@@ -26,9 +26,10 @@ const ITEM_HEIGHT = 72;
 export default function PickExercise() {
   const theme = useTheme();
   const router = useRouter();
-  const { templateId, sessionId } = useLocalSearchParams<{
+  const { templateId, sessionId, editId } = useLocalSearchParams<{
     templateId?: string;
     sessionId?: string;
+    editId?: string;
   }>();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState("");
@@ -68,14 +69,20 @@ export default function PickExercise() {
         }
         router.back();
       } else if (templateId) {
-        router.replace(
-          `/template/create?templateId=${templateId}&addExerciseId=${exercise.id}`
-        );
+        if (editId) {
+          router.replace(
+            `/template/${editId}?addExerciseId=${exercise.id}`
+          );
+        } else {
+          router.replace(
+            `/template/create?templateId=${templateId}&addExerciseId=${exercise.id}`
+          );
+        }
       } else {
         router.back();
       }
     },
-    [templateId, sessionId, router]
+    [templateId, sessionId, editId, router]
   );
 
   const renderItem = useCallback(

@@ -66,7 +66,7 @@ export default function ActiveSession() {
     const sets = await getSessionSets(id);
 
     // Build previous data
-    const prevCache: Record<string, { set_number: number; weight: number; reps: number }[]> = {};
+    const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
     for (const eid of exerciseIds) {
       prevCache[eid] = await getPreviousSets(eid, id);
@@ -87,7 +87,10 @@ export default function ActiveSession() {
       );
       map.get(s.exercise_id)!.sets.push({
         ...s,
-        previous: prev ? `${prev.weight}×${prev.reps}` : "-",
+        previous:
+          prev && prev.weight != null && prev.reps != null
+            ? `${prev.weight}×${prev.reps}`
+            : "-",
       });
     }
     setGroups([...map.values()]);

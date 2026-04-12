@@ -485,12 +485,12 @@ export async function deleteSet(id: string): Promise<void> {
 export async function getPreviousSets(
   exerciseId: string,
   currentSessionId: string
-): Promise<{ set_number: number; weight: number; reps: number }[]> {
+): Promise<{ set_number: number; weight: number | null; reps: number | null }[]> {
   const database = await getDatabase();
   return database.getAllAsync<{
     set_number: number;
-    weight: number;
-    reps: number;
+    weight: number | null;
+    reps: number | null;
   }>(
     `SELECT ws.set_number, ws.weight, ws.reps
      FROM workout_sets ws

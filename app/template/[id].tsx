@@ -170,7 +170,7 @@ export default function EditTemplate() {
           mode="outlined"
           icon="plus"
           onPress={() =>
-            router.push(`/template/pick-exercise?templateId=${id}`)
+            router.push(`/template/pick-exercise?templateId=${id}&editId=${id}`)
           }
           style={styles.addBtn}
         >
