@@ -642,55 +642,57 @@ export async function importData(data: {
   const database = await getDatabase();
   let inserted = 0;
 
-  if (data.exercises) {
-    for (const e of data.exercises) {
-      const r = await database.runAsync(
-        "INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [e.id, e.name, e.category, e.primary_muscles, e.secondary_muscles, e.equipment, e.instructions, e.difficulty, e.is_custom]
-      );
-      inserted += r.changes;
+  await database.withTransactionAsync(async () => {
+    if (data.exercises) {
+      for (const e of data.exercises) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO exercises (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [e.id, e.name, e.category, e.primary_muscles, e.secondary_muscles, e.equipment, e.instructions, e.difficulty, e.is_custom]
+        );
+        inserted += r.changes;
+      }
     }
-  }
 
-  if (data.templates) {
-    for (const t of data.templates) {
-      const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-        [t.id, t.name, t.created_at, t.updated_at]
-      );
-      inserted += r.changes;
+    if (data.templates) {
+      for (const t of data.templates) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+          [t.id, t.name, t.created_at, t.updated_at]
+        );
+        inserted += r.changes;
+      }
     }
-  }
 
-  if (data.template_exercises) {
-    for (const te of data.template_exercises) {
-      const r = await database.runAsync(
-        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [te.id, te.template_id, te.exercise_id, te.position, te.target_sets, te.target_reps, te.rest_seconds]
-      );
-      inserted += r.changes;
+    if (data.template_exercises) {
+      for (const te of data.template_exercises) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [te.id, te.template_id, te.exercise_id, te.position, te.target_sets, te.target_reps, te.rest_seconds]
+        );
+        inserted += r.changes;
+      }
     }
-  }
 
-  if (data.sessions) {
-    for (const s of data.sessions) {
-      const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [s.id, s.template_id, s.name, s.started_at, s.completed_at, s.duration_seconds, s.notes]
-      );
-      inserted += r.changes;
+    if (data.sessions) {
+      for (const s of data.sessions) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO workout_sessions (id, template_id, name, started_at, completed_at, duration_seconds, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.template_id, s.name, s.started_at, s.completed_at, s.duration_seconds, s.notes]
+        );
+        inserted += r.changes;
+      }
     }
-  }
 
-  if (data.sets) {
-    for (const s of data.sets) {
-      const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at]
-      );
-      inserted += r.changes;
+    if (data.sets) {
+      for (const s of data.sets) {
+        const r = await database.runAsync(
+          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at]
+        );
+        inserted += r.changes;
+      }
     }
-  }
+  });
 
   return { inserted };
 }

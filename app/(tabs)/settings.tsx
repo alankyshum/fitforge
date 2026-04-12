@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet } from "react-native";
 import { Button, Card, Snackbar, Text, useTheme } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import * as DocumentPicker from "expo-document-picker";
 import { exportAllData, importData } from "../../lib/db";
 
 export default function Settings() {
@@ -16,7 +17,7 @@ export default function Settings() {
       const data = await exportAllData();
       const json = JSON.stringify(data, null, 2);
       const file = new File(Paths.cache, "fitforge-export.json");
-      file.write(json);
+      await file.write(json);
       await Sharing.shareAsync(file.uri, {
         mimeType: "application/json",
         dialogTitle: "Export FitForge Data",
@@ -31,11 +32,15 @@ export default function Settings() {
 
   const handleImport = async () => {
     try {
-      const picked = await File.pickFileAsync(undefined, "application/json");
-      if (!picked) return;
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/json",
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
 
       setLoading(true);
-      const file = Array.isArray(picked) ? picked[0] : picked;
+      const uri = result.assets[0].uri;
+      const file = new File(uri);
       const raw = await file.text();
 
       let data: Record<string, unknown>;

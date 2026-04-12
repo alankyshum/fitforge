@@ -176,7 +176,6 @@ export default function ActiveSession() {
         if (prev <= 1) {
           if (restRef.current) clearInterval(restRef.current);
           restRef.current = null;
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           return 0;
         }
         return prev - 1;
@@ -189,6 +188,14 @@ export default function ActiveSession() {
     restRef.current = null;
     setRest(0);
   };
+
+  const prevRest = useRef(0);
+  useEffect(() => {
+    if (prevRest.current > 0 && rest === 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    prevRest.current = rest;
+  }, [rest]);
 
   useEffect(() => {
     return () => {
