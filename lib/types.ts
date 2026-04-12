@@ -156,3 +156,17 @@ export type MacroTargets = {
   fat: number;
   updated_at: number;
 };
+
+// --------------- Error Log ---------------
+
+export type ErrorEntry = {
+  id: string;
+  message: string;
+  stack: string | null;
+  component: string | null;
+  fatal: boolean;
+  timestamp: number;
+  app_version: string | null;
+  platform: string | null;
+  os_version: string | null;
+};

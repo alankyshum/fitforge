@@ -6,6 +6,8 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
 import { getDatabase } from "../lib/db";
+import { setupGlobalHandler } from "../lib/errors";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -14,6 +16,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     getDatabase();
+    setupGlobalHandler();
   }, []);
 
   const headerStyle = {
@@ -22,88 +25,99 @@ export default function RootLayout() {
   const headerTintColor = paperTheme.colors.onSurface;
 
   return (
-    <PaperProvider theme={paperTheme}>
-      <ThemeProvider value={isDark ? navigationDark : navigationLight}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="exercise/[id]"
-            options={{
-              headerShown: true,
-              headerStyle,
-              headerTintColor,
+    <ErrorBoundary>
+      <PaperProvider theme={paperTheme}>
+        <ThemeProvider value={isDark ? navigationDark : navigationLight}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
             }}
-          />
-          <Stack.Screen
-            name="template/create"
-            options={{
-              headerShown: true,
-              title: "New Template",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-          <Stack.Screen
-            name="template/[id]"
-            options={{
-              headerShown: true,
-              title: "Edit Template",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-          <Stack.Screen
-            name="template/pick-exercise"
-            options={{
-              headerShown: true,
-              title: "Pick Exercise",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-          <Stack.Screen
-            name="session/[id]"
-            options={{
-              headerShown: true,
-              title: "Workout",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-          <Stack.Screen
-            name="session/detail/[id]"
-            options={{
-              headerShown: true,
-              title: "Workout Summary",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-          <Stack.Screen
-            name="nutrition/add"
-            options={{
-              headerShown: true,
-              title: "Add Food",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-          <Stack.Screen
-            name="nutrition/targets"
-            options={{
-              headerShown: true,
-              title: "Macro Targets",
-              headerStyle,
-              headerTintColor,
-            }}
-          />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </PaperProvider>
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="exercise/[id]"
+              options={{
+                headerShown: true,
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="template/create"
+              options={{
+                headerShown: true,
+                title: "New Template",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="template/[id]"
+              options={{
+                headerShown: true,
+                title: "Edit Template",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="template/pick-exercise"
+              options={{
+                headerShown: true,
+                title: "Pick Exercise",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="session/[id]"
+              options={{
+                headerShown: true,
+                title: "Workout",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="session/detail/[id]"
+              options={{
+                headerShown: true,
+                title: "Workout Summary",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="nutrition/add"
+              options={{
+                headerShown: true,
+                title: "Add Food",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="nutrition/targets"
+              options={{
+                headerShown: true,
+                title: "Macro Targets",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="errors"
+              options={{
+                headerShown: true,
+                title: "Error Log",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </PaperProvider>
+    </ErrorBoundary>
   );
 }
