@@ -16,6 +16,11 @@ export default function RootLayout() {
     getDatabase();
   }, []);
 
+  const headerStyle = {
+    backgroundColor: paperTheme.colors.surface,
+  };
+  const headerTintColor = paperTheme.colors.onSurface;
+
   return (
     <PaperProvider theme={paperTheme}>
       <ThemeProvider value={isDark ? navigationDark : navigationLight}>
@@ -29,8 +34,53 @@ export default function RootLayout() {
             name="exercise/[id]"
             options={{
               headerShown: true,
-              headerStyle: { backgroundColor: paperTheme.colors.surface },
-              headerTintColor: paperTheme.colors.onSurface,
+              headerStyle,
+              headerTintColor,
+            }}
+          />
+          <Stack.Screen
+            name="template/create"
+            options={{
+              headerShown: true,
+              title: "New Template",
+              headerStyle,
+              headerTintColor,
+            }}
+          />
+          <Stack.Screen
+            name="template/[id]"
+            options={{
+              headerShown: true,
+              title: "Edit Template",
+              headerStyle,
+              headerTintColor,
+            }}
+          />
+          <Stack.Screen
+            name="template/pick-exercise"
+            options={{
+              headerShown: true,
+              title: "Pick Exercise",
+              headerStyle,
+              headerTintColor,
+            }}
+          />
+          <Stack.Screen
+            name="session/[id]"
+            options={{
+              headerShown: true,
+              title: "Workout",
+              headerStyle,
+              headerTintColor,
+            }}
+          />
+          <Stack.Screen
+            name="session/detail/[id]"
+            options={{
+              headerShown: true,
+              title: "Workout Summary",
+              headerStyle,
+              headerTintColor,
             }}
           />
         </Stack>
