@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -29,6 +29,7 @@ export default function EditTemplate() {
   }>();
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
+  const handled = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -51,7 +52,8 @@ export default function EditTemplate() {
   }, [id]);
 
   useEffect(() => {
-    if (!addExerciseId || !id) return;
+    if (!addExerciseId || !id || handled.current === addExerciseId) return;
+    handled.current = addExerciseId;
     addExerciseToTemplate(id, addExerciseId, exercises.length).then(() =>
       load()
     );

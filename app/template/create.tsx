@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -34,6 +34,7 @@ export default function CreateTemplate() {
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [saving, setSaving] = useState(false);
+  const handled = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (!template) return;
@@ -45,9 +46,22 @@ export default function CreateTemplate() {
     load();
   }, [load]);
 
+  // Hydrate template from templateId param (returning from picker)
+  useEffect(() => {
+    if (!params.templateId || template) return;
+    getTemplateById(params.templateId).then((tpl) => {
+      if (tpl) {
+        setTemplate(tpl);
+        setName(tpl.name);
+        setExercises(tpl.exercises ?? []);
+      }
+    });
+  }, [params.templateId, template]);
+
   // Handle exercise added from picker
   useEffect(() => {
-    if (!params.addExerciseId || !template) return;
+    if (!params.addExerciseId || !template || handled.current === params.addExerciseId) return;
+    handled.current = params.addExerciseId;
     addExerciseToTemplate(
       template.id,
       params.addExerciseId,
