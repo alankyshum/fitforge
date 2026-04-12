@@ -1,15 +1,26 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { Button, Card, Snackbar, Text, useTheme } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { exportAllData, importData } from "../../lib/db";
+import { getErrorCount, clearErrorLog, generateReport } from "../../lib/errors";
 
 export default function Settings() {
   const theme = useTheme();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState("");
+  const [count, setCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      getErrorCount().then(setCount);
+    }, [])
+  );
 
   const handleExport = async () => {
     setLoading(true);
@@ -119,6 +130,64 @@ export default function Settings() {
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
             Import a previously exported FitForge JSON file. Duplicate records are skipped.
           </Text>
+        </Card.Content>
+      </Card>
+
+      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+            Crash Reporting ({count} {count === 1 ? "error" : "errors"})
+          </Text>
+
+          <Button
+            mode="contained"
+            icon="bug-outline"
+            onPress={() => router.push("/errors")}
+            style={styles.btn}
+          >
+            View Error Log
+          </Button>
+
+          <Button
+            mode="outlined"
+            icon="share-variant"
+            onPress={async () => {
+              setLoading(true);
+              try {
+                const report = await generateReport();
+                const file = new File(Paths.cache, "fitforge-crash-report.json");
+                await file.write(report);
+                await Sharing.shareAsync(file.uri, {
+                  mimeType: "application/json",
+                  dialogTitle: "Share Crash Report",
+                });
+                setSnack("Crash report shared");
+              } catch {
+                setSnack("Unable to share");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            loading={loading}
+            disabled={loading}
+            style={styles.btn}
+          >
+            Share Crash Report
+          </Button>
+
+          <Button
+            mode="outlined"
+            icon="delete-outline"
+            onPress={async () => {
+              await clearErrorLog();
+              setCount(0);
+              setSnack("Error log cleared");
+            }}
+            style={styles.btn}
+            textColor={theme.colors.error}
+          >
+            Clear Error Log
+          </Button>
         </Card.Content>
       </Card>
 

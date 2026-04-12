@@ -105,6 +105,18 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       fat REAL DEFAULT 65,
       updated_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS error_log (
+      id TEXT PRIMARY KEY,
+      message TEXT NOT NULL,
+      stack TEXT,
+      component TEXT,
+      fatal INTEGER NOT NULL DEFAULT 0,
+      timestamp INTEGER NOT NULL,
+      app_version TEXT,
+      platform TEXT,
+      os_version TEXT
+    );
   `);
 }
 
