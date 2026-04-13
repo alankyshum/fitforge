@@ -19,6 +19,7 @@ import {
   getExerciseRecords,
   getExerciseChartData,
   getBodySettings,
+  getBestSet,
   type ExerciseSession,
   type ExerciseRecords as Records,
 } from "../../lib/db";
@@ -26,6 +27,7 @@ import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
 import { semantic, difficultyText } from "../../constants/theme";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
+import { epley, percentageTable } from "../../lib/rm";
 
 const PAGE_SIZE = 10;
 const MAX_ITEMS = 50;
@@ -57,6 +59,7 @@ export default function ExerciseDetail() {
   const [records, setRecords] = useState<Records | null>(null);
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordsError, setRecordsError] = useState(false);
+  const [best, setBest] = useState<{ weight: number; reps: number } | null>(null);
 
   // Chart state
   const [chart, setChart] = useState<{ date: number; value: number }[]>([]);
@@ -74,8 +77,9 @@ export default function ExerciseDetail() {
     setRecordsLoading(true);
     setRecordsError(false);
     try {
-      const r = await getExerciseRecords(eid);
+      const [r, b] = await Promise.all([getExerciseRecords(eid), getBestSet(eid)]);
       setRecords(r);
+      setBest(b);
     } catch {
       setRecordsError(true);
     } finally {
@@ -320,6 +324,7 @@ export default function ExerciseDetail() {
               No workout data yet — start a session to build your history
             </Text>
           ) : records ? (
+            <>
             <View style={styles.statsRow}>
               {bw ? (
                 <>
@@ -360,7 +365,9 @@ export default function ExerciseDetail() {
                     <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
                       {records.est_1rm != null ? toDisplay(records.est_1rm, unit) : "—"}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Est 1RM</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                      {best && best.reps === 1 ? "Tested 1RM" : "Est 1RM"}
+                    </Text>
                   </View>
                   <View style={styles.stat} accessibilityLabel={`Total sessions: ${records.total_sessions}`}>
                     <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
@@ -371,6 +378,57 @@ export default function ExerciseDetail() {
                 </>
               )}
             </View>
+
+            {/* Strength Profile — % 1RM breakdown table */}
+            {!bw && records.est_1rm != null && (() => {
+              const tested = best != null && best.reps === 1;
+              const orm = toDisplay(records.est_1rm!, unit);
+              const table = percentageTable(orm);
+              const source = best
+                ? `Based on: ${toDisplay(best.weight, unit)}${unit} × ${best.reps} reps`
+                : "";
+              return (
+                <View style={[styles.pctSection, { borderTopColor: theme.colors.outlineVariant }]}>
+                  <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
+                    {tested ? "Tested 1RM" : "Estimated 1RM"}: {orm} {unit}
+                  </Text>
+                  {source ? (
+                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                      {source} · Epley
+                    </Text>
+                  ) : null}
+                  <View style={styles.pctTable}>
+                    <View style={styles.pctRow}>
+                      <Text variant="labelSmall" style={[styles.pctCol, { color: theme.colors.onSurfaceVariant }]}>% 1RM</Text>
+                      <Text variant="labelSmall" style={[styles.pctCol, { color: theme.colors.onSurfaceVariant }]}>Weight</Text>
+                      <Text variant="labelSmall" style={[styles.pctCol, { color: theme.colors.onSurfaceVariant }]}>Reps</Text>
+                    </View>
+                    {table.map((row) => (
+                      <View
+                        key={row.pct}
+                        style={[styles.pctRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.outlineVariant }]}
+                        accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${unit === "kg" ? "kilograms" : "pounds"}, ${row.reps} reps`}
+                      >
+                        <Text variant="bodySmall" style={[styles.pctCol, { color: theme.colors.onSurface }]}>{row.pct}%</Text>
+                        <Text variant="bodySmall" style={[styles.pctCol, { color: theme.colors.onSurface }]}>{row.weight} {unit}</Text>
+                        <Text variant="bodySmall" style={[styles.pctCol, { color: theme.colors.onSurface }]}>{row.reps}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Button
+                    mode="text"
+                    compact
+                    icon="calculator"
+                    onPress={() => router.push("/tools/rm")}
+                    style={{ alignSelf: "flex-start", marginTop: 4 }}
+                    accessibilityLabel="Open 1RM calculator"
+                  >
+                    1RM Calculator
+                  </Button>
+                </View>
+              );
+            })()}
+            </>
           ) : null}
         </Card.Content>
       </Card>
@@ -621,5 +679,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginTop: 4,
+  },
+  pctSection: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+
+  },
+  pctTable: {
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  pctRow: {
+    flexDirection: "row",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  pctCol: {
+    flex: 1,
+    textAlign: "center",
   },
 });
