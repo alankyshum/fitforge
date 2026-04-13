@@ -170,7 +170,18 @@ function calculatePlates(target, barWeight, availablePlates):
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION (2026-04-13)
+
+**Critical issues (must fix):**
+1. **Algorithm**: Greedy fails with limited plate counts (e.g., 1×20kg + 2×15kg, target=30/side → greedy fails, but 15+15=30 works). Replace with backtracking/DP — search space is tiny, runs in microseconds. Also fix "closest achievable" to use DP/BFS instead of greedy remainder.
+2. **Accessibility gaps**: Add `accessibilityValue` on stepper, `keyboardType="numeric"` on TextInput, touch targets (48dp min / 56dp from active session), `accessibilityState` on bar weight buttons.
+3. **Barbell visualization a11y**: Specify how the visual plate display is announced to screen readers (comprehensive `accessibilityLabel` on the whole viz).
+
+**Recommendations (nice to have):**
+- Plate badge border/outline for dark mode visibility (yellow/white on light bg)
+- body_settings fallback to kg if not configured
+- Note plate config persistence as high-priority fast follow
+- Specify validation timing (real-time vs on blur)
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED — Technically sound, minimal risk, no new dependencies, fits existing architecture perfectly.
