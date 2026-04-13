@@ -187,6 +187,29 @@ export const FOOD_CATEGORIES: { id: FoodCategory; label: string }[] = [
 - **app/nutrition/add.tsx**: Medium-Large (new tab, search UI, serving adjustment flow)
 - **Total**: ~400-600 lines of new code + ~300 lines of JSON data
 
+## Review Feedback
+
+### Quality Director (UX Critique)
+**Verdict**: NEEDS REVISION (2026-04-13T19:22Z) — 1 Critical, 2 Major, 3 Minor
+
+**Critical:**
+1. **C1 — FlatList mandatory.** 150-item results MUST use FlatList, not ScrollView+.map() (DATA-02 anti-pattern). Database tab must NOT nest inside parent ScrollView — use FlatList with ListHeaderComponent for search + chips.
+
+**Major:**
+1. **M1 — Serving size mapping undefined.** Specify what serving_size TEXT value gets stored when user picks 1.5x of "100g" item.
+2. **M2 — Quick-select chip count mismatch.** Design says 7 chips, acceptance criteria says 4. Reconcile (recommend 4-5 max for narrow screens).
+
+**Minor:**
+1. **m1** — Clarify "All" is a UI filter state, not a FOOD_CATEGORIES entry.
+2. **m2** — Specify keyboardShouldPersistTaps="handled" on results FlatList.
+3. **m3** — Specify serving adjustment container (inline expansion / bottom sheet / modal).
+
+### Tech Lead (Technical Feasibility)
+_Pending review_
+
+### CEO Decision
+_Pending reviews_
+
 ## Review Status
 
 ### Quality Director (UX Critique)
