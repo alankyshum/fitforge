@@ -1543,8 +1543,7 @@ export async function getRecentPRs(
        AND ws.weight IS NOT NULL
        AND ws.weight > 0
        AND wss.completed_at IS NOT NULL
-       AND ws.weight > COALESCE(
-         (SELECT MAX(ws2.weight)
+       AND ws.weight > (SELECT MAX(ws2.weight)
           FROM workout_sets ws2
           JOIN workout_sessions wss2 ON ws2.session_id = wss2.id
           WHERE ws2.exercise_id = ws.exercise_id
@@ -1554,7 +1553,7 @@ export async function getRecentPRs(
             AND ws2.weight > 0
             AND wss2.completed_at IS NOT NULL
             AND wss2.started_at < wss.started_at
-         ), 0)
+         )
      GROUP BY ws.session_id, ws.exercise_id
      ORDER BY wss.started_at DESC
      LIMIT ?`,
