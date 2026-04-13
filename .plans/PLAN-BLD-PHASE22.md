@@ -92,33 +92,77 @@ Face Pulls with External Rotation, Front Raise (Bar), Front Raise (Handle), Late
 
 #### 1. Type Updates (`lib/types.ts`)
 
-Add new types and update Exercise interface:
+Add new Voltra-specific types:
 
 ```typescript
 type MountPosition = "high" | "mid" | "low" | "floor"
 type Attachment = "handle" | "ring_handle" | "ankle_strap" | "rope" | "bar" | "squat_harness" | "carabiner"
 type TrainingMode = "weight" | "eccentric_overload" | "band" | "damper" | "isokinetic" | "isometric" | "custom_curves" | "rowing"
-
-// Update MuscleGroup to new 6-group system:
-type MuscleGroup = "abs_core" | "arms" | "back" | "chest" | "legs_glutes" | "shoulders"
 ```
 
-Add `mount_position`, `attachment`, `training_modes` to Exercise type.
+**IMPORTANT — MuscleGroup vs Category distinction (Tech Lead feedback):**
+
+- **MuscleGroup** stays at current 14 granular values (biceps, triceps, forearms, quads, hamstrings, glutes, calves, core, chest, back, shoulders, lats, traps, full_body). These drive `primary_muscles`/`secondary_muscles` for volume tracking and muscle balance analysis. **DO NOT collapse these.**
+- **Category** changes to 6 Voltra-aligned groups for UI filtering:
+  ```typescript
+  type Category = "abs_core" | "arms" | "back" | "chest" | "legs_glutes" | "shoulders"
+  ```
+- Update `CATEGORIES` array and `CATEGORY_LABELS` to match the 6 new groups.
+- Remove unused categories: "cardio", "full_body", "biceps", "triceps", "legs" → replaced by the 6 Voltra groups.
+
+Add optional Voltra metadata fields to Exercise type (optional to avoid breaking custom exercises):
+
+```typescript
+type Exercise = {
+  // ...existing fields...
+  mount_position?: MountPosition   // optional — custom exercises may not have this
+  attachment?: Attachment           // optional
+  training_modes?: TrainingMode[]   // optional, stored as JSON text in DB
+  is_voltra?: boolean              // true for official Voltra Movement Bank exercises
+}
+```
+
+**Equipment field strategy**: Keep the `Equipment` type and field. All Voltra exercises use `equipment: "cable"`. Hide the equipment filter chip in the exercise list UI (meaningless when all exercises are cable). Preserve backward compatibility for custom exercises users may have created with other equipment types.
 
 #### 2. Schema Migration (`lib/db.ts`)
 
 ```sql
-ALTER TABLE exercises ADD COLUMN mount_position TEXT DEFAULT 'mid';
+ALTER TABLE exercises ADD COLUMN mount_position TEXT;
 ALTER TABLE exercises ADD COLUMN attachment TEXT DEFAULT 'handle';
 ALTER TABLE exercises ADD COLUMN training_modes TEXT DEFAULT '["weight"]';
+ALTER TABLE exercises ADD COLUMN is_voltra INTEGER DEFAULT 0;
 ```
 
 Migration must:
-- Add new columns
+- Check column existence with PRAGMA table_info (consistent with existing pattern)
+- Add new columns (optional — NULL allowed for mount_position)
 - Delete all seed exercises (is_custom = 0)
-- Re-seed with Voltra exercises
-- Preserve user's custom exercises (is_custom = 1)
-- Update category values in related tables
+- Re-seed with Voltra exercises (is_voltra = 1)
+- Preserve user's custom exercises (is_custom = 1) — NEVER delete user data
+- Update category values: map old categories to new 6-group system
+  - "biceps" | "triceps" → "arms"
+  - "legs" → "legs_glutes"
+  - "core" → "abs_core"
+  - "cardio" | "full_body" → remove (no Voltra exercises in these categories)
+  - "chest", "back", "shoulders" → unchanged
+
+#### Orphaned Exercise Handling (Templates & Sessions)
+
+**CRITICAL — explicit strategy for exercises that get deleted during migration:**
+
+1. **Workout templates** (`getTemplateExercises()`): When a template references a deleted exercise (exercise_id points to a non-existent row), the existing LEFT JOIN returns NULL for exercise fields. The UI MUST:
+   - Display "Exercise removed" with a muted visual indicator (gray text, strikethrough or italic)
+   - Show a "Replace" button/link that opens the exercise picker to swap in a Voltra exercise
+   - Never crash or show blank slots
+
+2. **Historical session data** (`getSessionSets()`): Past workout logs reference exercises by ID. When the exercise no longer exists:
+   - Display the exercise name from stored context (session_exercises table stores exercise_name)
+   - Show a subtle "(removed)" suffix to indicate the exercise is no longer in the database
+   - Historical data is READ-ONLY — never delete or modify past session records
+
+3. **Programs**: Program structures referencing removed exercises:
+   - Show "Exercise unavailable — tap to replace" in program view
+   - Program remains functional; user replaces exercises at their own pace
 
 #### 3. Seed Data Replacement (`lib/seed.ts`)
 
@@ -215,7 +259,7 @@ _Pending review_
 
 ### Tech Lead (Technical Feasibility)
 
-**Verdict**: NEEDS REVISION
+**Rev 1 Verdict**: NEEDS REVISION
 
 **Technical Feasibility**: Can be built as described with one CRITICAL design fix. Migration approach (PRAGMA column detection + ALTER TABLE) follows established patterns. Seed replacement and UI cleanup are low-risk.
 
@@ -236,10 +280,15 @@ Collapsing MuscleGroup destroys tracking value. "Arms" conflates biceps/triceps/
 2. Consider `is_voltra` boolean to distinguish official Voltra exercises from custom ones
 3. Keep `MUSCLE_GROUPS_BY_REGION` — just update it for relevant Voltra muscles
 
-**TODO (must fix before approval)**:
-- [ ] Keep MuscleGroup granular (14 values). Only change Category to 6 Voltra groups.
-- [ ] Add explicit orphaned-exercise UI handling instructions.
-- [ ] Specify Equipment field strategy (keep type, hide filter in UI).
+**Rev 2 Resolution** (CEO):
+- [x] **CRITICAL**: MuscleGroup stays granular (14 values). Only Category changes to 6 Voltra groups. → **FIXED in Rev 2 plan body**
+- [x] **MAJOR**: Orphaned exercise UI handling added with explicit spec for templates, sessions, programs. → **FIXED in Rev 2 plan body**
+- [x] **MINOR**: Equipment field strategy — keep type, hide filter in UI. → **FIXED in Rev 2 plan body**
+- [x] Voltra fields are optional (custom exercise backward compat) → Adopted
+- [x] Migration checks column existence with PRAGMA → Adopted
+- [x] Added `is_voltra` boolean field → Adopted
+
+**Awaiting Tech Lead re-review on Rev 2.**
 
 ### CEO Decision
 _Pending reviews_
