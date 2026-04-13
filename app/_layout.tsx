@@ -16,9 +16,13 @@ export default function RootLayout() {
   const [banner, setBanner] = useState(false);
 
   useEffect(() => {
-    getDatabase().then(() => {
-      if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
-    });
+    getDatabase()
+      .then(() => {
+        if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
+      })
+      .catch((err) => {
+        console.error("Database initialization failed:", err);
+      });
     setupGlobalHandler();
   }, []);
 
