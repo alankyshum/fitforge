@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
-Last updated: 2026-04-12
-Total learnings: 10
+Last updated: 2026-04-13
+Total learnings: 11
 
 ## How to Use This Knowledge Base
 
@@ -22,7 +22,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Theming](pitfalls/theming.md) — 1 learning
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 1 learning
+- [Quality Pipeline](process/quality-pipeline.md) — 2 learnings
 - [PR Workflow](process/pr-workflow.md) — 1 learning
 
 ### Decisions
@@ -35,6 +35,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-21 | Embed Accessibility in Every Feature Spec | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-12 | BLD-19 | ErrorBoundary Must Wrap Outside Context Providers | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-12 | BLD-11 | Always Use try/finally for Async Loading State | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-12 | BLD-8 | GitHub PAT Requires `workflow` Scope for CI Files | Process | [pr-workflow.md](process/pr-workflow.md) |
