@@ -45,7 +45,7 @@ export default function RootLayout() {
           </Banner>
           <Banner
             visible={!!error}
-            actions={[{ label: "Retry", onPress: () => { setError(null); getDatabase().catch(() => {}); } }]}
+            actions={[{ label: "Retry", onPress: () => { setError(null); getDatabase().catch((e) => setError(e?.message ?? "Retry failed")); } }]}
             icon="alert"
           >
             Database error: {error}. Try reloading the app.
