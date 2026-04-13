@@ -1,5 +1,10 @@
 # Phase 20: Built-in Food Database for Quick Nutrition Logging
 
+**Issue**: BLD-15
+**Author**: CEO
+**Date**: 2026-04-13
+**Status**: IN_REVIEW (Rev 2) — addressing QD + techlead feedback
+
 ## Problem Statement
 
 Currently, users must manually enter **6 fields** (name, calories, protein, carbs, fat, serving size) every time they log a meal. The `app/nutrition/add.tsx` screen has two tabs: "New Food" (manual entry) and "Favorites" (quick-log previously saved favorites).
@@ -28,8 +33,7 @@ Each entry contains:
   "protein": 31,
   "carbs": 0,
   "fat": 3.6,
-  "serving": "100g",
-  "unit_weight_g": 100
+  "serving": "100g"
 }
 ```
 
@@ -52,25 +56,31 @@ Each entry contains:
 [ New Food ] [ Favorites ] [ Database ]
 ```
 
-**Database tab layout**:
-1. **Search bar** (TextInput at top) — filters foods by name (case-insensitive substring match)
-2. **Category chips** (horizontal scroll) — filter by category. "All" selected by default.
-3. **Results list** — scrollable list of matching foods, each showing:
+**Database tab layout** (uses `FlatList` — NOT ScrollView+.map()):
+
+When the "Database" tab is active, render its content as a standalone `FlatList` that **replaces** the parent ScrollView. Do NOT nest a list inside ScrollView. The FlatList uses `ListHeaderComponent` for the search bar + category chips.
+
+1. **Search bar** (TextInput in ListHeaderComponent) — filters foods by name (case-insensitive substring match). FlatList has `keyboardShouldPersistTaps="handled"` so tapping a result doesn't require dismissing keyboard first.
+2. **Category chips** (horizontal scroll in ListHeaderComponent) — filter by category. Default state is "All" (no category filter applied — this is a UI state, NOT a FOOD_CATEGORIES entry; internally `category === null` means show all).
+3. **Results FlatList** — virtualized list of matching foods, each showing:
    - Food name (titleSmall)
    - Nutritional summary: `165 cal · 31p · 0c · 3.6f · 100g`
-4. **Tap a food** → shows serving adjustment UI:
-   - Pre-filled serving size from database
-   - **Serving multiplier** stepper: 0.25x / 0.5x / 0.75x / 1x / 1.5x / 2x / 3x (quick-select chips)
-   - Custom amount TextInput for precise entry
+4. **Tap a food** → shows serving adjustment as an **inline expansion** below the tapped item (same pattern as accordion/expandable list item). No bottom sheet or modal — keeps context visible.
+   - Pre-filled serving size from database (display only, e.g. "per 100g")
+   - **Serving multiplier** stepper with quick-select chips: **0.5x / 1x / 1.5x / 2x** (4 chips — fits on 320pt screens). Custom amount via TextInput below chips for precise entry (e.g. 0.75, 3.0).
    - Calculated macros update live as multiplier changes
+   - **Serving storage**: base macros are stored unscaled in `food_entries`. The multiplier is stored in `daily_log.servings`. `serving_size` TEXT stores the original serving string from JSON (e.g. "100g"). `getDailySummary()` already computes `calories * servings` — no special handling needed.
    - "Log Food" button
-   - "Save as Favorite" toggle (saves a copy to user's food_entries)
+   - "Save as Favorite" toggle (saves a copy to user's food_entries with `is_favorite=1`)
 
 ### 3. Data Layer Changes (`lib/db.ts`)
 
 No schema changes needed. When a user logs a food from the database:
-1. Create a `food_entries` row (copies the data from the JSON, adjusted by serving multiplier)
-2. Create a `daily_log` row linking to that food entry
+1. Create a `food_entries` row with **base** (unscaled) macros copied from JSON. The `serving_size` field stores the original serving string (e.g. "100g").
+2. Create a `daily_log` row linking to that food entry with `servings` set to the user's chosen multiplier (e.g. 1.5).
+3. `getDailySummary()` already computes `calories * servings` — the multiplier is applied at read time, not write time.
+
+**Deduplication**: Accept duplicate food_entries for simplicity (same behavior as manual entry). Each log creates a new food_entry. Optimize in a future phase if needed.
 
 This reuses the existing data model entirely. Database foods become user food entries upon logging — simple, no migration needed.
 
@@ -101,7 +111,6 @@ export type BuiltinFood = {
   carbs: number
   fat: number
   serving: string
-  unit_weight_g: number
 }
 
 export const FOOD_CATEGORIES: { id: FoodCategory; label: string }[] = [
@@ -133,12 +142,17 @@ export const FOOD_CATEGORIES: { id: FoodCategory; label: string }[] = [
 
 - [ ] Built-in food database ships with ~150 common foods
 - [ ] "Database" tab appears on add-food screen alongside "New Food" and "Favorites"
+- [ ] Database tab uses FlatList (NOT ScrollView+.map()) with ListHeaderComponent for search + chips
+- [ ] Database tab renders independently from parent ScrollView (conditional rendering by active tab)
 - [ ] Search bar filters foods by name (case-insensitive, substring)
-- [ ] Category chips filter foods by category
-- [ ] Tapping a food shows serving adjustment with live macro calculation
-- [ ] Serving multiplier quick-select chips (0.5x, 1x, 1.5x, 2x)
-- [ ] Custom serving amount via TextInput
-- [ ] "Log Food" creates food_entry + daily_log with adjusted macros
+- [ ] FlatList has keyboardShouldPersistTaps="handled"
+- [ ] Category chips filter foods by category; "All" is default (null filter state, not a FOOD_CATEGORIES entry)
+- [ ] Tapping a food shows inline serving adjustment with live macro calculation
+- [ ] Serving multiplier quick-select chips: 0.5x, 1x, 1.5x, 2x (4 chips)
+- [ ] Custom serving amount via TextInput for precise values
+- [ ] Base macros stored unscaled in food_entries; multiplier stored in daily_log.servings
+- [ ] serving_size TEXT stores original serving string from JSON (e.g. "100g")
+- [ ] "Log Food" creates food_entry (base macros) + daily_log (with servings multiplier)
 - [ ] "Save as Favorite" toggle persists the food to favorites
 - [ ] Nutritional data is reasonable (verified against USDA data)
 - [ ] No new dependencies required
@@ -190,47 +204,37 @@ export const FOOD_CATEGORIES: { id: FoodCategory; label: string }[] = [
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION (2026-04-13T19:22Z) — 1 Critical, 2 Major, 3 Minor
-
-**Critical:**
-1. **C1 — FlatList mandatory.** 150-item results MUST use FlatList, not ScrollView+.map() (DATA-02 anti-pattern). Database tab must NOT nest inside parent ScrollView — use FlatList with ListHeaderComponent for search + chips.
-
-**Major:**
-1. **M1 — Serving size mapping undefined.** Specify what serving_size TEXT value gets stored when user picks 1.5x of "100g" item.
-2. **M2 — Quick-select chip count mismatch.** Design says 7 chips, acceptance criteria says 4. Reconcile (recommend 4-5 max for narrow screens).
-
-**Minor:**
-1. **m1** — Clarify "All" is a UI filter state, not a FOOD_CATEGORIES entry.
-2. **m2** — Specify keyboardShouldPersistTaps="handled" on results FlatList.
-3. **m3** — Specify serving adjustment container (inline expansion / bottom sheet / modal).
+**Initial Verdict**: NEEDS REVISION (2026-04-13T19:22Z) — 1 Critical, 2 Major, 3 Minor
+**Findings (all resolved in Rev 2):**
+1. **C1 — FlatList mandatory** ✅ Database tab uses FlatList with ListHeaderComponent. Renders independently from parent ScrollView.
+2. **M1 — Serving size mapping** ✅ Base macros stored unscaled in food_entries. Multiplier in daily_log.servings. serving_size stores original JSON string.
+3. **M2 — Quick-select chip count** ✅ Reconciled to 4 chips (0.5x, 1x, 1.5x, 2x). Custom TextInput for other values.
+4. **m1 — "All" category** ✅ Clarified as UI filter state (null), not a FOOD_CATEGORIES entry.
+5. **m2 — keyboardShouldPersistTaps** ✅ Specified on FlatList.
+6. **m3 — Serving adjustment container** ✅ Specified as inline expansion below tapped item.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict**: APPROVED (2026-04-13T19:22Z)
+**Findings (all addressed in Rev 2):**
+1. Store base macros in food_entries, use daily_log.servings for multiplier ✅
+2. Remove unit_weight_g from JSON — unused, YAGNI ✅
+3. Accept food_entries duplication for simplicity ✅
+4. Test 3-tab SegmentedButtons on narrow screens — noted for implementation
 
-### CEO Decision
-_Pending reviews_
+### CEO Decision — Rev 2 Resolutions
 
-## Review Status
+All QD and techlead findings addressed in Rev 2:
 
-### Quality Director (UX Critique)
-_Pending review_
+| Finding | Resolution |
+|---------|-----------|
+| **C1 — FlatList** | ✅ Database tab uses FlatList with ListHeaderComponent. Conditional rendering replaces parent ScrollView. |
+| **M1 — Serving storage** | ✅ Base macros unscaled in food_entries, multiplier in daily_log.servings, serving_size = original JSON string. |
+| **M2 — Chip count** | ✅ 4 chips (0.5x, 1x, 1.5x, 2x) + custom TextInput. |
+| **m1 — "All" category** | ✅ UI filter state (null), not in FOOD_CATEGORIES. |
+| **m2 — keyboardShouldPersistTaps** | ✅ Added to FlatList. |
+| **m3 — Serving container** | ✅ Inline expansion below tapped item. |
+| **TL1 — Base macros** | ✅ Same as M1 — unscaled storage. |
+| **TL2 — unit_weight_g** | ✅ Removed from JSON schema and BuiltinFood type. |
+| **TL3 — Deduplication** | ✅ Accept duplicates for simplicity. |
 
-### Tech Lead (Technical Feasibility)
-**Verdict**: APPROVED
-
-**Feasibility**: Fully buildable. addFoodEntry() + addDailyLog() already handle the full flow. getDailySummary() already multiplies macros by dl.servings. Metro bundles JSON via require() sync. Zero new deps.
-
-**Architecture Fit**: Excellent. New tab in existing SegmentedButtons, lib/foods.ts follows lib/rpe.ts module pattern, copy-on-log to food_entries matches existing data flow.
-
-**Complexity**: Medium | Risk: Low | New deps: none
-
-**Findings (all minor)**:
-1. Store base macros in food_entries, use daily_log.servings for serving multiplier (not pre-scaled copies)
-2. Remove unit_weight_g from JSON schema — unused, YAGNI
-3. Accept food_entries duplication for simplicity (optimize later)
-4. Test 3-tab SegmentedButtons on narrow screens
-
-**Approved for implementation** — clean scope, zero friction with existing patterns.
-
-### CEO Decision
-_Pending reviews_
+**Plan status**: Submitted for re-review.
