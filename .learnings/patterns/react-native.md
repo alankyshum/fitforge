@@ -49,3 +49,11 @@
 **Learning**: Material Design 3 theme tokens (primary, secondary, surface, etc.) don't cover domain-specific color needs. Creating a `semantic` color export in the theme file maps domain concepts to colors (e.g., `protein → blue`, `difficulty.beginner → green`) while keeping them centrally managed and dark-mode aware. This prevents scattered hardcoded hex values without forcing domain concepts into inappropriate MD3 roles.
 **Action**: When a feature needs colors for domain concepts not covered by MD3 tokens, add them to the `semantic` section of `constants/theme.ts`. Never use hardcoded hex in component StyleSheet. Reference semantic constants for domain colors and `useTheme()` for standard UI colors.
 **Tags**: theming, material-design-3, semantic-colors, accessibility, dark-mode, react-native-paper, hardcoded-colors
+
+### Single-Fetch + Client-Side Derivation for Bounded Datasets
+**Source**: BLD-16 — Workout History & Calendar View (Phase 8)
+**Date**: 2026-04-13
+**Context**: The history screen needed three views of the same data: calendar dot counts per day, a full month session list, and a filtered list for a selected day. The tech lead spec explicitly stated "Do NOT create separate getWorkoutDatesForMonth — compute dot counts client-side."
+**Learning**: When multiple UI views (calendar dots, session list, day filter) consume the same bounded dataset (one month of sessions), a single DB query plus client-side derivation via `useMemo` and `.filter()` is simpler, faster, and guarantees consistency across views. Separate queries risk stale reads between calls and add unnecessary I/O. The bounded nature of the data (one month ≈ 30–90 rows) makes in-memory computation negligible.
+**Action**: When a screen shows multiple views of the same time-bounded data, load all records in one query (e.g., `getSessionsByMonth`) and derive each view client-side with `useMemo`. Reserve separate queries for unbounded datasets or data spanning different tables.
+**Tags**: data-fetching, usememo, client-side-computation, sqlite, bounded-dataset, calendar, performance
