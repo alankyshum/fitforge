@@ -279,24 +279,27 @@ export default function ActiveSession() {
             await completeSession(id!);
 
             // Auto-advance program if this session was started from a program
-            const dayId = await getSessionProgramDayId(id!);
-            if (dayId) {
-              const day = await getProgramDayById(dayId);
-              if (day) {
-                const result = await advanceProgram(day.program_id, dayId, id!);
-                if (result.wrapped) {
-                  setSnackbar(`Cycle ${result.cycle} complete!`);
-                  AccessibilityInfo.announceForAccessibility(
-                    `Cycle ${result.cycle} complete! Program wrapping to day 1.`
-                  );
-                  // Brief delay so snackbar shows before navigating
-                  await new Promise((r) => setTimeout(r, 1500));
-                } else {
-                  AccessibilityInfo.announceForAccessibility(
-                    "Workout complete. Program advanced to next day."
-                  );
+            try {
+              const dayId = await getSessionProgramDayId(id!);
+              if (dayId) {
+                const day = await getProgramDayById(dayId);
+                if (day) {
+                  const result = await advanceProgram(day.program_id, dayId, id!);
+                  if (result.wrapped) {
+                    setSnackbar(`Cycle ${result.cycle} complete!`);
+                    AccessibilityInfo.announceForAccessibility(
+                      `Cycle ${result.cycle} complete! Program wrapping to day 1.`
+                    );
+                    await new Promise((r) => setTimeout(r, 1500));
+                  } else {
+                    AccessibilityInfo.announceForAccessibility(
+                      "Workout complete. Program advanced to next day."
+                    );
+                  }
                 }
               }
+            } catch {
+              // Program advance failed — session is already saved, navigate normally
             }
 
             router.replace(`/session/detail/${id}`);

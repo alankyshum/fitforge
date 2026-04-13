@@ -38,7 +38,6 @@ export default function CreateProgram() {
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [saving, setSaving] = useState(false);
-  const handled = useCallback(() => {}, []);
   const [handledTemplate, setHandledTemplate] = useState<string | null>(null);
 
   const load = useCallback(async () => {

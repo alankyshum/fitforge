@@ -107,12 +107,19 @@ export async function activateProgram(id: string): Promise<void> {
       [id]
     );
     const first = days.length > 0 ? days[0].id : null;
-    // Preserve current_day_id if it already belongs to this program
+    // Preserve current_day_id only if it still exists in program_days
     const prog = await database.getFirstAsync<{ current_day_id: string | null }>(
       "SELECT current_day_id FROM programs WHERE id = ?",
       [id]
     );
-    const dayId = prog?.current_day_id ?? first;
+    let dayId = first;
+    if (prog?.current_day_id) {
+      const exists = await database.getFirstAsync<{ id: string }>(
+        "SELECT id FROM program_days WHERE id = ? AND program_id = ?",
+        [prog.current_day_id, id]
+      );
+      if (exists) dayId = prog.current_day_id;
+    }
     await database.runAsync(
       "UPDATE programs SET is_active = 1, current_day_id = ?, updated_at = ? WHERE id = ?",
       [dayId, Date.now(), id]
@@ -185,8 +192,9 @@ export async function removeProgramDay(id: string): Promise<void> {
     "SELECT program_id FROM program_days WHERE id = ?",
     [id]
   );
-  await database.runAsync("DELETE FROM program_days WHERE id = ?", [id]);
-  if (row) {
+  if (!row) return;
+  await database.withTransactionAsync(async () => {
+    await database.runAsync("DELETE FROM program_days WHERE id = ?", [id]);
     const prog = await database.getFirstAsync<{ current_day_id: string | null }>(
       "SELECT current_day_id FROM programs WHERE id = ?",
       [row.program_id]
@@ -205,7 +213,7 @@ export async function removeProgramDay(id: string): Promise<void> {
       "UPDATE programs SET updated_at = ? WHERE id = ?",
       [Date.now(), row.program_id]
     );
-  }
+  });
 }
 
 export async function reorderProgramDays(
@@ -220,11 +228,11 @@ export async function reorderProgramDays(
         [i, orderedIds[i], programId]
       );
     }
+    await database.runAsync(
+      "UPDATE programs SET updated_at = ? WHERE id = ?",
+      [Date.now(), programId]
+    );
   });
-  await database.runAsync(
-    "UPDATE programs SET updated_at = ? WHERE id = ?",
-    [Date.now(), programId]
-  );
 }
 
 export async function advanceProgram(
@@ -243,23 +251,29 @@ export async function advanceProgram(
     return { wrapped: false, cycle: 0 };
   }
 
-  await database.runAsync(
-    "INSERT INTO program_log (id, program_id, day_id, session_id, completed_at) VALUES (?, ?, ?, ?, ?)",
-    [crypto.randomUUID(), programId, dayId, sessionId, now]
-  );
+  let wrapped = false;
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "INSERT INTO program_log (id, program_id, day_id, session_id, completed_at) VALUES (?, ?, ?, ?, ?)",
+      [crypto.randomUUID(), programId, dayId, sessionId, now]
+    );
 
-  const days = await database.getAllAsync<{ id: string; position: number }>(
-    "SELECT id, position FROM program_days WHERE program_id = ? ORDER BY position ASC",
-    [programId]
-  );
-  const idx = days.findIndex((d) => d.id === dayId);
-  const next = idx + 1 < days.length ? days[idx + 1] : days[0];
-  const wrapped = idx + 1 >= days.length;
+    const days = await database.getAllAsync<{ id: string; position: number }>(
+      "SELECT id, position FROM program_days WHERE program_id = ? ORDER BY position ASC",
+      [programId]
+    );
+    const idx = days.findIndex((d) => d.id === dayId);
+    if (idx === -1 || days.length === 0) {
+      return;
+    }
+    const next = idx + 1 < days.length ? days[idx + 1] : days[0];
+    wrapped = idx + 1 >= days.length;
 
-  await database.runAsync(
-    "UPDATE programs SET current_day_id = ?, updated_at = ? WHERE id = ?",
-    [next?.id ?? null, now, programId]
-  );
+    await database.runAsync(
+      "UPDATE programs SET current_day_id = ?, updated_at = ? WHERE id = ?",
+      [next.id, now, programId]
+    );
+  });
 
   const cycle = await getProgramCycleCount(programId);
   return { wrapped, cycle };
