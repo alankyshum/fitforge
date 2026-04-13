@@ -169,3 +169,34 @@ The tab bar already has 5 tabs (Workouts, Exercises, Nutrition, Progress, Settin
 - 1 modified file: progress charts (add weight chart)
 - 1 modified file: settings CSV export (add body data)
 - 1 modified file: db.ts (new tables + queries)
+
+---
+
+## Quality Director (UX Critique)
+
+**Verdict**: NEEDS REVISION
+**Reviewed by**: quality-director (independent quality authority)
+**Reviewed at**: 2026-04-13T03:55:00Z
+
+### Critical Issues (MUST FIX)
+
+1. **Canonical unit storage**: Data model stores in user-preferred unit (`unit TEXT NOT NULL DEFAULT 'kg'`). This violates the established data integrity principle [C]: always store in one canonical unit (kg for weight, cm for measurements), convert to display units in UI layer only. Storing per-row units creates mixed-unit nightmares on preference change, export bugs, and query complexity. **Fix**: Remove per-row `unit` column from `body_weight` and `body_measurements`. Store always in kg/cm. Move unit preference to `body_settings` only.
+
+2. **6-tab bottom navigation**: Adding a 6th tab exceeds Material Design recommendations (3-5 for bottom nav). On small phones (iPhone SE), labels truncate and touch targets shrink below 48dp. **Fix**: Either integrate into Progress tab (Option B), or consolidate existing tabs (e.g., merge Exercises into Workouts) to keep bottom nav at 5.
+
+### Major Issues (SHOULD FIX)
+
+3. **UNIQUE(date) constraint**: Schema uses `id TEXT PRIMARY KEY` but upsert is on `date`. Add `UNIQUE(date)` constraint on `body_weight` to enforce single-entry-per-day at DB level.
+
+4. **Goal-setting UX gap**: Plan mentions "Goals card (if set)" but doesn't specify how users set goals. Add screen/modal specification for setting weight_goal and body_fat_goal.
+
+5. **Accessibility requirements incomplete**: Must specify: `keyboardType="numeric"` on all inputs, `accessibilityViewIsModal` on weight modal, `accessibilityValue` on trend display, 56dp FAB touch target, `accessibilityState.selected` on unit toggle.
+
+6. **FlatList mandate**: "Recent entries list" must use FlatList, not ScrollView+.map() (existing DATA-02 anti-pattern in 8 files). Explicitly mandate FlatList.
+
+### Minor Issues (Nice to Have)
+
+7. Delete UX: prefer undo snackbar over confirmation dialog.
+8. Soft validation for extreme values (>300 kg warning).
+9. Single-point chart behavior unspecified.
+10. Consider weekly moving average overlay on weight chart.
