@@ -1442,6 +1442,7 @@ export type WorkoutCSVRow = {
   notes: string;
   set_rpe: number | null;
   set_notes: string;
+  link_id: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -1467,7 +1468,8 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
        ws.duration_seconds,
        ws.notes,
        wset.rpe AS set_rpe,
-       wset.notes AS set_notes
+       wset.notes AS set_notes,
+       wset.link_id
      FROM workout_sessions ws
      JOIN workout_sets wset ON wset.session_id = ws.id
      LEFT JOIN exercises e ON e.id = wset.exercise_id
