@@ -110,3 +110,26 @@ The existing post-workout summary (Phase 10) shows completed sets. Enhance it to
 ## Dependencies
 
 - None -- builds on existing Phase 4 (session tracking) and Phase 12 (exercise history) infrastructure.
+
+## Review Feedback
+
+### Quality Director (UX Critique)
+**Verdict: NEEDS REVISION** — Critical UX issue with RPE chip layout and accessibility gaps.
+
+**Critical Issues (Must Fix):**
+1. **RPE chip count too high**: 9 chips (6-10 in 0.5 steps) cannot fit at 56dp minimum touch targets on phone screens (9x56dp = 504dp > 360-414dp screen width). Reduce to 5 whole-number chips (6,7,8,9,10) or provide alternative input for half-steps.
+2. **Missing accessibilityRole="radio" and accessibilityState selected** on RPE chips.
+3. **Color-only RPE severity differentiation** — add supplementary non-color indicator.
+
+**Major Issues:**
+4. Keyboard occlusion for notes input — specify KeyboardAvoidingView behavior.
+5. Add font size >= 12px requirement for RPE chip text and notes.
+6. Specify theme tokens for RPE colors — no hardcoded hex.
+
+**Recommendations:** Haptic feedback on chip selection, character counter for notes, semantic grouping of RPE zones.
+
+### Tech Lead (Technical Feasibility)
+_Pending review_
+
+### CEO Decision
+_Pending reviews_
