@@ -239,7 +239,7 @@ function HistoryScreen() {
     cells.push(renderDay(d));
   }
 
-  const renderSession = ({ item }: ListRenderItemInfo<SessionRow>) => {
+  const renderSession = useCallback(({ item }: ListRenderItemInfo<SessionRow>) => {
     const date = new Date(item.started_at).toLocaleDateString(undefined, {
       weekday: "short",
       month: "short",
@@ -265,7 +265,7 @@ function HistoryScreen() {
         </Card.Content>
       </Card>
     );
-  };
+  }, [theme, router]);
 
   const emptyMessage = () => {
     if (query.trim()) return `No workouts matching "${query}"`;
