@@ -41,21 +41,12 @@ import {
 } from "../../lib/db";
 import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
 import { useLayout } from "../../lib/layout";
+import { KG_TO_LB, LB_TO_KG, toDisplay, toKg } from "../../lib/units";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
 type SessionRow = { id: string; name: string; started_at: number; duration_seconds: number | null; set_count: number };
 
-const KG_TO_LB = 2.20462;
-const LB_TO_KG = 0.453592;
 const PAGE_SIZE = 20;
-
-function toDisplay(kg: number, unit: "kg" | "lb"): number {
-  return unit === "lb" ? Math.round(kg * KG_TO_LB * 10) / 10 : Math.round(kg * 10) / 10;
-}
-
-function toKg(val: number, unit: "kg" | "lb"): number {
-  return unit === "lb" ? val * LB_TO_KG : val;
-}
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);

@@ -3,9 +3,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getBodySettings, updateBodySettings } from "../../lib/db";
-
-const KG_TO_LB = 2.20462;
-const LB_TO_KG = 0.453592;
+import { KG_TO_LB, LB_TO_KG } from "../../lib/units";
 
 export default function Goals() {
   const theme = useTheme();
