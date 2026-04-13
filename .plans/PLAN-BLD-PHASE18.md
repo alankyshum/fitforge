@@ -3,7 +3,7 @@
 **Issue**: BLD-8
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT
+**Status**: IN_REVIEW (Rev 2) — addressing QD + techlead feedback
 
 ## Problem Statement
 
@@ -61,11 +61,14 @@ Add a **"Strength Profile"** card between the Records card and the History secti
 └─────────────────────────────────┘
 ```
 
-- Shows estimated 1RM (Epley formula, same as existing `est_1rm`)
+- Shows estimated 1RM using **Epley formula** (consistent with existing `est_1rm` in Personal Records)
+- **Merged into the existing Personal Records card** — add the percentage breakdown table below the existing `Est 1RM` line rather than creating a separate card. This avoids redundancy (techlead feedback: line 359 already shows Est 1RM).
 - Shows the set that produced the estimate (heaviest valid set: weight > 0, 1 ≤ reps ≤ 12)
 - Percentage breakdown table with expected rep ranges at each intensity
+- If `reps=1` (tested max): display "Tested 1RM" instead of "Estimated 1RM" (no formula needed, weight IS the 1RM)
 - `accessibilityLabel` on each row: "90 percent of one-rep max, 90 kilograms, 3 to 4 reps"
 - Hidden when no completed sets exist (empty state: "Complete some sets to see your strength profile")
+- **Suppressed for time-based exercises** (reps=1 AND weight=0) — 1RM not applicable
 - Respects unit preference (kg/lb)
 
 #### 2. Smart Weight Suggestions in Active Session (`app/session/[id].tsx`)
@@ -83,9 +86,10 @@ Suggested: 82.5 ▲  (or "80×10 ▲" for rep progression)
 
 **Progressive overload logic:**
 1. **Weight progression** (default for barbell/dumbbell exercises):
-   - If the user completed all target sets at the current weight with ≥ target reps → suggest +1 step (step = user's weight step setting, default 2.5kg/5lb)
-   - "Target reps" = the reps they actually completed last time (we don't dictate rep targets)
-   - Only suggest increase when the LAST session's sets for this exercise were ALL completed
+   - If the user completed all **attempted** sets at the current weight with ≥ target reps → suggest +1 step (step = user's current step setting from session UI, default 2.5kg/5lb)
+   - "Target reps" = the reps they actually completed last time (we don't dictate rep targets). Weight progression triggers when user completed ≥ the same reps as prior session across ALL attempted sets. If any attempted set dropped reps, don't suggest increase.
+   - **"All attempted sets completed" definition**: A set is "attempted" if `weight > 0 AND reps > 0`. Un-started sets (`weight=NULL` or `reps=NULL`) are ignored. An attempted set is "completed" if `completed=1`. Progression triggers when **all attempted sets** have `completed=1`.
+   - Example: User has 5 sets, started 4 (one left blank) → if all 4 attempted sets are completed=1, suggest progression. User completed 3/4 attempted sets → do NOT suggest (not all attempted sets completed).
    
 2. **Rep progression** (when weight increase isn't possible — e.g., bodyweight exercises):
    - If the exercise is bodyweight category → suggest +1-2 reps instead of weight increase
@@ -93,13 +97,18 @@ Suggested: 82.5 ▲  (or "80×10 ▲" for rep progression)
 3. **No suggestion** when:
    - Fewer than 2 completed sessions for this exercise (not enough data)
    - The user DECREASED weight or reps last session (possible deload — don't push)
-   - RPE was ≥ 9.5 on the last session (too hard — don't increase)
+   - Any set in last session has RPE ≥ 9.5 (too hard — don't increase)
+   - **If all RPE values are NULL** (user doesn't track RPE) → **proceed with suggestion normally** — don't penalize users who skip RPE tracking
+   - Exercise is time-based (all sets have `reps=1` AND `weight=0`) — 1RM concept doesn't apply; suppress Strength Profile and suggestion chip entirely
 
 **Display:**
 - Small `Chip` component below the "previous" text
 - Green color with "▲" arrow when suggesting increase
 - Gray "=" when suggesting same weight (maintain)
 - `accessibilityLabel="Suggested weight: 82.5 kilograms, increase by 2.5"`
+- **Tap behavior**: Tapping the suggestion chip **auto-fills the weight input** for the current set with the suggested weight. This is the primary UX value — users don't need to manually type the number. The weight input field updates immediately; the user can still adjust it before confirming the set.
+- Minimum touch target: 48dp height (Material chip default is sufficient)
+- `accessibilityRole="button"`, `accessibilityHint="Double tap to fill suggested weight"`
 
 #### 3. 1RM Calculator Screen (`app/tools/rm.tsx`)
 
@@ -133,11 +142,13 @@ Standalone tool accessible from:
 
 - Two numeric inputs: weight and reps
 - Computes 1RM using three formulas: Epley, Brzycki, Lombardi
-- Shows average of all three
-- Percentage breakdown table (same as exercise detail)
+- Shows average of all three — **note: Calculator shows all 3 formulas for comparison, while Exercise Detail uses Epley only (consistent with existing est_1rm). Each result is clearly labeled with the formula name so users understand the difference.**
+- Percentage breakdown table (same as exercise detail, using the average)
 - Unit toggle (kg/lb) — reads from user's body settings
 - No database access needed — pure calculation
 - `accessibilityLabel` on results and table rows
+- **Disclaimer footnote**: "Estimates based on submaximal performance. Actual 1RM may vary. Estimates become less accurate above 12 reps."
+- **Wrapped in `KeyboardAvoidingView`** (behavior="padding" on iOS, undefined on Android) with `ScrollView` so keyboard doesn't cover results on small screens
 
 ### Technical Approach
 
@@ -232,16 +243,26 @@ This returns sets from the N most recent completed sessions for a given exercise
 
 - [ ] Exercise detail shows "Strength Profile" card with est 1RM, source set, and percentage table
 - [ ] Strength Profile hidden when no completed sets exist
+- [ ] Strength Profile merged into existing Personal Records card (not a separate card)
+- [ ] Strength Profile shows "Tested 1RM" when reps=1, "Estimated 1RM" otherwise
 - [ ] Strength Profile respects kg/lb unit preference
+- [ ] Strength Profile and suggestion chip suppressed for time-based exercises (reps=1, weight=0)
 - [ ] Active session shows suggestion chip below "previous" text when applicable
 - [ ] Suggestion chip shows green "▲" for increase, gray "=" for maintain
+- [ ] Tapping suggestion chip auto-fills weight input for current set
+- [ ] Suggestion chip has accessibilityRole="button" and accessibilityHint
 - [ ] No suggestion shown when < 2 sessions history for that exercise
-- [ ] No suggestion when RPE ≥ 9.5 on last session (too hard)
+- [ ] No suggestion when any set has RPE ≥ 9.5 on last session (too hard)
+- [ ] Suggestion still shows when all RPE values are NULL (user doesn't track RPE)
 - [ ] No suggestion when user decreased weight last session (deload)
+- [ ] "All sets completed" = all attempted sets (weight>0 AND reps>0) have completed=1; un-started sets ignored
+- [ ] Suggestion uses user's current step setting from session UI (not hardcoded default)
 - [ ] Bodyweight exercises get rep-increase suggestions instead of weight-increase
 - [ ] 1RM Calculator screen accessible from Workouts tab header
-- [ ] 1RM Calculator shows results from Epley, Brzycki, Lombardi + average
+- [ ] 1RM Calculator wrapped in KeyboardAvoidingView + ScrollView
+- [ ] 1RM Calculator shows results from Epley, Brzycki, Lombardi + average, each labeled
 - [ ] 1RM Calculator shows percentage table based on average
+- [ ] 1RM Calculator shows disclaimer footnote about estimate accuracy
 - [ ] 1RM Calculator works with kg and lb
 - [ ] Formulas limited to 1-12 rep range (warning for > 12)
 - [ ] All new UI elements have accessibilityLabel
@@ -253,17 +274,22 @@ This returns sets from the N most recent completed sessions for a given exercise
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| No history for exercise | No Strength Profile card, no suggestion chip |
+| No history for exercise | No Strength Profile section, no suggestion chip |
 | Only 1 session history | Strength Profile shows 1RM, but no suggestion (need ≥ 2) |
 | Very high reps (> 12) | 1RM estimate shown with warning "estimates less accurate above 12 reps" |
 | 0 weight (bodyweight) | Use bodyweight exercises logic (rep progression) |
 | 0 reps | No 1RM calculation possible, skip |
+| reps=1 (tested max) | Show "Tested 1RM" instead of "Estimated 1RM" |
 | RPE 10 last session | No increase suggestion (too hard) |
+| All RPE values NULL | Proceed with suggestion normally (user doesn't track RPE) |
 | User decreased weight | Maintain suggestion (respect deload) |
+| Time-based exercise (reps=1, weight=0) | No Strength Profile, no suggestion chip |
 | Very heavy (1RM > 500kg) | Display normally, no special handling |
 | Unit switch mid-session | Recalculate suggestion with new unit |
 | Weight input 0 in calculator | Show "Enter a weight" message |
 | Reps input 0 in calculator | Show "Enter reps" message |
+| Partial completion (3/5 attempted sets done) | Do NOT suggest increase — not all attempted sets completed |
+| Un-started sets (NULL weight) | Ignored in completion calculation |
 
 ### Risk Assessment
 
@@ -314,5 +340,23 @@ This returns sets from the N most recent completed sessions for a given exercise
 
 **Complexity**: Medium | **Risk**: Low | **New deps**: None
 
-### CEO Decision
-_Pending reviews_
+### CEO Decision — Rev 2 Resolutions
+
+All QD and techlead findings addressed in Rev 2:
+
+| Finding | Resolution |
+|---------|-----------|
+| **C1 — Chip interaction** | ✅ Tapping suggestion chip auto-fills weight input. accessibilityRole="button", hint added. |
+| **C2 — "All sets completed"** | ✅ Defined: attempted = weight>0 AND reps>0; completed = all attempted sets have completed=1; un-started sets ignored. |
+| **M1 — Formula inconsistency** | ✅ Exercise Detail uses Epley (consistent with existing est_1rm). Calculator shows all 3 formulas clearly labeled. |
+| **M2 — KeyboardAvoidingView** | ✅ Calculator wrapped in KeyboardAvoidingView + ScrollView. |
+| **m1 — Disclaimer** | ✅ Added disclaimer footnote to Calculator. |
+| **m2 — Wire step setting** | ✅ Suggestion uses user's current step from session UI, not hardcoded. |
+| **m3 — Time-based exercises** | ✅ Strength Profile and suggestion suppressed for time-based (reps=1, weight=0). |
+| **Tested 1RM edge case** | ✅ reps=1 shows "Tested 1RM" instead of "Estimated 1RM". |
+| **TL — RPE null** | ✅ NULL RPE → proceed normally; only suppress when any set has RPE ≥ 9.5. |
+| **TL — Target reps** | ✅ Clarified: progression triggers when user completed ≥ same reps as prior session across ALL attempted sets. |
+| **TL — 1RM redundancy** | ✅ Merged Strength Profile into existing Personal Records card (no separate card). |
+| **TL — Use Epley consistently** | ✅ Exercise Detail uses Epley. Calculator labels each formula. |
+
+**Plan status**: Submitted for re-review.
