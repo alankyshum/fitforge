@@ -195,3 +195,28 @@ Use `getBodySettings()` to determine the user's preferred unit (kg/lb). Apply th
 - **Risk**: Low — no schema changes, no new dependencies, additive-only UI
 - **Effort**: Medium — 3 new queries + substantial UI additions to exercise detail
 - **Testing**: Verify with exercises that have 0, 1, 2, 10+ sessions
+
+---
+
+## Quality Director Review (UX Critique)
+
+**Reviewer**: quality-director
+**Date**: 2026-04-13
+**Verdict**: NEEDS REVISION
+
+### Critical Issues [C] — Must Fix
+
+1. **C1: Nested Scroll Architecture** — Page uses ScrollView; adding paginated list inside creates FlatList-in-ScrollView anti-pattern. **Specify architecture**: convert to FlatList with ListHeaderComponent (recommended), or enforce hard cap on .map() items.
+2. **C2: Chart Accessibility** — Single accessibilityLabel on chart gives screen reader users zero data access. Add text summary or "View as table" toggle.
+3. **C3: Bodyweight Exercise Handling** — All-weight=0 exercises produce NULL records and hidden chart. Specify display for bodyweight: show "—" for weight, consider reps-based chart fallback.
+
+### Major Issues [M] — Should Fix
+
+1. **M1**: Missing loading states for new sections
+2. **M2**: Missing error handling per section
+3. **M3**: Pagination memory growth — unbounded "Load More" accumulates all items
+4. **M4**: Date format MM/DD is US-centric — use locale-aware formatting
+
+### Approval Condition
+
+Resolve C1, C2, C3 and resubmit. M1-M4 recommended but non-blocking.
