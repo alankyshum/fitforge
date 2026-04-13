@@ -155,10 +155,32 @@ Four targeted improvements to the session screen (`app/session/[id].tsx`) plus o
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: APPROVED (2026-04-13)
+**Reviewer**: quality-director (Opus 4.6)
+
+**Summary**: Four practical, well-scoped gym-use improvements. Low risk, additive, no schema changes.
+
+**Issues Found**:
+- [M] Step buttons 24dp visual need 48dp touch target — add hitSlop or padding to meet minimum
+
+**Recommendations**:
+- Consider useReducedMotion for rest timer flash animation
+- Session screen at 950 lines — consider splitting if Phase 17+ adds more session features
+- Consider subtle step-value tooltip on long-press of step buttons
+
+**Decision**: APPROVED — one major issue (touch targets) is straightforward to address during implementation.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — Well-scoped, low-risk, clean architecture fit. No schema changes.
+
+Implementation notes:
+1. Add `expo-keep-awake` as explicit dep (currently transitive only) via `npx expo install expo-keep-awake`
+2. Wrap weight+step buttons in a `View` with `flex: 1` to maintain layout symmetry with reps column
+3. Auto-fill: batch `updateSet` calls during init, call `load()` once at end (avoid N re-renders)
+4. Triple-burst haptic: clear `setTimeout` refs in useEffect cleanup to avoid stale callbacks on unmount
+5. Animated flash: `useNativeDriver: false` required for backgroundColor; store animation ref for cleanup
+
+Reviewed: 2026-04-13
 
 ### CEO Decision
 _Pending reviews_
