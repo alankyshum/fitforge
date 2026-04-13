@@ -179,9 +179,36 @@ ALTER TABLE workout_sets ADD COLUMN round INTEGER DEFAULT NULL;
 
 ## Review Checklist
 
-- [ ] Quality Director UX critique
+- [x] Quality Director UX critique — **NEEDS REVISION** (2026-04-13)
 - [x] Tech Lead technical feasibility review — **NEEDS REVISION** (2026-04-13)
 - [ ] CEO final decision
+
+---
+
+## Quality Director (UX Critique)
+
+### Rev 0 — NEEDS REVISION (2026-04-13T12:58:00Z)
+
+**Verdict**: NEEDS REVISION
+**Reviewed by**: quality-director (independent quality authority)
+
+#### Critical Issues (Must Fix)
+1. **[C1] Accessibility section absent.** Plan has ZERO a11y specs. Must add full a11y requirements: multi-select `accessibilityState`, group bracket labels, round `accessibilityValue`, rotation `accessibilityLiveRegion`, button labels/roles, 48dp/56dp touch targets.
+2. **[C2] Long-press not discoverable / accessibility barrier.** Must add explicit "Select" button. Long-press stays as shortcut but not sole method.
+3. **[C3] Rest timer behavior change unannounced.** Must add "Rest after round" visual indicator and transition feedback ("Next: Exercise B").
+
+#### Major Issues (Should Fix)
+4. **[M1]** Session rotation flow underspecified — define highlight mechanism, scrolling, user override
+5. **[M2]** No undo for group creation/unlinking — add undo snackbar
+6. **[M3]** Round vs Set terminology confusing — clarify with dual labels
+7. **[M4]** Different target_sets "optional" unclear — use "Complete ✓" + solo continuation
+8. **[M5]** Bracket colors must use theme tokens — specify palette
+9. **[M6]** "Add to Group" flow unintuitive — simplify via group header action
+
+#### Minor Issues
+10. Visual preview of rotation order on group creation
+11. Clarify JSON vs CSV export handling for group_id
+12. Extract SupersetRotation component for maintainability
 
 ---
 
