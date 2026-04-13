@@ -44,7 +44,7 @@ import {
   advanceProgram,
 } from "../../lib/programs";
 import type { WorkoutSession, WorkoutSet } from "../../lib/types";
-import { semantic } from "../../constants/theme";
+import { rpeColor, rpeText } from "../../lib/rpe";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -62,12 +62,6 @@ const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
 const RPE_LABELS: Record<number, string> = {
   6: "Easy", 7: "Easy", 8: "Mod", 9: "Hard", 10: "Max",
 };
-
-function rpeColor(val: number): string {
-  if (val <= 7) return semantic.beginner;
-  if (val <= 8) return semantic.intermediate;
-  return semantic.advanced;
-}
 
 export default function ActiveSession() {
   const theme = useTheme();
@@ -88,6 +82,7 @@ export default function ActiveSession() {
   const prHapticFired = useRef<Set<string>>(new Set());
   const [snackbar, setSnackbar] = useState("");
   const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
+  const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
 
   const load = useCallback(async () => {
@@ -282,6 +277,7 @@ export default function ActiveSession() {
 
   const handleNotes = async (setId: string, text: string) => {
     await updateSetNotes(setId, text);
+    setNotesDraft((prev) => { const next = { ...prev }; delete next[setId]; return next; });
     await load();
   };
 
@@ -564,7 +560,7 @@ export default function ActiveSession() {
                         >
                           <Text style={[
                             styles.rpeChipText,
-                            { color: selected ? semantic.onSemantic : rpeColor(val) },
+                            { color: selected ? rpeText(val) : rpeColor(val) },
                           ]}>
                             {val} {RPE_LABELS[val]}
                           </Text>
@@ -616,7 +612,7 @@ export default function ActiveSession() {
                 {set.completed && set.rpe != null && !Number.isInteger(set.rpe) && (
                   <View style={styles.rpeBadgeRow}>
                     <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
-                      <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                      <Text style={{ color: rpeText(set.rpe), fontSize: 12, fontWeight: "600" }}>
                         RPE {set.rpe}
                       </Text>
                     </View>
@@ -630,15 +626,16 @@ export default function ActiveSession() {
                       mode="outlined"
                       dense
                       placeholder="Add notes..."
-                      value={set.notes}
-                      onChangeText={(v) => handleNotes(set.id, v)}
+                      value={notesDraft[set.id] ?? set.notes}
+                      onChangeText={(v) => setNotesDraft((prev) => ({ ...prev, [set.id]: v }))}
+                      onBlur={() => handleNotes(set.id, notesDraft[set.id] ?? set.notes)}
                       maxLength={200}
                       multiline
                       style={styles.notesInput}
                       accessibilityLabel="Set notes"
                     />
                     <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
-                      {set.notes.length}/200
+                      {(notesDraft[set.id] ?? set.notes).length}/200
                     </Text>
                   </View>
                 )}
@@ -794,7 +791,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 16,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 14,
     minWidth: 56,
     alignItems: "center",
   },

@@ -37,6 +37,7 @@ import {
 } from "../../lib/programs";
 import type { Program, ProgramDay, WorkoutSession, WorkoutTemplate } from "../../lib/types";
 import { semantic } from "../../constants/theme";
+import { rpeColor, rpeText } from "../../lib/rpe";
 
 function mondayOf(date: Date): number {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -574,8 +575,8 @@ export default function Workouts() {
                       {setCounts2[item.id] ?? 0} sets
                     </Text>
                     {rpe != null && (
-                      <View style={[styles.rpeTag, { backgroundColor: rpe <= 7 ? semantic.beginner : rpe <= 8 ? semantic.intermediate : semantic.advanced }]}>
-                        <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                      <View style={[styles.rpeTag, { backgroundColor: rpeColor(rpe) }]}>
+                        <Text style={{ color: rpeText(rpe), fontSize: 12, fontWeight: "600" }}>
                           RPE {Math.round(rpe * 10) / 10}
                         </Text>
                       </View>

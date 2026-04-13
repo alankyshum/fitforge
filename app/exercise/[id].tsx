@@ -24,6 +24,7 @@ import {
 } from "../../lib/db";
 import { CATEGORY_LABELS, type Exercise } from "../../lib/types";
 import { semantic } from "../../constants/theme";
+import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
 
 const PAGE_SIZE = 10;
@@ -439,12 +440,6 @@ export default function ExerciseDetail() {
     </View>
   );
 
-  const rpeColor = (val: number): string => {
-    if (val <= 7) return semantic.beginner;
-    if (val <= 8) return semantic.intermediate;
-    return semantic.advanced;
-  };
-
   const renderItem = ({ item }: { item: ExerciseSession }) => {
     const rpeLabel = item.avg_rpe != null ? `, avg RPE ${Math.round(item.avg_rpe * 10) / 10}` : "";
     const label = bw
@@ -471,7 +466,7 @@ export default function ExerciseDetail() {
           </Text>
           {item.avg_rpe != null && (
             <View style={[styles.rpeBadge, { backgroundColor: rpeColor(item.avg_rpe) }]}>
-              <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+              <Text style={{ color: rpeText(item.avg_rpe), fontSize: 12, fontWeight: "600" }}>
                 RPE {Math.round(item.avg_rpe * 10) / 10}
               </Text>
             </View>

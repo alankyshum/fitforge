@@ -26,6 +26,9 @@ export const semantic = {
   intermediate: "#FF9800",
   advanced: "#F44336",
   onSemantic: "#ffffff",
+  onBeginner: "#ffffff",
+  onIntermediate: "#000000",
+  onAdvanced: "#ffffff",
 };
 
 export const light = {

@@ -5,15 +5,9 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { getSessionById, getSessionPRs, getSessionSets } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
-import { semantic } from "../../../constants/theme";
+import { rpeColor, rpeText } from "../../../lib/rpe";
 
 type SetWithName = WorkoutSet & { exercise_name?: string };
-
-function rpeColor(val: number): string {
-  if (val <= 7) return semantic.beginner;
-  if (val <= 8) return semantic.intermediate;
-  return semantic.advanced;
-}
 
 type ExerciseGroup = {
   exercise_id: string;
@@ -244,7 +238,7 @@ export default function SessionDetail() {
                     </Text>
                     {set.rpe != null && (
                       <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
-                        <Text style={{ color: semantic.onSemantic, fontSize: 12, fontWeight: "600" }}>
+                        <Text style={{ color: rpeText(set.rpe), fontSize: 12, fontWeight: "600" }}>
                           RPE {set.rpe}
                         </Text>
                       </View>
