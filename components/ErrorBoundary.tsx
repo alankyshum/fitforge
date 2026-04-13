@@ -4,18 +4,20 @@ import { Button, Text } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { logError, generateReport } from "../lib/errors";
+import { light, dark as darkTheme } from "../constants/theme";
 
 type Props = { children: React.ReactNode };
 type State = { error: Error | null; expanded: boolean };
 
 function colors() {
-  const dark = Appearance.getColorScheme() !== "light";
+  const isDark = Appearance.getColorScheme() !== "light";
+  const t = isDark ? darkTheme : light;
   return {
-    bg: dark ? "#121212" : "#fafafa",
-    text: dark ? "#e0e0e0" : "#212121",
-    muted: dark ? "#9e9e9e" : "#757575",
-    code: dark ? "#e0e0e0" : "#424242",
-    codeBg: dark ? "#1e1e1e" : "#eeeeee",
+    bg: t.colors.background,
+    text: t.colors.onBackground,
+    muted: t.colors.onSurfaceVariant,
+    code: t.colors.onSurface,
+    codeBg: t.colors.surfaceVariant,
   };
 }
 
