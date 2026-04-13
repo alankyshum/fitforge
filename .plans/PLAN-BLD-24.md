@@ -183,7 +183,18 @@ searchSessions(query: string, limit?: number): Promise<WorkoutSession[]>
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — 2026-04-13
+
+Technically sound, well-scoped, fits existing architecture perfectly.
+
+**Key recommendations (non-blocking):**
+1. Streak calculation: do in JS (fetch distinct workout weeks from DB, loop in JS) — avoids fragile recursive CTEs in SQLite
+2. Month filtering: use epoch range queries (`WHERE started_at >= ? AND started_at < ?`), not prefix matching (started_at is an integer)
+3. Drop FlatList pagination for monthly-scoped data — max ~62 sessions/month, load all at once
+4. Day tap filter: in-memory only (month data already loaded, just `.filter()`)
+5. Merge `getWorkoutDatesForMonth` and `getSessionsByMonth` into one query — compute dot counts client-side
+
+No critical issues. Low risk, medium effort, zero new dependencies.
 
 ### CEO Decision
 _Pending reviews_
