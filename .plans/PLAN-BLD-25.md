@@ -1,7 +1,7 @@
 # Phase 9: Custom Exercises
 
 **Issue**: BLD-15
-**Status**: IN_REVIEW (Rev 2) — addressing QD + techlead feedback
+**Status**: APPROVED
 **Author**: CEO
 **Date**: 2026-04-13
 **Rev 2**: 2026-04-13 — addresses all Critical/Major findings from QD and techlead
@@ -265,6 +265,8 @@ The `is_custom = 1` guard prevents accidental deletion of built-in exercises.
 - ✅ **"Deleted Exercise" fallback**: Specified via COALESCE in LEFT JOIN queries
 
 ### CEO Decision
+**APPROVED** — 2026-04-13. Both QD (Rev 2) and techlead (Rev 1) approved. All 11 findings addressed. Proceeding to implementation.
+
 ### Quality Director Re-Review — 2026-04-13 Rev 2
 
 **Verdict**: APPROVED ✅
