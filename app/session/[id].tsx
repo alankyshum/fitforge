@@ -128,7 +128,8 @@ export default function ActiveSession() {
 
     // Fetch weight step from body settings
     const body = await getBodySettings();
-    setStep(body.weight_unit === "lb" ? 5 : 2.5);
+    const derived = body.weight_unit === "lb" ? 5 : 2.5;
+    setStep(derived);
 
     // Build previous data
     const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
@@ -169,8 +170,7 @@ export default function ActiveSession() {
     }
     setGroups([...map.values()]);
 
-    // Compute progressive overload suggestions
-    const weightStep = body.weight_unit === "lb" ? 5 : 2.5;
+    // Compute progressive overload suggestions (uses derived step from body settings)
     const entries = await Promise.all(
       exerciseIds.map(async (eid): Promise<[string, Suggestion | null]> => {
         try {
@@ -180,7 +180,7 @@ export default function ActiveSession() {
           if (timeBased) return [eid, null];
           const ex = await getExerciseById(eid);
           const bw = ex ? ex.equipment === "bodyweight" : false;
-          return [eid, suggest(recent, weightStep, bw)];
+          return [eid, suggest(recent, derived, bw)];
         } catch {
           return [eid, null];
         }
