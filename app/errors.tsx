@@ -118,7 +118,7 @@ export default function Errors() {
                 {item.message}
               </Text>
               {expanded === item.id && item.stack && (
-                <View style={styles.stackBox}>
+                <View style={[styles.stackBox, { backgroundColor: theme.colors.surfaceVariant }]}>
                   <Text
                     variant="bodySmall"
                     style={{
@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
   },
   stackBox: {
     marginTop: 8,
-    backgroundColor: "rgba(0,0,0,0.15)",
     borderRadius: 6,
     padding: 8,
   },
