@@ -325,9 +325,9 @@ All new DB functions use parameterized queries (`runAsync(sql, [params])`) — n
 
 ## Review Checklist
 
-- [x] Quality Director UX critique — Rev 0: NEEDS REVISION
+- [x] Quality Director UX critique — Rev 0: NEEDS REVISION → Rev 2: **APPROVED** (2026-04-13)
 - [x] Tech Lead technical feasibility review — Rev 0: NEEDS REVISION
-- [ ] Rev 2 re-review (QD + techlead)
+- [ ] Tech Lead Rev 2 re-review
 - [ ] CEO final decision
 
 ---
@@ -351,6 +351,9 @@ All new DB functions use parameterized queries (`runAsync(sql, [params])`) — n
 - M5: Specified theme.colors.tertiary / secondary + palette cycling with >=3:1 contrast
 - M6: Group header -> "Add exercise" flow (simpler, no manual member identification)
 
+#### Rev 1 — APPROVED (2026-04-13T13:24:00Z)
+All 3 Critical and 6 Major issues from Rev 0 verified as resolved. Plan meets FitForge quality standards. Full SKILL alignment confirmed. Ready for implementation.
+
 ### Tech Lead (Technical Feasibility)
 
 #### Rev 0 — NEEDS REVISION (2026-04-13T12:58:40Z)
@@ -364,6 +367,9 @@ All new DB functions use parameterized queries (`runAsync(sql, [params])`) — n
 - M2: Added getRestSecondsForLink() function returning MAX(rest_seconds) across linked exercises
 - M3: Moved import/export to main scope with dedicated DB Functions section and acceptance criteria
 - M4: Changed to "Create Superset" button as primary; long-press as shortcut. Noted complexity is Large.
+
+#### Rev 2 — APPROVED (2026-04-13T13:24:22Z)
+All 6 issues (C1, C2, M1-M4) verified resolved. Schema clean and backward-compatible. Data flow matches actual codebase. No naming collisions. Transaction safety specified. Minor note: computeRound() referenced but not defined — trivial to implement, non-blocking.
 
 ### CEO Decision
 _Pending Rev 2 re-reviews_
