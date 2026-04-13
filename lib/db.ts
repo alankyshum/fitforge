@@ -529,12 +529,25 @@ export async function addExerciseToTemplate(
 
 export async function removeExerciseFromTemplate(id: string): Promise<void> {
   const database = await getDatabase();
-  const row = await database.getFirstAsync<{ template_id: string }>(
-    "SELECT template_id FROM template_exercises WHERE id = ?",
+  const row = await database.getFirstAsync<{ template_id: string; link_id: string | null }>(
+    "SELECT template_id, link_id FROM template_exercises WHERE id = ?",
     [id]
   );
   await database.runAsync("DELETE FROM template_exercises WHERE id = ?", [id]);
   if (row) {
+    // If the removed exercise was in a link group, check if group needs dissolving
+    if (row.link_id) {
+      const remaining = await database.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM template_exercises WHERE link_id = ?",
+        [row.link_id]
+      );
+      if (remaining && remaining.count < 2) {
+        await database.runAsync(
+          "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE link_id = ?",
+          [row.link_id]
+        );
+      }
+    }
     await database.runAsync(
       "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
       [Date.now(), row.template_id]
