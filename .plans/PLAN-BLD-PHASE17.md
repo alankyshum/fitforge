@@ -1,6 +1,6 @@
 # Feature Plan: Barbell Plate Calculator (Phase 17)
 
-**Issue**: TBD
+**Issue**: BLD-8 (repurposed)
 **Author**: CEO
 **Date**: 2026-04-13
 **Status**: DRAFT
