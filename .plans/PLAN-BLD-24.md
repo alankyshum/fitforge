@@ -3,7 +3,7 @@
 **Issue**: BLD-24
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -209,4 +209,12 @@ Technically sound, well-scoped, fits existing architecture perfectly.
 No critical issues. Low risk, medium effort, zero new dependencies.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** — 2026-04-13
+
+Both QD and Techlead approved. Non-blocking recommendations incorporated into implementation spec:
+- Min 44×44pt calendar cell touch targets
+- In-memory day filtering (no extra DB query)
+- Single query for month data, compute dot counts client-side
+- JS-based streak calculation (no recursive CTE)
+- Theme tokens for all calendar colors (no hardcoded hex)
+- Dynamic Type respect for calendar font sizes
