@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 19
+Total learnings: 21
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 10 learnings
+- [React Native + Expo](patterns/react-native.md) — 12 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
@@ -36,6 +36,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-1 | Derive Shared Display Flags Before Rendering Concurrent Async Results | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-1 | Nested Subquery for "Last N in Chronological Order" in SQLite | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-7 | Wrap Multi-Step State Machine Mutations in Transactions | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-7 | Validate Persisted Entity References Before Use | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-13 | BLD-5 | COALESCE with Zero Default Creates False Positives in Comparison Queries | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |

@@ -74,6 +74,22 @@
 **Action**: When adding soft-delete to any table, audit ALL queries across the codebase that JOIN to that table. Change INNER JOIN → LEFT JOIN and add COALESCE for display columns. Search the codebase for `JOIN <table_name>` to find all affected queries before marking the feature complete.
 **Tags**: sqlite, soft-delete, left-join, inner-join, data-integrity, migration, crud, query-audit
 
+### Derive Shared Display Flags Before Rendering Concurrent Async Results
+**Source**: BLD-1 — Exercise History & Performance Trends (Phase 12)
+**Date**: 2026-04-13
+**Context**: The exercise detail screen fires three independent async fetches (records, chart, history). The `is_bodyweight` flag comes from the records fetch, but chart rendering starts independently. If the chart completes before records, bodyweight exercises briefly render with weight labels.
+**Learning**: When multiple parallel fetches return data that shares a display dependency (e.g., unit labels, layout mode), the fetch that finishes first may render with incorrect assumptions. The chart data query used a self-sufficient fallback (try weight data → fall back to reps), but the surrounding UI labels still depended on a flag from a separate fetch.
+**Action**: When parallel fetches control a shared display mode, either (1) chain the dependent fetch after the flag-providing one, (2) derive the flag from the data itself at render time (`chart[0].value > 100 → likely weight`), or (3) show a loading placeholder for all dependent sections until the flag-providing fetch completes. Document the dependency in a comment near the fetch declarations.
+**Tags**: react, async, concurrent-fetch, race-condition, display-dependency, loading-state, bodyweight
+
+### Nested Subquery for "Last N in Chronological Order" in SQLite
+**Source**: BLD-1 — Exercise History & Performance Trends (Phase 12)
+**Date**: 2026-04-13
+**Context**: The performance chart needs the last 20 sessions in ascending date order for left-to-right plotting. A single `ORDER BY date ASC LIMIT 20` returns the oldest 20 sessions instead of the most recent 20.
+**Learning**: SQLite (and SQL in general) applies LIMIT before any outer ordering. To get the N most recent rows in ascending order, wrap a descending-limited subquery in an outer `SELECT * FROM (...) ORDER BY date ASC`. This two-level query pattern is required whenever a chart, timeline, or export needs the "tail" of a time series in forward order.
+**Action**: For chart/timeline data, use `SELECT * FROM (SELECT ... ORDER BY date DESC LIMIT ?) ORDER BY date ASC`. Never use a single `ORDER BY ASC LIMIT` — it returns the head, not the tail. Add a comment explaining the nested ordering to prevent future "simplification" that breaks the query.
+**Tags**: sqlite, sql, subquery, ordering, limit, chart-data, time-series, pagination
+
 ### Wrap Multi-Step State Machine Mutations in Transactions
 **Source**: BLD-7 — Workout Programs / Training Plans (Phase 11)
 **Date**: 2026-04-13
