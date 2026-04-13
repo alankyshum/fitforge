@@ -73,3 +73,11 @@
 **Learning**: Adding soft-delete to a table cascades beyond the table's own queries. Every existing INNER JOIN on that table becomes a silent data-loss vector: rows in dependent tables (workout_sets, CSV exports) disappear from results when the joined exercise is deleted. The fix is LEFT JOIN + COALESCE for a fallback display value (e.g., "Deleted Exercise").
 **Action**: When adding soft-delete to any table, audit ALL queries across the codebase that JOIN to that table. Change INNER JOIN → LEFT JOIN and add COALESCE for display columns. Search the codebase for `JOIN <table_name>` to find all affected queries before marking the feature complete.
 **Tags**: sqlite, soft-delete, left-join, inner-join, data-integrity, migration, crud, query-audit
+
+### Wrap Multi-Step State Machine Mutations in Transactions
+**Source**: BLD-7 — Workout Programs / Training Plans (Phase 11)
+**Date**: 2026-04-13
+**Context**: The `advanceProgram` function performed INSERT (program_log) → SELECT (program_days) → UPDATE (programs.current_day_id) sequentially without a transaction. An app crash between the INSERT and UPDATE would create a log entry without advancing the pointer, corrupting cycle count calculations.
+**Learning**: Multi-step state machine mutations — where step N depends on step N-1 or where partial completion leaves data inconsistent — require transactional wrapping for atomicity. This is distinct from bulk-insert transactions (which are primarily for performance): state machine transactions prevent logically inconsistent intermediate states that no retry can fix.
+**Action**: When a function performs multiple related writes that together represent a single state transition (log + advance, delete + reassign pointer, deactivate-all + activate-one), wrap them in `withTransactionAsync`. During code review, look for sequential `runAsync` calls that touch related tables — each is a candidate for transactional wrapping.
+**Tags**: expo-sqlite, transactions, state-machine, atomicity, data-integrity, multi-step-mutation
