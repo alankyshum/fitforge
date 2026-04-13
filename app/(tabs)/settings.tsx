@@ -20,7 +20,7 @@ import { getErrorCount, clearErrorLog, generateReport } from "../../lib/errors";
 import { csvEscape } from "../../lib/csv";
 
 function workoutCSV(rows: WorkoutCSVRow[]): string {
-  const header = "date,exercise,set_number,weight,reps,duration_seconds,notes";
+  const header = "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes";
   const lines = rows.map((r) =>
     [
       csvEscape(r.date),
@@ -30,6 +30,8 @@ function workoutCSV(rows: WorkoutCSVRow[]): string {
       csvEscape(r.reps),
       csvEscape(r.duration_seconds),
       csvEscape(r.notes),
+      csvEscape(r.set_rpe),
+      csvEscape(r.set_notes),
     ].join(",")
   );
   return [header, ...lines].join("\n");
