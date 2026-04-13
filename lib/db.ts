@@ -226,6 +226,33 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id)"
   );
+
+  // Migration: add link_id and link_label to template_exercises
+  const teCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(template_exercises)"
+  );
+  if (!teCols.some((c) => c.name === "link_id")) {
+    await database.execAsync(
+      "ALTER TABLE template_exercises ADD COLUMN link_id TEXT DEFAULT NULL"
+    );
+  }
+  if (!teCols.some((c) => c.name === "link_label")) {
+    await database.execAsync(
+      "ALTER TABLE template_exercises ADD COLUMN link_label TEXT DEFAULT ''"
+    );
+  }
+
+  // Migration: add link_id and round to workout_sets
+  if (!setCols.some((c) => c.name === "link_id")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN link_id TEXT DEFAULT NULL"
+    );
+  }
+  if (!setCols.some((c) => c.name === "round")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sets ADD COLUMN round INTEGER DEFAULT NULL"
+    );
+  }
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -402,6 +429,8 @@ type TemplateExerciseRow = {
   target_sets: number;
   target_reps: string;
   rest_seconds: number;
+  link_id: string | null;
+  link_label: string;
   exercise_name: string | null;
   exercise_category: string | null;
   exercise_primary_muscles: string | null;
@@ -440,6 +469,8 @@ export async function getTemplateById(
     target_sets: r.target_sets,
     target_reps: r.target_reps,
     rest_seconds: r.rest_seconds,
+    link_id: r.link_id ?? null,
+    link_label: r.link_label ?? "",
     exercise: r.exercise_name
       ? mapRow({
           id: r.exercise_id,
@@ -491,6 +522,8 @@ export async function addExerciseToTemplate(
     target_sets: targetSets,
     target_reps: targetReps,
     rest_seconds: restSeconds,
+    link_id: null,
+    link_label: "",
   };
 }
 
@@ -618,6 +651,8 @@ type SetRow = {
   completed_at: number | null;
   rpe: number | null;
   notes: string;
+  link_id: string | null;
+  round: number | null;
   exercise_name: string | null;
 };
 
@@ -644,6 +679,8 @@ export async function getSessionSets(
     completed_at: r.completed_at,
     rpe: r.rpe ?? null,
     notes: r.notes ?? "",
+    link_id: r.link_id ?? null,
+    round: r.round ?? null,
     exercise_name: r.exercise_name ?? undefined,
   }));
 }
@@ -660,13 +697,15 @@ export async function getActiveSession(): Promise<WorkoutSession | null> {
 export async function addSet(
   sessionId: string,
   exerciseId: string,
-  setNumber: number
+  setNumber: number,
+  linkId?: string | null,
+  round?: number | null
 ): Promise<WorkoutSet> {
   const database = await getDatabase();
   const id = crypto.randomUUID();
   await database.runAsync(
-    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number) VALUES (?, ?, ?, ?)",
-    [id, sessionId, exerciseId, setNumber]
+    "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round) VALUES (?, ?, ?, ?, ?, ?)",
+    [id, sessionId, exerciseId, setNumber, linkId ?? null, round ?? null]
   );
   return {
     id,
@@ -679,6 +718,8 @@ export async function addSet(
     completed_at: null,
     rpe: null,
     notes: "",
+    link_id: linkId ?? null,
+    round: round ?? null,
   };
 }
 
@@ -959,9 +1000,9 @@ export async function importData(data: {
   version: number;
   exercises?: { id: string; name: string; category: string; primary_muscles: string; secondary_muscles: string; equipment: string; instructions: string; difficulty: string; is_custom: number }[];
   templates?: { id: string; name: string; created_at: number; updated_at: number }[];
-  template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number }[];
+  template_exercises?: { id: string; template_id: string; exercise_id: string; position: number; target_sets: number; target_reps: string; rest_seconds: number; link_id?: string | null; link_label?: string }[];
   sessions?: { id: string; template_id: string | null; name: string; started_at: number; completed_at: number | null; duration_seconds: number | null; notes: string }[];
-  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null; set_rpe?: number | null; set_notes?: string }[];
+  sets?: { id: string; session_id: string; exercise_id: string; set_number: number; weight: number | null; reps: number | null; completed: number; completed_at: number | null; set_rpe?: number | null; set_notes?: string; link_id?: string | null; round?: number | null }[];
   food_entries?: { id: string; name: string; calories: number; protein: number; carbs: number; fat: number; serving_size: string; is_favorite: number; created_at: number }[];
   daily_log?: { id: string; food_entry_id: string; date: string; meal: string; servings: number; logged_at: number }[];
   macro_targets?: { id: string; calories: number; protein: number; carbs: number; fat: number; updated_at: number }[];
@@ -996,8 +1037,8 @@ export async function importData(data: {
     if (data.template_exercises) {
       for (const te of data.template_exercises) {
         const r = await database.runAsync(
-          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [te.id, te.template_id, te.exercise_id, te.position, te.target_sets, te.target_reps, te.rest_seconds]
+          "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds, link_id, link_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [te.id, te.template_id, te.exercise_id, te.position, te.target_sets, te.target_reps, te.rest_seconds, te.link_id ?? null, te.link_label ?? ""]
         );
         inserted += r.changes;
       }
@@ -1016,8 +1057,8 @@ export async function importData(data: {
     if (data.sets) {
       for (const s of data.sets) {
         const r = await database.runAsync(
-          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at, s.set_rpe ?? null, s.set_notes ?? ""]
+          "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [s.id, s.session_id, s.exercise_id, s.set_number, s.weight, s.reps, s.completed, s.completed_at, s.set_rpe ?? null, s.set_notes ?? "", s.link_id ?? null, s.round ?? null]
         );
         inserted += r.changes;
       }
@@ -1102,6 +1143,104 @@ export async function getRestSecondsForExercise(
     [exerciseId, sessionId]
   );
   return row?.rest_seconds ?? 90;
+}
+
+// --------------- Superset / Circuit Linking ---------------
+
+export async function createExerciseLink(
+  templateId: string,
+  exerciseIds: string[]
+): Promise<string> {
+  const database = await getDatabase();
+  const linkId = crypto.randomUUID();
+  await database.withTransactionAsync(async () => {
+    for (const eid of exerciseIds) {
+      await database.runAsync(
+        "UPDATE template_exercises SET link_id = ? WHERE id = ? AND template_id = ?",
+        [linkId, eid, templateId]
+      );
+    }
+  });
+  await database.runAsync(
+    "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
+    [Date.now(), templateId]
+  );
+  return linkId;
+}
+
+export async function unlinkExerciseGroup(linkId: string): Promise<void> {
+  const database = await getDatabase();
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE link_id = ?",
+      [linkId]
+    );
+  });
+}
+
+export async function addToExerciseLink(
+  linkId: string,
+  exerciseIds: string[]
+): Promise<void> {
+  const database = await getDatabase();
+  await database.withTransactionAsync(async () => {
+    for (const eid of exerciseIds) {
+      await database.runAsync(
+        "UPDATE template_exercises SET link_id = ? WHERE id = ?",
+        [linkId, eid]
+      );
+    }
+  });
+}
+
+export async function unlinkSingleExercise(
+  teId: string,
+  linkId: string
+): Promise<void> {
+  const database = await getDatabase();
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE id = ?",
+      [teId]
+    );
+    // If only 1 exercise remains in the group, dissolve it
+    const remaining = await database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM template_exercises WHERE link_id = ?",
+      [linkId]
+    );
+    if (remaining && remaining.count < 2) {
+      await database.runAsync(
+        "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE link_id = ?",
+        [linkId]
+      );
+    }
+  });
+}
+
+export async function updateLinkLabel(
+  linkId: string,
+  label: string
+): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "UPDATE template_exercises SET link_label = ? WHERE link_id = ?",
+    [label, linkId]
+  );
+}
+
+export async function getRestSecondsForLink(
+  sessionId: string,
+  linkId: string
+): Promise<number> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ rest: number }>(
+    `SELECT MAX(te.rest_seconds) AS rest
+     FROM workout_sessions wss
+     JOIN template_exercises te ON te.template_id = wss.template_id
+     WHERE wss.id = ? AND te.link_id = ?`,
+    [sessionId, linkId]
+  );
+  return row?.rest ?? 90;
 }
 
 // --------------- Nutrition ---------------
