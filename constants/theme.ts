@@ -34,6 +34,41 @@ const darkColors = {
   onTertiaryContainer: "#C8E6C9",
 };
 
+// Competition plate colors (light/dark aware, WCAG contrast)
+export const plateColors = {
+  light: {
+    25: { bg: "#D32F2F", text: "#FFFFFF" },    // red
+    20: { bg: "#1565C0", text: "#FFFFFF" },    // blue
+    15: { bg: "#F9A825", text: "#000000" },    // yellow
+    10: { bg: "#2E7D32", text: "#FFFFFF" },    // green
+    5:  { bg: "#757575", text: "#FFFFFF" },    // white/grey
+    2.5: { bg: "#37474F", text: "#FFFFFF" },   // dark
+    1.25: { bg: "#9E9E9E", text: "#000000" },  // silver
+    55: { bg: "#D32F2F", text: "#FFFFFF" },    // red (lb)
+    45: { bg: "#1565C0", text: "#FFFFFF" },    // blue (lb)
+    35: { bg: "#F9A825", text: "#000000" },    // yellow (lb)
+  } as Record<number, { bg: string; text: string }>,
+  dark: {
+    25: { bg: "#EF5350", text: "#000000" },
+    20: { bg: "#42A5F5", text: "#000000" },
+    15: { bg: "#FFD54F", text: "#000000" },
+    10: { bg: "#66BB6A", text: "#000000" },
+    5:  { bg: "#BDBDBD", text: "#000000" },
+    2.5: { bg: "#78909C", text: "#FFFFFF" },
+    1.25: { bg: "#E0E0E0", text: "#000000" },
+    55: { bg: "#EF5350", text: "#000000" },
+    45: { bg: "#42A5F5", text: "#000000" },
+    35: { bg: "#FFD54F", text: "#000000" },
+  } as Record<number, { bg: string; text: string }>,
+};
+
+export function plateColor(weight: number, isDark: boolean): { bg: string; text: string } {
+  const palette = isDark ? plateColors.dark : plateColors.light;
+  return palette[weight] || (isDark
+    ? { bg: "#616161", text: "#FFFFFF" }
+    : { bg: "#424242", text: "#FFFFFF" });
+}
+
 // Custom semantic colors for domain-specific indicators
 export const semantic = {
   protein: "#4caf50",
