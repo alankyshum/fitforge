@@ -33,6 +33,7 @@ import {
   getTemplateById,
   getPreviousSets,
   getRestSecondsForExercise,
+  getRestSecondsForLink,
   uncompleteSet,
   updateSet,
   updateSetRPE,
@@ -55,6 +56,7 @@ type ExerciseGroup = {
   exercise_id: string;
   name: string;
   sets: SetWithMeta[];
+  link_id: string | null;
 };
 
 const RPE_CHIPS = [6, 7, 8, 9, 10] as const;
@@ -84,6 +86,8 @@ export default function ActiveSession() {
   const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
+  const [nextHint, setNextHint] = useState<string | null>(null);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -121,6 +125,7 @@ export default function ActiveSession() {
           exercise_id: s.exercise_id,
           name: s.exercise_name ?? "Unknown",
           sets: [],
+          link_id: s.link_id ?? null,
         });
       }
       const prev = prevCache[s.exercise_id]?.find(
@@ -153,8 +158,14 @@ export default function ActiveSession() {
         const tpl = await getTemplateById(templateId);
         if (tpl?.exercises) {
           for (const te of tpl.exercises) {
-            for (let i = 1; i <= te.target_sets; i++) {
-              await addSet(id, te.exercise_id, i);
+            if (te.link_id) {
+              for (let i = 1; i <= te.target_sets; i++) {
+                await addSet(id, te.exercise_id, i, te.link_id, i);
+              }
+            } else {
+              for (let i = 1; i <= te.target_sets; i++) {
+                await addSet(id, te.exercise_id, i);
+              }
             }
           }
         }
@@ -220,6 +231,21 @@ export default function ActiveSession() {
     }, 1000);
   }, [id]);
 
+  const startRestWithDuration = useCallback((secs: number) => {
+    if (restRef.current) clearInterval(restRef.current);
+    setRest(secs);
+    restRef.current = setInterval(() => {
+      setRest((prev) => {
+        if (prev <= 1) {
+          if (restRef.current) clearInterval(restRef.current);
+          restRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
   const dismissRest = () => {
     if (restRef.current) clearInterval(restRef.current);
     restRef.current = null;
@@ -237,6 +263,7 @@ export default function ActiveSession() {
   useEffect(() => {
     return () => {
       if (restRef.current) clearInterval(restRef.current);
+      if (hintTimer.current) clearTimeout(hintTimer.current);
     };
   }, []);
 
@@ -245,7 +272,28 @@ export default function ActiveSession() {
       await uncompleteSet(set.id);
     } else {
       await completeSet(set.id);
-      startRest(set.exercise_id);
+
+      if (set.link_id) {
+        // Find linked group exercises
+        const linked = groups.filter((g) => g.link_id === set.link_id);
+        const idx = linked.findIndex((g) => g.exercise_id === set.exercise_id);
+        const next = idx >= 0 && idx < linked.length - 1 ? linked[idx + 1] : null;
+
+        if (next) {
+          // Mid-round: show "Next" hint, no rest timer
+          setNextHint(`Next: ${next.name}`);
+          AccessibilityInfo.announceForAccessibility(`Next: ${next.name}`);
+          if (hintTimer.current) clearTimeout(hintTimer.current);
+          hintTimer.current = setTimeout(() => setNextHint(null), 2000);
+        } else {
+          // End of round: start rest timer with MAX(rest_seconds)
+          setNextHint(null);
+          const secs = await getRestSecondsForLink(id!, set.link_id);
+          startRestWithDuration(secs);
+        }
+      } else {
+        startRest(set.exercise_id);
+      }
     }
     await load();
   };
@@ -426,8 +474,43 @@ export default function ActiveSession() {
           </View>
         )}
 
-        {groups.map((group) => (
+        {/* Next exercise hint for supersets */}
+        {nextHint && (
+          <View style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]} accessibilityLiveRegion="polite">
+            <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer, fontWeight: "700" }}>
+              {nextHint}
+            </Text>
+          </View>
+        )}
+
+        {groups.map((group) => {
+          const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
+          const linkIdx = group.link_id ? linked.findIndex((g) => g.exercise_id === group.exercise_id) : -1;
+          const isFirstInLink = linkIdx === 0;
+          const totalRounds = group.link_id ? Math.max(...linked.map((g) => g.sets.length)) : 0;
+          const completedRounds = group.link_id
+            ? Math.min(...linked.map((g) => g.sets.filter((s) => s.completed).length))
+            : 0;
+
+          return (
           <View key={group.exercise_id} style={styles.group}>
+            {/* Linked group header */}
+            {isFirstInLink && group.link_id && (
+              <View
+                style={[styles.linkGroupHeader, { borderLeftColor: theme.colors.tertiary, borderLeftWidth: 4 }]}
+                accessibilityRole="header"
+                accessibilityLabel={`Round ${completedRounds + 1} of ${totalRounds}`}
+              >
+                <Text variant="labelMedium" style={{ color: theme.colors.tertiary, fontWeight: "700" }}>
+                  {linked.length >= 3 ? "Circuit" : "Superset"} — Round {completedRounds + 1}/{totalRounds}
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
+                  Rest after round
+                </Text>
+              </View>
+            )}
+
+            <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: theme.colors.tertiary, paddingLeft: 8 } : undefined}>
             <Text
               variant="titleMedium"
               style={[styles.groupTitle, { color: theme.colors.primary }]}
@@ -478,7 +561,7 @@ export default function ActiveSession() {
                     variant="bodyMedium"
                     style={[styles.colSet, { color: theme.colors.onSurface }]}
                   >
-                    {set.set_number}
+                    {set.round ? `R${set.round}` : set.set_number}
                   </Text>
                   <Text
                     variant="bodySmall"
@@ -652,9 +735,11 @@ export default function ActiveSession() {
             >
               Add Set
             </Button>
+            </View>
             <Divider style={styles.divider} />
           </View>
-        ))}
+          );
+        })}
 
         <Button
           mode="outlined"
@@ -779,6 +864,20 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
+  },
+  nextBanner: {
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  linkGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginBottom: 4,
+    borderRadius: 4,
   },
   rpeRow: {
     flexDirection: "row",
