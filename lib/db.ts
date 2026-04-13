@@ -2042,43 +2042,43 @@ export async function getMuscleVolumeTrend(
   monday.setHours(0, 0, 0, 0);
   monday.setDate(monday.getDate() - diff);
 
-  const result: { week: string; sets: number }[] = [];
+  const oldest = new Date(monday);
+  oldest.setDate(oldest.getDate() - (weeks - 1) * 7);
+  const end = new Date(monday);
+  end.setDate(end.getDate() + 7);
 
-  for (let i = weeks - 1; i >= 0; i--) {
-    const start = new Date(monday);
-    start.setDate(start.getDate() - i * 7);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
+  const rows = await database.getAllAsync<{
+    primary_muscles: string | null;
+    completed_at: number;
+    sets: number;
+  }>(
+    `SELECT e.primary_muscles, wss.completed_at, COUNT(*) AS sets
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE wss.completed_at IS NOT NULL
+       AND wss.completed_at >= ?
+       AND wss.completed_at < ?
+       AND ws.completed = 1
+     GROUP BY ws.exercise_id, wss.id`,
+    [oldest.getTime(), end.getTime()]
+  );
 
-    const rows = await database.getAllAsync<{
-      primary_muscles: string | null;
-      sets: number;
-    }>(
-      `SELECT e.primary_muscles, COUNT(*) AS sets
-       FROM workout_sets ws
-       JOIN workout_sessions wss ON ws.session_id = wss.id
-       LEFT JOIN exercises e ON ws.exercise_id = e.id
-       WHERE wss.completed_at IS NOT NULL
-         AND wss.completed_at >= ?
-         AND wss.completed_at < ?
-         AND ws.completed = 1
-       GROUP BY ws.exercise_id`,
-      [start.getTime(), end.getTime()]
-    );
+  // Bucket by week index
+  const buckets = new Array<number>(weeks).fill(0);
+  const oldestMs = oldest.getTime();
 
-    let total = 0;
-    for (const row of rows) {
-      if (!row.primary_muscles) continue;
-      try {
-        const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
-        if (muscles.includes(muscle)) total += row.sets;
-      } catch {
-        continue;
-      }
+  for (const row of rows) {
+    if (!row.primary_muscles) continue;
+    try {
+      const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+      if (!muscles.includes(muscle)) continue;
+    } catch {
+      continue;
     }
-
-    result.push({ week: `W${weeks - i}`, sets: total });
+    const idx = Math.floor((row.completed_at - oldestMs) / (7 * 24 * 60 * 60 * 1000));
+    if (idx >= 0 && idx < weeks) buckets[idx] += row.sets;
   }
 
-  return result;
+  return buckets.map((sets, i) => ({ week: `W${i + 1}`, sets }));
 }

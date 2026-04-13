@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -98,6 +98,7 @@ export default function MuscleVolumeSegment() {
   const [data, setData] = useState<VolumeRow[]>([]);
   const [trend, setTrend] = useState<TrendRow[]>([]);
   const [selected, setSelected] = useState<MuscleGroup | null>(null);
+  const selectedRef = useRef<MuscleGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reduced, setReduced] = useState(false);
@@ -111,13 +112,16 @@ export default function MuscleVolumeSegment() {
       const rows = await getMuscleVolumeForWeek(monday.getTime());
       setData(rows);
       if (rows.length > 0) {
-        const muscle = selected && rows.some((r) => r.muscle === selected)
-          ? selected
+        const cur = selectedRef.current;
+        const muscle = cur && rows.some((r) => r.muscle === cur)
+          ? cur
           : rows[0].muscle;
+        selectedRef.current = muscle;
         setSelected(muscle);
         const t = await getMuscleVolumeTrend(muscle, TREND_WEEKS);
         setTrend(t);
       } else {
+        selectedRef.current = null;
         setSelected(null);
         setTrend([]);
       }
@@ -126,7 +130,7 @@ export default function MuscleVolumeSegment() {
     } finally {
       setLoading(false);
     }
-  }, [monday, selected]);
+  }, [monday]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,6 +140,7 @@ export default function MuscleVolumeSegment() {
   );
 
   const selectMuscle = useCallback(async (muscle: MuscleGroup) => {
+    selectedRef.current = muscle;
     setSelected(muscle);
     try {
       const t = await getMuscleVolumeTrend(muscle, TREND_WEEKS);
