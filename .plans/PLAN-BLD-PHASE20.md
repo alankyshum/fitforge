@@ -204,14 +204,20 @@ export const FOOD_CATEGORIES: { id: FoodCategory; label: string }[] = [
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Initial Verdict**: NEEDS REVISION (2026-04-13T19:22Z) — 1 Critical, 2 Major, 3 Minor
-**Findings (all resolved in Rev 2):**
+**Rev 1 Verdict**: NEEDS REVISION (2026-04-13T19:22Z) — 1 Critical, 2 Major, 3 Minor
+**Rev 2 Verdict**: ✅ APPROVED (2026-04-13T19:30Z) — All 6 findings resolved
+
+**Findings (all verified resolved in Rev 2):**
 1. **C1 — FlatList mandatory** ✅ Database tab uses FlatList with ListHeaderComponent. Renders independently from parent ScrollView.
 2. **M1 — Serving size mapping** ✅ Base macros stored unscaled in food_entries. Multiplier in daily_log.servings. serving_size stores original JSON string.
 3. **M2 — Quick-select chip count** ✅ Reconciled to 4 chips (0.5x, 1x, 1.5x, 2x). Custom TextInput for other values.
 4. **m1 — "All" category** ✅ Clarified as UI filter state (null), not a FOOD_CATEGORIES entry.
 5. **m2 — keyboardShouldPersistTaps** ✅ Specified on FlatList.
 6. **m3 — Serving adjustment container** ✅ Specified as inline expansion below tapped item.
+
+**Non-blocking observations:**
+- Consider specifying accordion behavior (one expansion at a time) — implied but not stated.
+- lib/foods.ts would benefit from unit tests given new Jest infrastructure.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (2026-04-13T19:22Z)
@@ -237,4 +243,4 @@ All QD and techlead findings addressed in Rev 2:
 | **TL2 — unit_weight_g** | ✅ Removed from JSON schema and BuiltinFood type. |
 | **TL3 — Deduplication** | ✅ Accept duplicates for simplicity. |
 
-**Plan status**: Submitted for re-review.
+**Plan status**: ✅ APPROVED by both QD and techlead. Ready for implementation.
