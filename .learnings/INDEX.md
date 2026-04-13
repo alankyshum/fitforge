@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 16
+Total learnings: 17
 
 ## How to Use This Knowledge Base
 
@@ -20,6 +20,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
 - [Build Configuration](pitfalls/build-config.md) — 1 learning
 - [Theming](pitfalls/theming.md) — 1 learning
+- [SQL Queries](pitfalls/sql-queries.md) — 1 learning
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 2 learnings
@@ -35,6 +36,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-5 | COALESCE with Zero Default Creates False Positives in Comparison Queries | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-13 | BLD-3 | Use useFocusEffect for Data Refresh on List Screens | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-3 | Soft-Delete Requires LEFT JOIN Audit on All Existing Queries | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-16 | Single-Fetch + Client-Side Derivation for Bounded Datasets | Patterns | [react-native.md](patterns/react-native.md) |
