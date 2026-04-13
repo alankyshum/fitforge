@@ -222,6 +222,7 @@ export default function PlateCalculator() {
             onPress={() => bump(-1)}
             accessibilityLabel={`Decrease target weight by ${step}`}
             accessibilityRole="button"
+            accessibilityValue={{ now: valid ? parsed : 0, min: 0, max: 999, text: `${target || 0} ${unit}` }}
             style={styles.stepBtn}
           />
           <TextInput
@@ -240,6 +241,7 @@ export default function PlateCalculator() {
             onPress={() => bump(1)}
             accessibilityLabel={`Increase target weight by ${step}`}
             accessibilityRole="button"
+            accessibilityValue={{ now: valid ? parsed : 0, min: 0, max: 999, text: `${target || 0} ${unit}` }}
             style={styles.stepBtn}
           />
         </View>
