@@ -139,7 +139,19 @@ A plain-text summary including session name, duration, sets, volume, PRs, and co
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION (2026-04-13)
+
+**Critical issues (must fix):**
+1. **C1 — Bodyweight exercises invisible in PRs.** `getSessionPRs()` filters `weight > 0`, so bodyweight exercises (pushups, pullups, etc.) never show PRs. Add rep-based PR detection for exercises where weight=0.
+
+**Major issues (should fix):**
+1. **M1 — Share uses wrong API.** `expo-sharing` requires file URIs, not text. Use RN's built-in `Share.share({ message })` from `react-native` (zero new deps). Drop clipboard mention or add expo-clipboard.
+2. **M2 — Button hierarchy undefined.** Specify: Done=filled/primary (full-width), Share=outlined, View Details=text/tertiary.
+
+**Minor issues:**
+1. **m1** — Add `AccessibilityInfo.announceForAccessibility('Workout Complete!')` on mount.
+2. **m2** — Progressive overload section wording misleading — suggestion taps aren't stored. Say "Weight Increases" not "Progressive Overload Followed."
+3. **m3** — Reuse existing `formatTime()` for duration display.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (with minor fixes)
