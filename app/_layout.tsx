@@ -88,6 +88,33 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="program/[id]"
+              options={{
+                headerShown: true,
+                title: "Program",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="program/create"
+              options={{
+                headerShown: true,
+                title: "New Program",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
+              name="program/pick-template"
+              options={{
+                headerShown: true,
+                title: "Pick Template",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="session/[id]"
               options={{
                 headerShown: true,

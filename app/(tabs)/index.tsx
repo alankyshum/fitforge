@@ -10,6 +10,8 @@ import {
   Button,
   Card,
   IconButton,
+  SegmentedButtons,
+  Snackbar,
   Text,
   useTheme,
 } from "react-native-paper";
@@ -26,7 +28,13 @@ import {
   getTemplates,
   startSession,
 } from "../../lib/db";
-import type { WorkoutSession, WorkoutTemplate } from "../../lib/types";
+import {
+  getNextWorkout,
+  getPrograms,
+  getProgramDayCount,
+  softDeleteProgram,
+} from "../../lib/programs";
+import type { Program, ProgramDay, WorkoutSession, WorkoutTemplate } from "../../lib/types";
 
 function mondayOf(date: Date): number {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -50,28 +58,41 @@ function computeStreak(timestamps: number[]): number {
 export default function Workouts() {
   const theme = useTheme();
   const router = useRouter();
+  const [segment, setSegment] = useState("templates");
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [dayCounts, setDayCounts] = useState<Record<string, number>>({});
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [setCounts2, setSetCounts] = useState<Record<string, number>>({});
   const [active, setActive] = useState<WorkoutSession | null>(null);
   const [streak, setStreak] = useState(0);
   const [recentPRs, setRecentPRs] = useState<{ exercise_id: string; name: string; weight: number; session_id: string; date: number }[]>([]);
+  const [nextWorkout, setNextWorkout] = useState<{ program: Program; day: ProgramDay } | null>(null);
+  const [snackbar, setSnackbar] = useState("");
 
   const load = useCallback(async () => {
-    const [tpls, sess, act, timestamps, prData] = await Promise.all([
+    const [tpls, sess, act, timestamps, prData, progs, nw] = await Promise.all([
       getTemplates(),
       getRecentSessions(5),
       getActiveSession(),
       getAllCompletedSessionWeeks(),
       getRecentPRs(5),
+      getPrograms(),
+      getNextWorkout(),
     ]);
     setTemplates(tpls);
     setSessions(sess);
     setActive(act);
     setRecentPRs(prData);
+    setPrograms(progs);
+    setNextWorkout(nw);
 
-    // Calculate streak in JS: consecutive weeks with >= 1 workout
+    // Default segment: Programs if active program exists, else Templates
+    if (nw) {
+      setSegment("programs");
+    }
+
     setStreak(computeStreak(timestamps));
 
     const c: Record<string, number> = {};
@@ -85,6 +106,12 @@ export default function Workouts() {
       sc[s.id] = await getSessionSetCount(s.id);
     }
     setSetCounts(sc);
+
+    const dc: Record<string, number> = {};
+    for (const p of progs) {
+      dc[p.id] = await getProgramDayCount(p.id);
+    }
+    setDayCounts(dc);
   }, []);
 
   useFocusEffect(
@@ -101,6 +128,38 @@ export default function Workouts() {
   const startFromTemplate = async (tpl: WorkoutTemplate) => {
     const session = await startSession(tpl.id, tpl.name);
     router.push(`/session/${session.id}?templateId=${tpl.id}`);
+  };
+
+  const startNextWorkout = async () => {
+    if (!nextWorkout) return;
+    if (!nextWorkout.day.template_id) {
+      setSnackbar("Template no longer exists");
+      return;
+    }
+    const session = await startSession(
+      nextWorkout.day.template_id,
+      nextWorkout.day.label || nextWorkout.day.template_name || nextWorkout.program.name,
+      nextWorkout.day.id
+    );
+    router.push(`/session/${session.id}?templateId=${nextWorkout.day.template_id}`);
+  };
+
+  const confirmDeleteProgram = (prog: Program) => {
+    Alert.alert(
+      "Delete Program",
+      `Delete "${prog.name}"? Past workout data will be preserved.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await softDeleteProgram(prog.id);
+            await load();
+          },
+        },
+      ]
+    );
   };
 
   const confirmDelete = (tpl: WorkoutTemplate) => {
@@ -160,6 +219,28 @@ export default function Workouts() {
         </Card>
       )}
 
+      {/* Next Workout Banner (visible on both segments) */}
+      {nextWorkout && (
+        <Card
+          style={[styles.nextBanner, { backgroundColor: theme.colors.secondaryContainer }]}
+          onPress={startNextWorkout}
+          accessibilityLabel={`Next workout: ${nextWorkout.day.label || nextWorkout.day.template_name || "workout"} from ${nextWorkout.program.name}`}
+          accessibilityRole="button"
+        >
+          <Card.Content style={styles.nextContent}>
+            <MaterialCommunityIcons name="play-circle" size={24} color={theme.colors.onSecondaryContainer} />
+            <View style={styles.nextText}>
+              <Text variant="titleSmall" style={{ color: theme.colors.onSecondaryContainer }}>
+                Next: {nextWorkout.day.label || nextWorkout.day.template_name || "Workout"}
+              </Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSecondaryContainer }}>
+                {nextWorkout.program.name} · Tap to start
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
       {/* Quick Start */}
       <Button
         mode="contained"
@@ -172,79 +253,182 @@ export default function Workouts() {
         Quick Start
       </Button>
 
-      {/* Templates */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
-            My Templates
-          </Text>
-          <Button
-            mode="text"
-            icon="plus"
-            compact
-            onPress={() => router.push("/template/create")}
-            accessibilityLabel="Create new template"
-          >
-            Create
-          </Button>
-        </View>
-        {templates.length === 0 ? (
-          <View style={styles.empty}>
-            <Text
-              variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant }}
-            >
-              Create your first workout template
-            </Text>
-            <Button
-              mode="outlined"
-              onPress={() => router.push("/template/create")}
-              style={styles.emptyBtn}
-              accessibilityLabel="Create your first template"
-            >
-              Create Template
-            </Button>
-          </View>
-        ) : (
-          <FlatList
-            data={templates}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
-              <Card
-                style={[styles.card, { backgroundColor: theme.colors.surface }]}
-                onPress={() => startFromTemplate(item)}
-                onLongPress={() => confirmDelete(item)}
-                accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
-                accessibilityRole="button"
+      {/* Segmented Control */}
+      <SegmentedButtons
+        value={segment}
+        onValueChange={setSegment}
+        buttons={[
+          {
+            value: "templates",
+            label: "Templates",
+            accessibilityLabel: "Templates tab",
+          },
+          {
+            value: "programs",
+            label: "Programs",
+            accessibilityLabel: "Programs tab",
+          },
+        ]}
+        style={styles.segmented}
+      />
+
+      {segment === "templates" ? (
+        <>
+          {/* Templates */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+                My Templates
+              </Text>
+              <Button
+                mode="text"
+                icon="plus"
+                compact
+                onPress={() => router.push("/template/create")}
+                accessibilityLabel="Create new template"
               >
-                <Card.Content style={styles.cardContent}>
-                  <View style={styles.cardInfo}>
-                    <Text
-                      variant="titleSmall"
-                      style={{ color: theme.colors.onSurface }}
-                    >
-                      {item.name}
-                    </Text>
-                    <Text
-                      variant="bodySmall"
-                      style={{ color: theme.colors.onSurfaceVariant }}
-                    >
-                      {counts[item.id] ?? 0} exercises
-                    </Text>
-                  </View>
-                  <IconButton
-                    icon="pencil"
-                    size={20}
-                    onPress={() => router.push(`/template/${item.id}`)}
-                    accessibilityLabel={`Edit template ${item.name}`}
-                  />
-                </Card.Content>
-              </Card>
+                Create
+              </Button>
+            </View>
+            {templates.length === 0 ? (
+              <View style={styles.empty}>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurfaceVariant }}
+                >
+                  Create your first workout template
+                </Text>
+                <Button
+                  mode="outlined"
+                  onPress={() => router.push("/template/create")}
+                  style={styles.emptyBtn}
+                  accessibilityLabel="Create your first template"
+                >
+                  Create Template
+                </Button>
+              </View>
+            ) : (
+              <FlatList
+                data={templates}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item }: ListRenderItemInfo<WorkoutTemplate>) => (
+                  <Card
+                    style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                    onPress={() => startFromTemplate(item)}
+                    onLongPress={() => confirmDelete(item)}
+                    accessibilityLabel={`Start workout from template: ${item.name}, ${counts[item.id] ?? 0} exercises`}
+                    accessibilityRole="button"
+                  >
+                    <Card.Content style={styles.cardContent}>
+                      <View style={styles.cardInfo}>
+                        <Text
+                          variant="titleSmall"
+                          style={{ color: theme.colors.onSurface }}
+                        >
+                          {item.name}
+                        </Text>
+                        <Text
+                          variant="bodySmall"
+                          style={{ color: theme.colors.onSurfaceVariant }}
+                        >
+                          {counts[item.id] ?? 0} exercises
+                        </Text>
+                      </View>
+                      <IconButton
+                        icon="pencil"
+                        size={20}
+                        onPress={() => router.push(`/template/${item.id}`)}
+                        accessibilityLabel={`Edit template ${item.name}`}
+                      />
+                    </Card.Content>
+                  </Card>
+                )}
+              />
             )}
-          />
-        )}
-      </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Programs */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+                My Programs
+              </Text>
+              <Button
+                mode="text"
+                icon="plus"
+                compact
+                onPress={() => router.push("/program/create")}
+                accessibilityLabel="Create new program"
+              >
+                Create
+              </Button>
+            </View>
+            {programs.length === 0 ? (
+              <View style={styles.empty}>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: theme.colors.onSurfaceVariant }}
+                  accessibilityRole="text"
+                  accessibilityLabel="No programs yet. Create your first program."
+                >
+                  Create your first program
+                </Text>
+                <Button
+                  mode="outlined"
+                  onPress={() => router.push("/program/create")}
+                  style={styles.emptyBtn}
+                  accessibilityLabel="Create your first program"
+                >
+                  Create Program
+                </Button>
+              </View>
+            ) : (
+              <FlatList
+                data={programs}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item }: ListRenderItemInfo<Program>) => (
+                  <Card
+                    style={[styles.card, { backgroundColor: theme.colors.surface }]}
+                    onPress={() => router.push(`/program/${item.id}`)}
+                    onLongPress={() => confirmDeleteProgram(item)}
+                    accessibilityLabel={`Program: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
+                    accessibilityRole="button"
+                  >
+                    <Card.Content style={styles.cardContent}>
+                      <View style={styles.cardInfo}>
+                        <Text
+                          variant="titleSmall"
+                          style={{ color: theme.colors.onSurface }}
+                        >
+                          {item.name}
+                        </Text>
+                        <Text
+                          variant="bodySmall"
+                          style={{ color: theme.colors.onSurfaceVariant }}
+                        >
+                          {dayCounts[item.id] ?? 0} days{item.is_active ? " · Active" : ""}
+                        </Text>
+                      </View>
+                      {item.is_active && (
+                        <MaterialCommunityIcons
+                          name="check-circle"
+                          size={20}
+                          color={theme.colors.primary}
+                          accessibilityLabel="Active program"
+                        />
+                      )}
+                    </Card.Content>
+                  </Card>
+                )}
+              />
+            )}
+          </View>
+        </>
+      )}
 
       {/* Streak Card */}
       {streak > 0 && (
@@ -385,6 +569,14 @@ export default function Workouts() {
           />
         )}
       </View>
+
+      <Snackbar
+        visible={!!snackbar}
+        onDismiss={() => setSnackbar("")}
+        duration={3000}
+      >
+        {snackbar}
+      </Snackbar>
     </View>
   );
 }
@@ -397,8 +589,22 @@ const styles = StyleSheet.create({
   banner: {
     marginBottom: 12,
   },
+  nextBanner: {
+    marginBottom: 12,
+  },
+  nextContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  nextText: {
+    flex: 1,
+  },
   quickStart: {
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  segmented: {
+    marginBottom: 16,
   },
   streak: {
     marginBottom: 16,

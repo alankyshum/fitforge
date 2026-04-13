@@ -12,6 +12,9 @@ import type {
   BodyWeight,
   BodyMeasurements,
   BodySettings,
+  Program,
+  ProgramDay,
+  ProgramLog,
 } from "./types";
 import { seedExercises } from "./seed";
 
@@ -155,6 +158,33 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       body_fat_goal REAL,
       updated_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS programs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      is_active INTEGER DEFAULT 0,
+      current_day_id TEXT DEFAULT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER DEFAULT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS program_days (
+      id TEXT PRIMARY KEY,
+      program_id TEXT NOT NULL,
+      template_id TEXT DEFAULT NULL,
+      position INTEGER NOT NULL,
+      label TEXT DEFAULT ''
+    );
+
+    CREATE TABLE IF NOT EXISTS program_log (
+      id TEXT PRIMARY KEY,
+      program_id TEXT NOT NULL,
+      day_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      completed_at INTEGER NOT NULL
+    );
   `);
 
   // Migration: add deleted_at column for soft-delete
@@ -164,6 +194,16 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   if (!cols.some((c) => c.name === "deleted_at")) {
     await database.execAsync(
       "ALTER TABLE exercises ADD COLUMN deleted_at INTEGER DEFAULT NULL"
+    );
+  }
+
+  // Migration: add program_day_id to workout_sessions
+  const sessionCols = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(workout_sessions)"
+  );
+  if (!sessionCols.some((c) => c.name === "program_day_id")) {
+    await database.execAsync(
+      "ALTER TABLE workout_sessions ADD COLUMN program_day_id TEXT DEFAULT NULL"
     );
   }
 }
@@ -400,6 +440,7 @@ export async function getTemplateById(
 export async function deleteTemplate(id: string): Promise<void> {
   const database = await getDatabase();
   await database.runAsync("DELETE FROM template_exercises WHERE template_id = ?", [id]);
+  await database.runAsync("UPDATE program_days SET template_id = NULL WHERE template_id = ?", [id]);
   await database.runAsync("DELETE FROM workout_templates WHERE id = ?", [id]);
 }
 
@@ -482,14 +523,15 @@ export async function updateTemplateExercise(
 
 export async function startSession(
   templateId: string | null,
-  name: string
+  name: string,
+  programDayId?: string
 ): Promise<WorkoutSession> {
   const database = await getDatabase();
   const id = crypto.randomUUID();
   const now = Date.now();
   await database.runAsync(
-    "INSERT INTO workout_sessions (id, template_id, name, started_at, notes) VALUES (?, ?, ?, ?, '')",
-    [id, templateId, name, now]
+    "INSERT INTO workout_sessions (id, template_id, name, started_at, notes, program_day_id) VALUES (?, ?, ?, ?, '', ?)",
+    [id, templateId, name, now, programDayId ?? null]
   );
   return {
     id,
