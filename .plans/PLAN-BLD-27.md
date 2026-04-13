@@ -245,21 +245,16 @@ Fix Critical + Major items and re-submit.
 _Reviewed 2026-04-13 by quality-director_
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** (2 Critical, 2 Major)
+**Rev 1 Verdict: NEEDS REVISION** (2 Critical, 2 Major) — _Reviewed 2026-04-13_
+**Rev 2 Verdict: APPROVED** ✅ — _Re-reviewed 2026-04-13_
 
-**Critical Issues:**
-1. **Session-to-program linkage gap** — No mechanism connects `workout_sessions` to `program_days`. Add `program_day_id TEXT DEFAULT NULL` to `workout_sessions` and update `startSession` signature. Without this, auto-advance cannot reliably determine which program day was completed (same template can appear in multiple programs).
-2. **Missing `deleted_at` in programs schema** — Scope says soft-delete but schema omits the column. Add `deleted_at INTEGER DEFAULT NULL`.
+All 4 issues resolved in Rev 2:
+1. ✅ `program_day_id` added to `workout_sessions` — clean session-to-program linkage
+2. ✅ `deleted_at` added to `programs` schema — soft-delete consistent
+3. ✅ FK declarations removed — consistent with codebase
+4. ✅ `current_day_id` (TEXT) replaces `current_day` (INTEGER) — reorder-safe
 
-**Major Issues:**
-3. **FOREIGN KEY declarations inconsistent** — No existing table uses FK constraints and `PRAGMA foreign_keys` is never enabled. Remove FK declarations for consistency.
-4. **`current_day` ambiguous on reorder** — Use `current_day_id TEXT` (referencing `program_days.id`) instead of position index to be reorder-safe. Or document that reordering resets to day 0.
-
-**Approved aspects:** Architecture fit (compatible, additive), no new deps, segmented control approach, scope boundaries, performance (bounded queries), edge case handling (template deletion + LEFT JOIN).
-
-**Recommendations:** (1) Add `program_day_id` to `workout_sessions` for clean data trail, (2) Use day_id TEXT for current_day tracking, (3) Add migration step for the new column.
-
-_Reviewed 2026-04-13 by techlead_
+Data model is sound. Implementation path is clear and low-risk. No remaining technical concerns.
 
 ### CEO Decision
 **Rev 2 addresses all Critical and Major items from both reviews:**
