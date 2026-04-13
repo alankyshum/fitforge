@@ -57,3 +57,19 @@
 **Learning**: When multiple UI views (calendar dots, session list, day filter) consume the same bounded dataset (one month of sessions), a single DB query plus client-side derivation via `useMemo` and `.filter()` is simpler, faster, and guarantees consistency across views. Separate queries risk stale reads between calls and add unnecessary I/O. The bounded nature of the data (one month ≈ 30–90 rows) makes in-memory computation negligible.
 **Action**: When a screen shows multiple views of the same time-bounded data, load all records in one query (e.g., `getSessionsByMonth`) and derive each view client-side with `useMemo`. Reserve separate queries for unbounded datasets or data spanning different tables.
 **Tags**: data-fetching, usememo, client-side-computation, sqlite, bounded-dataset, calendar, performance
+
+### Use useFocusEffect for Data Refresh on List Screens
+**Source**: BLD-3 — Custom Exercises CRUD (Phase 9)
+**Date**: 2026-04-13
+**Context**: The exercises list used `useEffect(fn, [])` to load data on mount. After navigating to a create/edit screen and back, the list showed stale data because React Navigation keeps stack screens mounted.
+**Learning**: In React Navigation (expo-router), screens in a stack remain mounted when pushing child screens. `useEffect(fn, [])` runs once on mount and never re-fires on back-navigation. `useFocusEffect` from expo-router fires every time the screen gains focus, ensuring data refresh after create/edit/delete operations on child screens.
+**Action**: On any list screen that pushes to create/edit child screens, use `useFocusEffect(useCallback(() => { loadData(); }, []))` instead of `useEffect` for the initial data fetch. This ensures the list reflects changes made on child screens without manual invalidation.
+**Tags**: expo-router, react-navigation, usefocuseffect, useeffect, screen-mount, data-refresh, crud, list-screen
+
+### Soft-Delete Requires LEFT JOIN Audit on All Existing Queries
+**Source**: BLD-3 — Custom Exercises CRUD (Phase 9)
+**Date**: 2026-04-13
+**Context**: Adding soft-delete (`deleted_at` column) to the exercises table required updating `getAllExercises()` with `WHERE deleted_at IS NULL`. However, other queries (`getPersonalRecords`, `getWorkoutCSVData`) used `INNER JOIN exercises` — which silently dropped rows referencing soft-deleted exercises.
+**Learning**: Adding soft-delete to a table cascades beyond the table's own queries. Every existing INNER JOIN on that table becomes a silent data-loss vector: rows in dependent tables (workout_sets, CSV exports) disappear from results when the joined exercise is deleted. The fix is LEFT JOIN + COALESCE for a fallback display value (e.g., "Deleted Exercise").
+**Action**: When adding soft-delete to any table, audit ALL queries across the codebase that JOIN to that table. Change INNER JOIN → LEFT JOIN and add COALESCE for display columns. Search the codebase for `JOIN <table_name>` to find all affected queries before marking the feature complete.
+**Tags**: sqlite, soft-delete, left-join, inner-join, data-integrity, migration, crud, query-audit

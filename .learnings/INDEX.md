@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 14
+Total learnings: 16
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 7 learnings
+- [React Native + Expo](patterns/react-native.md) — 9 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
@@ -35,6 +35,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-3 | Use useFocusEffect for Data Refresh on List Screens | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-3 | Soft-Delete Requires LEFT JOIN Audit on All Existing Queries | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-16 | Single-Fetch + Client-Side Derivation for Bounded Datasets | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-17 | Store Measurements in Canonical Units | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-13 | BLD-21 | Semantic Color Constants for Domain-Specific Theming | Patterns | [react-native.md](patterns/react-native.md) |
