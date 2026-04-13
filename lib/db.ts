@@ -1986,6 +1986,70 @@ export async function getExerciseChartData(
   );
 }
 
+// ---- Recent Exercise Sets (for progressive overload) ----
+
+export async function getRecentExerciseSets(
+  exerciseId: string,
+  count: number,
+): Promise<{
+  session_id: string;
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  rpe: number | null;
+  completed: number;
+  started_at: number;
+}[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<{
+    session_id: string;
+    set_number: number;
+    weight: number | null;
+    reps: number | null;
+    rpe: number | null;
+    completed: number;
+    started_at: number;
+  }>(
+    `SELECT ws.session_id, ws.set_number, ws.weight, ws.reps, ws.rpe,
+            ws.completed, wss.started_at
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ?
+       AND wss.completed_at IS NOT NULL
+       AND wss.id IN (
+         SELECT DISTINCT wss2.id
+         FROM workout_sessions wss2
+         JOIN workout_sets ws2 ON ws2.session_id = wss2.id
+         WHERE ws2.exercise_id = ?
+           AND wss2.completed_at IS NOT NULL
+         ORDER BY wss2.started_at DESC
+         LIMIT ?
+       )
+     ORDER BY wss.started_at ASC, ws.set_number ASC`,
+    [exerciseId, exerciseId, count],
+  );
+}
+
+export async function getBestSet(
+  exerciseId: string,
+): Promise<{ weight: number; reps: number } | null> {
+  const database = await getDatabase();
+  return database.getFirstAsync<{ weight: number; reps: number }>(
+    `SELECT ws.weight, ws.reps
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ?
+       AND ws.completed = 1
+       AND ws.weight > 0
+       AND ws.reps > 0
+       AND ws.reps <= 12
+       AND wss.completed_at IS NOT NULL
+     ORDER BY ws.weight * (1.0 + ws.reps / 30.0) DESC
+     LIMIT 1`,
+    [exerciseId],
+  );
+}
+
 // ---- Muscle Volume Analysis ----
 
 export async function getMuscleVolumeForWeek(
