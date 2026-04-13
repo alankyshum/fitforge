@@ -3,7 +3,7 @@
 **Issue**: BLD-8
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: IN_REVIEW (Rev 2) — addressing QD + techlead feedback
+**Status**: APPROVED (Rev 2)
 
 ## Problem Statement
 
