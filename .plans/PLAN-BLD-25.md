@@ -177,3 +177,28 @@ getTemplatesUsingExercise(exerciseId: string): Promise<{id: string, name: string
 2. Show "Deleted Exercise" fallback name in session history for deleted exercises
 
 **Complexity**: Medium | **Risk**: Low | **New deps**: None
+
+### Quality Director (UX Critique) — 2026-04-13
+
+**Verdict**: NEEDS REVISION (7 Critical issues)
+
+#### Critical Issues (Must Fix)
+1. **DATA-DELETE-01**: Hard-deleting exercises orphans workout history. workout_sets uses LEFT JOIN — exercise name becomes NULL. Recommend soft-delete (`deleted_at` column).
+2. **DATA-DELETE-02**: Delete cascade (exercises + template_exercises) must use `withTransactionAsync()`.
+3. **UX-CAT-01**: SegmentedButtons for 9 categories won't fit mobile — use scrollable chip row instead.
+4. **UX-MUSCLE-01**: 14 flat muscle chips overwhelm. Group by body region or use bottom sheet.
+5. **A11Y-FAB-01**: FAB must be 56dp with accessibilityLabel/Role.
+6. **A11Y-ERR-01**: Form errors need `accessibilityLiveRegion="polite"`.
+7. **A11Y-DLG-01**: Delete dialog needs `accessibilityViewIsModal`.
+
+#### Major Issues (Should Fix)
+- Multi-select chips need `accessibilityState`/`accessibilityRole="checkbox"` (A11Y-CHIP-01)
+- Form needs KeyboardAvoidingView (UX-KB-01)
+- Success feedback missing — toast + navigation on save (UX-FEED-01)
+- Duplicate name disambiguation in exercise picker (DATA-DUP-01)
+
+#### Notes
+- Tech lead found two INNER JOINs (getPersonalRecords, getWorkoutCSVData) that also break on delete — aligns with DATA-DELETE-01. Soft-delete resolves both.
+- Exercises tab already uses FlatList — performance is fine for 100+ items.
+
+**Full review**: BLD-15 issue comment (2026-04-13T08:17Z)
