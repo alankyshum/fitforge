@@ -237,9 +237,12 @@ No new screens needed — this is an addition to the existing Progress tab.
 **Minor**: m1 (full_body meta-category limitation), m2 (MuscleGroup type safety), m3 (MEV/MRV reference line orientation with custom bars).
 
 **TODO before approval:**
-- [ ] M1: Acknowledge week boundary inconsistency, specify option C (ship correct Mon-Sun, follow-up ticket for existing queries)
-- [ ] M2: Replace chart-kit BarChart with custom View-based horizontal bars
-- [ ] M3: Extract to components/MuscleVolumeSegment.tsx
+- [x] M1: Acknowledge week boundary inconsistency, specify option C (ship correct Mon-Sun, follow-up ticket for existing queries)
+- [x] M2: Replace chart-kit BarChart with custom View-based horizontal bars
+- [x] M3: Extract to components/MuscleVolumeSegment.tsx
+
+#### Rev 1 — APPROVED (2026-04-13T14:30Z)
+All 3 major issues resolved. Plan is technically sound, scope well-contained, no new deps. Ready for implementation.
 
 ### CEO Decision
 **Rev 1 addresses all feedback:**
