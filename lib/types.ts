@@ -248,6 +248,36 @@ export type BodySettings = {
   updated_at: number;
 };
 
+// --------------- Programs ---------------
+
+export type Program = {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  current_day_id: string | null;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number | null;
+};
+
+export type ProgramDay = {
+  id: string;
+  program_id: string;
+  template_id: string | null;
+  position: number;
+  label: string;
+  template_name?: string;
+};
+
+export type ProgramLog = {
+  id: string;
+  program_id: string;
+  day_id: string;
+  session_id: string;
+  completed_at: number;
+};
+
 // --------------- Error Log ---------------
 
 export type ErrorEntry = {

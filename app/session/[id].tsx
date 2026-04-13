@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AccessibilityInfo,
   ScrollView,
   StyleSheet,
   View,
@@ -10,6 +11,7 @@ import {
   Checkbox,
   Chip,
   Divider,
+  Snackbar,
   Text,
   TextInput,
   useTheme,
@@ -30,6 +32,11 @@ import {
   uncompleteSet,
   updateSet,
 } from "../../lib/db";
+import {
+  getSessionProgramDayId,
+  getProgramDayById,
+  advanceProgram,
+} from "../../lib/programs";
 import type { WorkoutSession, WorkoutSet } from "../../lib/types";
 
 type SetWithMeta = WorkoutSet & {
@@ -60,6 +67,7 @@ export default function ActiveSession() {
   const [maxes, setMaxes] = useState<Record<string, number>>({});
   const prevExerciseIds = useRef<string>("");
   const prHapticFired = useRef<Set<string>>(new Set());
+  const [snackbar, setSnackbar] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -269,6 +277,31 @@ export default function ActiveSession() {
           text: "Complete",
           onPress: async () => {
             await completeSession(id!);
+
+            // Auto-advance program if this session was started from a program
+            try {
+              const dayId = await getSessionProgramDayId(id!);
+              if (dayId) {
+                const day = await getProgramDayById(dayId);
+                if (day) {
+                  const result = await advanceProgram(day.program_id, dayId, id!);
+                  if (result.wrapped) {
+                    setSnackbar(`Cycle ${result.cycle} complete!`);
+                    AccessibilityInfo.announceForAccessibility(
+                      `Cycle ${result.cycle} complete! Program wrapping to day 1.`
+                    );
+                    await new Promise((r) => setTimeout(r, 1500));
+                  } else {
+                    AccessibilityInfo.announceForAccessibility(
+                      "Workout complete. Program advanced to next day."
+                    );
+                  }
+                }
+              }
+            } catch {
+              // Program advance failed — session is already saved, navigate normally
+            }
+
             router.replace(`/session/detail/${id}`);
           },
         },
@@ -500,6 +533,14 @@ export default function ActiveSession() {
           Cancel Workout
         </Button>
       </ScrollView>
+      <Snackbar
+        visible={!!snackbar}
+        onDismiss={() => setSnackbar("")}
+        duration={3000}
+        accessibilityLiveRegion="polite"
+      >
+        {snackbar}
+      </Snackbar>
     </>
   );
 }
