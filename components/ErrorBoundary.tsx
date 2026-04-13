@@ -4,19 +4,13 @@ import { Button, Text } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { logError, generateReport } from "../lib/errors";
+import { light, dark } from "../constants/theme";
 
 type Props = { children: React.ReactNode };
 type State = { error: Error | null; expanded: boolean };
 
-function colors() {
-  const dark = Appearance.getColorScheme() !== "light";
-  return {
-    bg: dark ? "#121212" : "#fafafa",
-    text: dark ? "#e0e0e0" : "#212121",
-    muted: dark ? "#9e9e9e" : "#757575",
-    code: dark ? "#e0e0e0" : "#424242",
-    codeBg: dark ? "#1e1e1e" : "#eeeeee",
-  };
+function theme() {
+  return Appearance.getColorScheme() === "dark" ? dark : light;
 }
 
 export default class ErrorBoundary extends React.Component<Props, State> {
@@ -51,15 +45,15 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (!this.state.error) return this.props.children;
 
-    const c = colors();
+    const t = theme();
 
     return (
-      <View style={[styles.container, { backgroundColor: c.bg }]}>
+      <View style={[styles.container, { backgroundColor: t.colors.background }]}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text variant="headlineLarge" style={[styles.heading, { color: c.text }]}>
+          <Text variant="headlineLarge" style={[styles.heading, { color: t.colors.onBackground }]}>
             Something went wrong
           </Text>
-          <Text variant="bodyMedium" style={[styles.sub, { color: c.muted }]}>
+          <Text variant="bodyMedium" style={[styles.sub, { color: t.colors.onSurfaceVariant }]}>
             The app encountered an unexpected error. You can share a crash
             report to help us fix the issue, or restart the app.
           </Text>
@@ -75,8 +69,8 @@ export default class ErrorBoundary extends React.Component<Props, State> {
           </Button>
 
           {this.state.expanded && (
-            <ScrollView style={[styles.stack, { backgroundColor: c.codeBg }]} nestedScrollEnabled>
-              <Text variant="bodySmall" style={[styles.mono, { color: c.code }]}>
+            <ScrollView style={[styles.stack, { backgroundColor: t.colors.surfaceVariant }]} nestedScrollEnabled>
+              <Text variant="bodySmall" style={[styles.mono, { color: t.colors.onSurfaceVariant }]}>
                 {this.state.error.message}
                 {"\n\n"}
                 {this.state.error.stack}
