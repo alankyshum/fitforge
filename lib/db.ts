@@ -15,6 +15,7 @@ import type {
   Program,
   ProgramDay,
   ProgramLog,
+  MuscleGroup,
 } from "./types";
 import { seedExercises } from "./seed";
 
@@ -1971,4 +1972,113 @@ export async function getExerciseChartData(
      ) ORDER BY date ASC`,
     [exerciseId, limit]
   );
+}
+
+// ---- Muscle Volume Analysis ----
+
+export async function getMuscleVolumeForWeek(
+  weekStart: number
+): Promise<{ muscle: MuscleGroup; sets: number; exercises: number }[]> {
+  const database = await getDatabase();
+  const end = weekStart + 7 * 24 * 60 * 60 * 1000;
+
+  const rows = await database.getAllAsync<{
+    exercise_id: string;
+    primary_muscles: string | null;
+    sets: number;
+  }>(
+    `SELECT ws.exercise_id,
+            e.primary_muscles,
+            COUNT(*) AS sets
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     LEFT JOIN exercises e ON ws.exercise_id = e.id
+     WHERE wss.completed_at IS NOT NULL
+       AND wss.completed_at >= ?
+       AND wss.completed_at < ?
+       AND ws.completed = 1
+     GROUP BY ws.exercise_id`,
+    [weekStart, end]
+  );
+
+  const map = new Map<MuscleGroup, { sets: number; exercises: Set<string> }>();
+
+  for (const row of rows) {
+    if (!row.primary_muscles) continue;
+    let muscles: MuscleGroup[];
+    try {
+      muscles = JSON.parse(row.primary_muscles);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(muscles) || muscles.length === 0) continue;
+
+    for (const m of muscles) {
+      const entry = map.get(m) ?? { sets: 0, exercises: new Set<string>() };
+      entry.sets += row.sets;
+      entry.exercises.add(row.exercise_id);
+      map.set(m, entry);
+    }
+  }
+
+  return Array.from(map.entries())
+    .map(([muscle, data]) => ({
+      muscle,
+      sets: data.sets,
+      exercises: data.exercises.size,
+    }))
+    .sort((a, b) => b.sets - a.sets);
+}
+
+export async function getMuscleVolumeTrend(
+  muscle: MuscleGroup,
+  weeks: number
+): Promise<{ week: string; sets: number }[]> {
+  const database = await getDatabase();
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - diff);
+
+  const result: { week: string; sets: number }[] = [];
+
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date(monday);
+    start.setDate(start.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+
+    const rows = await database.getAllAsync<{
+      primary_muscles: string | null;
+      sets: number;
+    }>(
+      `SELECT e.primary_muscles, COUNT(*) AS sets
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       LEFT JOIN exercises e ON ws.exercise_id = e.id
+       WHERE wss.completed_at IS NOT NULL
+         AND wss.completed_at >= ?
+         AND wss.completed_at < ?
+         AND ws.completed = 1
+       GROUP BY ws.exercise_id`,
+      [start.getTime(), end.getTime()]
+    );
+
+    let total = 0;
+    for (const row of rows) {
+      if (!row.primary_muscles) continue;
+      try {
+        const muscles: MuscleGroup[] = JSON.parse(row.primary_muscles);
+        if (muscles.includes(muscle)) total += row.sets;
+      } catch {
+        continue;
+      }
+    }
+
+    result.push({ week: `W${weeks - i}`, sets: total });
+  }
+
+  return result;
 }
