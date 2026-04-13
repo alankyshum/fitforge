@@ -278,7 +278,22 @@ This returns sets from the N most recent completed sessions for a given exercise
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION (2026-04-13)
+
+**Critical issues (must fix):**
+1. **C1 — Suggestion chip interaction undefined.** Plan never says what happens on tap. Users WILL tap a Chip (Material Design affordance). Recommendation: Tap auto-fills weight input for current set — saves the most friction. If non-interactive, use styled Text+icon instead of Chip, with accessibilityRole='text'.
+2. **C2 — 'All sets completed' definition ambiguous.** Un-started sets (weight=NULL) and partial failures (4/5 completed) aren't addressed. Recommendation: 'completed' = all sets with weight>0 AND reps>0 have completed=1. Ignore un-started sets. Or use >=80% threshold.
+
+**Major issues (should fix):**
+1. **M1 — Formula inconsistency.** Exercise Detail uses Epley, Calculator uses average of 3 formulas. User sees different 1RM for same exercise on different screens. Use same formula in both or label clearly.
+2. **M2 — KeyboardAvoidingView.** Calculator has 2 numeric inputs — keyboard will cover results on iOS. Specify KeyboardAvoidingView or ScrollView with keyboard dismiss.
+
+**Minor issues (nice to have):**
+1. **m1** — Add disclaimer footnote: "Estimates based on submaximal performance. Actual 1RM may vary."
+2. **m2** — Wire suggestion step into existing `step` state in session/[id].tsx (line 95) instead of separate hardcoded default.
+3. **m3** — Suppress Strength Profile and suggestion chip for time-based exercises (reps=1, weight=0).
+
+**Additional edge case:** If reps=1 (powerlifting singles), display "Tested 1RM" instead of "Estimated 1RM" since the formula adds ~3.3% error on tested maxes.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (with required fixes)
