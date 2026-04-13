@@ -206,6 +206,11 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       "ALTER TABLE workout_sessions ADD COLUMN program_day_id TEXT DEFAULT NULL"
     );
   }
+
+  // Migration: index for exercise history query performance
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id)"
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -1600,5 +1605,160 @@ export async function getRecentPRs(
      ORDER BY wss.started_at DESC
      LIMIT ?`,
     [limit]
+  );
+}
+
+// --- Exercise History & Performance ---
+
+export type ExerciseSession = {
+  session_id: string;
+  session_name: string;
+  started_at: number;
+  max_weight: number;
+  max_reps: number;
+  total_reps: number;
+  set_count: number;
+  volume: number;
+};
+
+export type ExerciseRecords = {
+  max_weight: number | null;
+  max_reps: number | null;
+  max_volume: number | null;
+  est_1rm: number | null;
+  total_sessions: number;
+  is_bodyweight: boolean;
+};
+
+export async function getExerciseHistory(
+  exerciseId: string,
+  limit: number = 10,
+  offset: number = 0
+): Promise<ExerciseSession[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<ExerciseSession>(
+    `SELECT wss.id AS session_id,
+            wss.name AS session_name,
+            wss.started_at,
+            MAX(ws.weight) AS max_weight,
+            MAX(ws.reps) AS max_reps,
+            SUM(ws.reps) AS total_reps,
+            COUNT(ws.id) AS set_count,
+            SUM(ws.weight * ws.reps) AS volume
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ?
+       AND ws.completed = 1
+       AND wss.completed_at IS NOT NULL
+     GROUP BY wss.id
+     ORDER BY wss.started_at DESC
+     LIMIT ? OFFSET ?`,
+    [exerciseId, limit, offset]
+  );
+}
+
+export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRecords> {
+  const database = await getDatabase();
+
+  const weight = await database.getFirstAsync<{ val: number | null }>(
+    `SELECT MAX(ws.weight) AS val
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.weight > 0 AND wss.completed_at IS NOT NULL`,
+    [exerciseId]
+  );
+
+  const reps = await database.getFirstAsync<{ val: number | null }>(
+    `SELECT MAX(ws.reps) AS val
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND wss.completed_at IS NOT NULL`,
+    [exerciseId]
+  );
+
+  const vol = await database.getFirstAsync<{ val: number | null }>(
+    `SELECT MAX(sv) AS val FROM (
+       SELECT SUM(ws.weight * ws.reps) AS sv
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ? AND ws.completed = 1 AND wss.completed_at IS NOT NULL
+       GROUP BY wss.id
+     )`,
+    [exerciseId]
+  );
+
+  const rm = await database.getFirstAsync<{ val: number | null }>(
+    `SELECT MAX(ws.weight * (1.0 + ws.reps / 30.0)) AS val
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.weight > 0 AND ws.reps > 0 AND ws.reps <= 12 AND wss.completed_at IS NOT NULL`,
+    [exerciseId]
+  );
+
+  const count = await database.getFirstAsync<{ val: number }>(
+    `SELECT COUNT(DISTINCT wss.id) AS val
+     FROM workout_sets ws
+     JOIN workout_sessions wss ON ws.session_id = wss.id
+     WHERE ws.exercise_id = ? AND ws.completed = 1 AND wss.completed_at IS NOT NULL`,
+    [exerciseId]
+  );
+
+  const weighted = await database.getFirstAsync<{ val: number }>(
+    `SELECT EXISTS(SELECT 1 FROM workout_sets WHERE exercise_id = ? AND completed = 1 AND weight > 0) AS val`,
+    [exerciseId]
+  );
+
+  return {
+    max_weight: weight?.val ?? null,
+    max_reps: reps?.val ?? null,
+    max_volume: vol?.val ?? null,
+    est_1rm: rm?.val ? Math.round(rm.val * 10) / 10 : null,
+    total_sessions: count?.val ?? 0,
+    is_bodyweight: !(weighted?.val),
+  };
+}
+
+export async function getExerciseChartData(
+  exerciseId: string,
+  limit: number = 20
+): Promise<{ date: number; value: number }[]> {
+  const database = await getDatabase();
+
+  // Try weight chart first
+  const rows = await database.getAllAsync<{ date: number; value: number }>(
+    `SELECT * FROM (
+       SELECT wss.started_at AS date,
+              MAX(ws.weight) AS value
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ?
+         AND ws.completed = 1
+         AND ws.weight IS NOT NULL
+         AND ws.weight > 0
+         AND wss.completed_at IS NOT NULL
+       GROUP BY wss.id
+       ORDER BY wss.started_at DESC
+       LIMIT ?
+     ) ORDER BY date ASC`,
+    [exerciseId, limit]
+  );
+
+  if (rows.length > 0) return rows;
+
+  // Fallback: reps chart for bodyweight exercises
+  return database.getAllAsync<{ date: number; value: number }>(
+    `SELECT * FROM (
+       SELECT wss.started_at AS date,
+              MAX(ws.reps) AS value
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ?
+         AND ws.completed = 1
+         AND wss.completed_at IS NOT NULL
+       GROUP BY wss.id
+       ORDER BY wss.started_at DESC
+       LIMIT ?
+     ) ORDER BY date ASC`,
+    [exerciseId, limit]
   );
 }
