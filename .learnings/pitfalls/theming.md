@@ -17,3 +17,11 @@
 **Learning**: Hardcoded hex colors bypass react-native-paper's theme system entirely. Since the app supports automatic dark/light mode switching via `PaperProvider`, any hardcoded color will be correct in one mode and wrong in the other. The same mistake recurring across two separate PRs by the same agent indicates this is a persistent blind spot, not a one-off error.
 **Action**: Always use `theme.colors.*` tokens from `useTheme()` for all colors in styles. For borders, use `theme.colors.outlineVariant`. For backgrounds, use `theme.colors.surface` or `theme.colors.background`. Never write a hex literal in a StyleSheet or inline style. Search for hex patterns (`/#[0-9a-fA-F]{3,8}/`) during self-review before submitting PRs.
 **Tags**: react-native-paper, theming, dark-mode, material-design-3, useTheme, hardcoded-colors, repeated-mistake
+
+### MD3 Container Tokens Need Separate Light/Dark Values for WCAG Contrast
+**Source**: BLD-21 — FIX: A11y contrast — font/label background insufficient (GitHub #15)
+**Date**: 2026-04-13
+**Context**: The theme defined a single set of container colors (primaryContainer, secondaryContainer, tertiaryContainer) shared between light and dark themes. Light-mode container values like pale green were used in dark mode, creating low-contrast containers against dark text that failed WCAG 4.5:1.
+**Learning**: MD3 container tokens (primaryContainer, onPrimaryContainer, etc.) must have separate values for light and dark themes. Light mode uses light container backgrounds with dark foregrounds; dark mode inverts this (dark container backgrounds with light foregrounds). Sharing one color set across both themes guarantees contrast failure in one mode.
+**Action**: In constants/theme.ts, maintain separate `lightColors` and `darkColors` objects for all container/onContainer token pairs. Apply `lightColors` to the light theme and `darkColors` to the dark theme. After any theme change, manually verify contrast in both modes — automated WCAG checks are not yet in the pipeline.
+**Tags**: a11y, wcag, contrast, material-design-3, container-tokens, dark-mode, light-mode, theming, react-native-paper
