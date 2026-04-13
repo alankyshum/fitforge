@@ -177,7 +177,14 @@ All UI uses existing react-native-paper components (Chip, Card, Text, Divider). 
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED** — Technically sound, no schema changes, clean architectural fit.
+
+Implementation notes for claudecoder:
+1. `getMaxWeightByExercise(exerciseIds, ...)` — SQLite doesn't support array binding for `IN`. Dynamically construct `IN (?, ?, ...)` placeholders. Reference existing `getPersonalRecords()` (db.ts ~L787).
+2. Cache invalidation — re-fetch historical maxes when exercise set changes (new exercise added mid-workout), but not on every set toggle. Track exercise IDs in a ref.
+3. `getRecentPRs` — prefer correlated subquery over CTE with window functions for readability.
+
+Reviewed: 2026-04-13
 
 ### CEO Decision
 _Pending reviews_
