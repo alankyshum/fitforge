@@ -3,7 +3,7 @@
 **Issue**: BLD-27
 **Author**: CEO
 **Date**: 2026-04-13
-**Status**: DRAFT → Rev 2 (addressing Tech Lead feedback)
+**Status**: DRAFT → Rev 3 (consistency fixes, awaiting re-review)
 
 ## Problem Statement
 
@@ -187,10 +187,13 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 
 **In Scope:**
 - Complete exercise database replacement (70 → 54 exercises)
-- Schema migration for Voltra metadata fields (mount_position, attachment, training_modes)
-- Category restructure (9 → 6 muscle groups)
+- Schema migration for Voltra metadata fields (mount_position, attachment, training_modes, is_voltra)
+- Category restructure (9 → 6 Voltra categories) — **Category only, NOT MuscleGroup**
+- MuscleGroup: remove `full_body` only; keep all 13 granular muscle values
+- Orphaned exercise handling in templates, programs, and session history
 - Remove plate calculator tool and its navigation entry
-- Update types for new fields
+- Hide equipment filter chip in exercise list (keep type for custom exercise compat)
+- Update types for new Voltra fields (OPTIONAL on Exercise type)
 - Update exercise list/detail UI to display new metadata
 - Update seed data with full Voltra Movement Bank
 - Tab layout updates (remove plate calc button, update icon)
@@ -206,14 +209,18 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 ### Acceptance Criteria
 
 - [ ] Given a fresh install, When the app opens, Then the exercise database contains exactly 54 Voltra exercises (no barbell/dumbbell/bodyweight/kettlebell)
-- [ ] Given the exercise list, When filtering by muscle group, Then 6 Voltra-aligned groups are shown (abs_core, arms, back, chest, legs_glutes, shoulders)
+- [ ] Given the exercise list, When filtering by category, Then 6 Voltra-aligned categories are shown (abs_core, arms, back, chest, legs_glutes, shoulders)
+- [ ] Given any exercise, When viewing muscle tracking, Then primary_muscles and secondary_muscles use granular values (biceps, triceps, etc. — NOT collapsed "arms")
 - [ ] Given any exercise, When viewing its detail, Then mount_position, attachment type, and training_modes are displayed
 - [ ] Given the workouts tab, When looking at the header, Then the plate calculator button is NOT present
 - [ ] Given the tools section, When navigating, Then only the 1RM calculator is available (plate calculator removed)
 - [ ] Given an existing user with workout history, When the app migrates, Then workout sessions and template logs are preserved (exercises update but historical data remains)
 - [ ] Given a user with custom exercises, When the app migrates, Then custom exercises (is_custom = 1) are preserved untouched
+- [ ] Given a template referencing a removed exercise, When viewing the template, Then the orphaned slot shows "Exercise removed" with a "Replace" action
+- [ ] Given a program referencing a removed exercise, When viewing the program, Then the orphaned slot shows "Exercise removed" with a "Replace" action
 - [ ] Given the exercise list, When searching, Then search works against the new 54 Voltra exercises
 - [ ] Given any screen, When looking at icons/labels, Then no barbell/dumbbell-specific references appear in navigation chrome
+- [ ] Given the exercise list, When viewing filters, Then no equipment filter chip is shown (all exercises are cable)
 - [ ] TypeScript compiles with zero errors (`npx tsc --noEmit`)
 - [ ] All existing tests pass (updated for new exercise data where needed)
 - [ ] No regressions on native platforms (iOS/Android)
@@ -222,14 +229,17 @@ Complete replacement — remove all 70 current exercises, add 54 Voltra exercise
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Existing workout templates reference removed exercises | Templates remain; removed exercise references show as "Exercise unavailable" with option to swap |
-| Existing workout sessions with old exercises | Session logs are preserved as historical data; exercise name is stored as string in session data |
-| User has custom exercises with non-cable equipment | Custom exercises are PRESERVED — user's custom data is never deleted regardless of equipment type |
+| Existing workout templates reference removed exercises | Template preserved; orphaned slot shows "Exercise removed" with "Replace" action (LEFT JOIN NULL handling) |
+| Existing workout sessions with old exercises | Session logs preserved as-is; exercise name from stored context shown; "(removed)" suffix if exercise gone |
+| User has custom exercises with non-cable equipment | Custom exercises PRESERVED — user data never deleted; equipment field kept; Voltra fields are NULL for custom exercises |
+| Programs referencing removed exercises | Program structure preserved; orphaned slots show "Exercise unavailable — tap to replace" |
+| Weekly muscle volume analysis (Phase 15) | Still works because MuscleGroup stays granular — biceps/triceps tracked separately, not collapsed |
+| Custom exercise with old category (e.g., "cardio") | Migration maps old category to nearest Voltra category; display fallback for unknown categories |
 | Category filter shows empty groups | Should not happen — all 6 groups have exactly 9 exercises each |
 | 1RM calculator with cable exercises | Still works — 1RM calculation is equipment-agnostic (weight-based) |
 | Search for old exercise names (e.g., "bench press") | No results for removed exercises — expected behavior |
 | Food database / nutrition tab | Unchanged — nutrition features are equipment-independent |
-| Programs referencing removed exercises | Program structure preserved; exercise slots marked as needing replacement |
+
 
 ### Risk Assessment
 
@@ -288,7 +298,9 @@ Collapsing MuscleGroup destroys tracking value. "Arms" conflates biceps/triceps/
 - [x] Migration checks column existence with PRAGMA → Adopted
 - [x] Added `is_voltra` boolean field → Adopted
 
-**Awaiting Tech Lead re-review on Rev 2.**
+**Rev 3**: Minor wording consistency fixes in Scope, Acceptance Criteria, Edge Cases sections to align with Rev 2 body changes.
+
+**Awaiting Tech Lead re-review on Rev 3.**
 
 ### CEO Decision
 _Pending reviews_
