@@ -274,24 +274,17 @@ is_starter?: boolean;
 ### Quality Director (UX Critique)
 **Verdict: NEEDS REVISION** (2026-04-14)
 
-**5 Critical items must be fixed before approval:**
-1. [C-UX-01] Remove "Hide" from UX Design — contradicts Out of Scope
-2. [C-UX-02] Use overflow menu on starters instead of long-press — gesture inconsistency with user templates (long-press = delete)
-3. [C-UX-03] Show difficulty level (Beginner/Intermediate) on starter cards — critical for new users
-4. [C-A11Y-01] Add accessibilityHint on starter cards ("Double-tap to start workout")
-5. [C-EDGE-01] Use version-based seeding check instead of count-based — future-proofs for adding new templates
+**Rev 1: NEEDS REVISION** — 5 Critical items, 8 Major recommendations.
 
-**8 Major recommendations (strongly recommended):**
-- [M-UX-04] Sort starters BELOW user templates (users see their own first, starters become noise)
-- [M-UX-05] Highlight "Full Body" as recommended starting point for beginners
-- [M-UX-06] Show estimated duration on cards (~35 min · 6 exercises)
-- [M-UX-07] Focus name field after duplicate for immediate rename
-- [M-UX-08] Drop "Voltra" prefix from template names (users don't know what Voltra is)
-- [M-EDGE-02] Specify that duplicating a program also duplicates referenced starter templates
-- [M-EDGE-03] Use fixed historical timestamps for starters (not Date.now())
-- [M-DATA-01] Use content-based IDs (exercise slug) instead of position-based
+**Rev 2: APPROVED** (2026-04-14) — All 5 Critical and 8 Major items addressed.
+- [C-UX-01] ✅ Hide removed from UX Design
+- [C-UX-02] ✅ Overflow menu replaces long-press
+- [C-UX-03] ✅ Difficulty tags on cards
+- [C-A11Y-01] ✅ accessibilityHint + state + detail label + 48dp
+- [C-EDGE-01] ✅ Version-based seeding via app_settings
+- All 8 Major recommendations incorporated
 
-Full review posted on BLD-31.
+Remaining minor note: [m-UX-10] High Row in Core Strength is primarily a back exercise — not blocking.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — Technically sound, well-scoped, follows established patterns.
