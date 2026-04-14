@@ -18,7 +18,7 @@ import {
 import { Stack } from "expo-router"
 import { useFocusEffect } from "expo-router"
 import * as Haptics from "expo-haptics"
-import { useKeepAwake } from "expo-keep-awake"
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake"
 import Svg, { Circle } from "react-native-svg"
 import Animated, {
   useSharedValue,
@@ -73,11 +73,21 @@ export default function TimerScreen() {
   const [pauseMsg, setPauseMsg] = useState("")
   const lastTap = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([])
   const appRef = useRef(state)
   appRef.current = state
 
   const active = state.status === "running" || state.status === "paused"
-  useKeepAwake()
+
+  // Keep awake only when timer is active
+  useEffect(() => {
+    if (active) {
+      activateKeepAwakeAsync().catch(() => {})
+    } else {
+      deactivateKeepAwake()
+    }
+    return () => { deactivateKeepAwake() }
+  }, [active])
 
   // Animated values
   const bgOpacity = useSharedValue(0)
@@ -88,20 +98,22 @@ export default function TimerScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const raw = await getAppSetting(STORAGE_KEYS[mode])
-        if (raw) {
-          try {
+        try {
+          const raw = await getAppSetting(STORAGE_KEYS[mode])
+          if (raw) {
             const cfg = JSON.parse(raw) as Config
             setState(init(mode, cfg))
-          } catch { /* use defaults */ }
-        }
+          }
+        } catch { /* use defaults on parse or DB error */ }
       })()
     }, [mode])
   )
 
   // Save config on start
   const save = useCallback(async (m: Mode, cfg: Config) => {
-    await setAppSetting(STORAGE_KEYS[m], JSON.stringify(cfg))
+    try {
+      await setAppSetting(STORAGE_KEYS[m], JSON.stringify(cfg))
+    } catch { /* non-critical: config won't persist */ }
   }, [])
 
   // Tick interval
@@ -118,7 +130,8 @@ export default function TimerScreen() {
       const result = tick(appRef.current, Date.now())
       if (result.transition === "work") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
+        const t = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
+        timeoutRefs.current.push(t)
       } else if (result.transition === "rest") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
       } else if (result.transition === "minute") {
@@ -127,8 +140,9 @@ export default function TimerScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
       } else if (result.transition === "completed") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300)
+        const t1 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
+        const t2 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300)
+        timeoutRefs.current.push(t1, t2)
       }
       setState(result.state)
     }, 200)
@@ -138,6 +152,8 @@ export default function TimerScreen() {
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
+      timeoutRefs.current.forEach(clearTimeout)
+      timeoutRefs.current = []
     }
   }, [state.status])
 
@@ -420,6 +436,7 @@ export default function TimerScreen() {
               <Text
                 style={[styles.time, { color: theme.colors.onSurface }]}
                 accessibilityLabel={`${state.remaining} seconds remaining`}
+                accessibilityLiveRegion="polite"
               >
                 {format(state.remaining)}
               </Text>
@@ -454,6 +471,7 @@ export default function TimerScreen() {
               style={[styles.addRound, { backgroundColor: theme.colors.primaryContainer }]}
               accessibilityLabel={`Add round. Current: ${state.amrapRounds} rounds`}
               accessibilityRole="button"
+              accessibilityState={{ disabled: false }}
             >
               <Text variant="titleLarge" style={{ color: theme.colors.onPrimaryContainer }}>
                 +1 Round
@@ -468,6 +486,7 @@ export default function TimerScreen() {
               style={[styles.btn, { backgroundColor: theme.colors.primary }]}
               accessibilityLabel={startA11y}
               accessibilityRole="button"
+              accessibilityState={{ disabled: false }}
             >
               <Text variant="titleMedium" style={{ color: theme.colors.onPrimary }}>
                 {startLabel}
@@ -479,6 +498,7 @@ export default function TimerScreen() {
                 style={[styles.btn, { backgroundColor: theme.colors.surfaceVariant }]}
                 accessibilityLabel="Reset timer"
                 accessibilityRole="button"
+                accessibilityState={{ disabled: false }}
               >
                 <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>
                   Reset
@@ -515,6 +535,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
           style={[styles.stepBtn, { backgroundColor: theme.colors.surfaceVariant, opacity: value <= min ? 0.4 : 1 }]}
           accessibilityLabel={`Decrease ${label}`}
           accessibilityRole="button"
+          accessibilityState={{ disabled: value <= min }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
         >
           <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>−</Text>
@@ -532,6 +553,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
           style={[styles.stepBtn, { backgroundColor: theme.colors.surfaceVariant, opacity: value >= max ? 0.4 : 1 }]}
           accessibilityLabel={`Increase ${label}`}
           accessibilityRole="button"
+          accessibilityState={{ disabled: value >= max }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
         >
           <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>+</Text>
