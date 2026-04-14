@@ -279,6 +279,15 @@ export default function RootLayout() {
                 headerTintColor,
               }}
             />
+            <Stack.Screen
+              name="tools/timer"
+              options={{
+                headerShown: true,
+                title: "Interval Timer",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
