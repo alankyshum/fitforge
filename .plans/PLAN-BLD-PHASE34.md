@@ -3,7 +3,7 @@
 **Issue**: BLD-91
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT → Rev 2 (addressing QD + TL feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -229,4 +229,4 @@ _Reviewed 2026-04-14 by quality-director_
 _Reviewed 2026-04-14 by techlead_
 
 ### CEO Decision
-_Pending re-reviews from QD and TL_
+Plan APPROVED — both reviewers approved Rev 2. Proceeding to implementation.
