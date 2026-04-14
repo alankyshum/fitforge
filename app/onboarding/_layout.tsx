@@ -7,13 +7,18 @@ import { setAppSetting } from "../../lib/db";
 function Fallback() {
   const theme = useTheme();
   const router = useRouter();
+  const [err, setErr] = React.useState<string | null>(null);
 
   async function skip() {
     try {
       await setAppSetting("onboarding_complete", "1");
+      router.replace("/(tabs)");
     } catch {
-      // Best-effort — navigate anyway
+      setErr("Could not save preferences. Tap again to continue anyway.");
     }
+  }
+
+  function force() {
     router.replace("/(tabs)");
   }
 
@@ -25,14 +30,19 @@ function Fallback() {
       <Text variant="bodyMedium" style={[styles.sub, { color: theme.colors.onSurfaceVariant }]}>
         We couldn't load onboarding. You can skip straight to the app.
       </Text>
+      {err && (
+        <Text variant="bodySmall" style={[styles.sub, { color: theme.colors.error }]}>
+          {err}
+        </Text>
+      )}
       <Button
         mode="contained"
-        onPress={skip}
+        onPress={err ? force : skip}
         style={styles.btn}
         contentStyle={{ minHeight: 48 }}
         accessibilityLabel="Skip to app"
       >
-        Skip to App
+        {err ? "Continue Without Saving" : "Skip to App"}
       </Button>
     </View>
   );

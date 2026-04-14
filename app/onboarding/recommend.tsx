@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, ScrollView, StyleSheet, View } from "react-native";
 import { Banner, Button, Card, Chip, Text, useTheme } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -50,8 +50,10 @@ export default function Recommend() {
 
   function skip() {
     setAppSetting("onboarding_complete", "1")
-      .catch(() => {})
-      .finally(() => router.replace("/(tabs)"));
+      .then(() => router.replace("/(tabs)"))
+      .catch(() => {
+        setError("Could not save preferences. Tap Skip to continue anyway.");
+      });
   }
 
   const errorBanner = (
@@ -60,7 +62,7 @@ export default function Recommend() {
         visible={!!error}
         actions={[
           { label: "Retry", onPress: () => finish() },
-          { label: "Skip", onPress: skip },
+          { label: "Skip", onPress: () => router.replace("/(tabs)") },
         ]}
         icon="alert-circle-outline"
       >
@@ -202,11 +204,8 @@ export default function Recommend() {
   }
 
   // Advanced
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={styles.scroll}
-    >
+  const advancedHeader = (
+    <>
       {errorBanner}
       <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
         Browse Our Templates
@@ -214,29 +213,11 @@ export default function Recommend() {
       <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
         Pick a starter template or create your own workouts from scratch.
       </Text>
-      {BROWSE_TEMPLATES.map((tpl) => (
-        <Card
-          key={tpl.id}
-          style={[styles.browseCard, { backgroundColor: theme.colors.surface }]}
-          mode="outlined"
-        >
-          <Card.Content>
-            <View style={styles.recHeader}>
-              <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
-                {tpl.name}
-              </Text>
-              <View style={styles.meta}>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {tpl.duration}
-                </Text>
-              </View>
-            </View>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {tpl.exercises.length} exercises · {tpl.difficulty}
-            </Text>
-          </Card.Content>
-        </Card>
-      ))}
+    </>
+  );
+
+  const advancedFooter = (
+    <>
       <Button
         mode="contained"
         onPress={() => finish("browse")}
@@ -258,7 +239,40 @@ export default function Recommend() {
       >
         I'll explore on my own
       </Button>
-    </ScrollView>
+    </>
+  );
+
+  return (
+    <FlatList
+      data={BROWSE_TEMPLATES}
+      keyExtractor={(tpl) => tpl.id}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={styles.scroll}
+      ListHeaderComponent={advancedHeader}
+      ListFooterComponent={advancedFooter}
+      renderItem={({ item: tpl }) => (
+        <Card
+          style={[styles.browseCard, { backgroundColor: theme.colors.surface }]}
+          mode="outlined"
+        >
+          <Card.Content>
+            <View style={styles.recHeader}>
+              <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+                {tpl.name}
+              </Text>
+              <View style={styles.meta}>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  {tpl.duration}
+                </Text>
+              </View>
+            </View>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {tpl.exercises.length} exercises · {tpl.difficulty}
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
+    />
   );
 }
 

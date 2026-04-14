@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { Button, SegmentedButtons, Text, TouchableRipple, useTheme } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -46,11 +46,8 @@ export default function Setup() {
   const [measurement, setMeasurement] = useState<"cm" | "in">(defaults.measurement);
   const [level, setLevel] = useState<Level | null>(null);
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      contentContainerStyle={styles.scroll}
-    >
+  const header = (
+    <>
       <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
         Set Up Your Preferences
       </Text>
@@ -88,76 +85,88 @@ export default function Setup() {
       <Text variant="titleMedium" style={[styles.section, { color: theme.colors.onBackground }]}>
         Experience Level
       </Text>
-      <View accessibilityRole="radiogroup" accessibilityLabel="Experience level">
-        {LEVELS.map((item) => {
-          const selected = level === item.value;
-          return (
-            <TouchableRipple
-              key={item.value}
-              onPress={() => setLevel(item.value)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              accessibilityLabel={`${item.label}: ${item.description}`}
-              style={[
-                styles.card,
-                {
-                  borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
-                  borderWidth: selected ? 2 : 1,
-                  backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surface,
-                },
-              ]}
-            >
-              <View style={styles.cardRow}>
-                <MaterialCommunityIcons
-                  name={item.icon as any}
-                  size={28}
-                  color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant}
-                  style={styles.cardIcon}
-                />
-                <View style={styles.cardText}>
-                  <Text
-                    variant="titleMedium"
-                    style={{ color: selected ? theme.colors.onPrimaryContainer : theme.colors.onSurface }}
-                  >
-                    {item.label}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: selected ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant }}
-                  >
-                    {item.description}
-                  </Text>
-                </View>
-                {selected && (
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={24}
-                    color={theme.colors.primary}
-                  />
-                )}
-              </View>
-            </TouchableRipple>
-          );
-        })}
-      </View>
+    </>
+  );
 
-      <Button
-        mode="contained"
-        disabled={!level}
-        onPress={() => {
-          router.replace({
-            pathname: "/onboarding/recommend",
-            params: { weight, measurement, level: level! },
-          });
-        }}
-        style={styles.btn}
-        contentStyle={styles.btnContent}
-        accessibilityLabel={level ? "Continue to recommendations" : "Select an experience level to continue"}
-        accessibilityState={{ disabled: !level }}
-      >
-        Continue
-      </Button>
-    </ScrollView>
+  const footer = (
+    <Button
+      mode="contained"
+      disabled={!level}
+      onPress={() => {
+        router.replace({
+          pathname: "/onboarding/recommend",
+          params: { weight, measurement, level: level! },
+        });
+      }}
+      style={styles.btn}
+      contentStyle={styles.btnContent}
+      accessibilityLabel={level ? "Continue to recommendations" : "Select an experience level to continue"}
+      accessibilityState={{ disabled: !level }}
+    >
+      Continue
+    </Button>
+  );
+
+  return (
+    <FlatList
+      data={LEVELS}
+      keyExtractor={(item) => item.value}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={styles.scroll}
+      ListHeaderComponent={header}
+      ListFooterComponent={footer}
+      accessibilityRole="radiogroup"
+      accessibilityLabel="Experience level"
+      renderItem={({ item }) => {
+        const selected = level === item.value;
+        return (
+          <TouchableRipple
+            onPress={() => setLevel(item.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            accessibilityLabel={`${item.label}: ${item.description}`}
+            style={[
+              styles.card,
+              {
+                borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
+                borderWidth: selected ? 2 : 1,
+                backgroundColor: selected ? theme.colors.primaryContainer : theme.colors.surface,
+              },
+            ]}
+          >
+            <View style={styles.cardRow}>
+              <MaterialCommunityIcons
+                name={item.icon as any}
+                size={28}
+                color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant}
+                style={styles.cardIcon}
+              />
+              <View style={styles.cardText}>
+                <Text
+                  variant="titleMedium"
+                  style={{ color: selected ? theme.colors.onPrimaryContainer : theme.colors.onSurface }}
+                >
+                  {item.label}
+                </Text>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: selected ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant }}
+                >
+                  {item.description}
+                </Text>
+              </View>
+              {selected && (
+                <MaterialCommunityIcons
+                  name="check-circle"
+                  size={24}
+                  color={theme.colors.primary}
+                />
+              )}
+            </View>
+          </TouchableRipple>
+        );
+      }}
+    />
   );
 }
 
