@@ -193,7 +193,23 @@ For intermediate: activate the PPL program (sets is_active=1, current_day_id to 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION (2026-04-14)
+
+**Critical (must fix):**
+- C1: Unit defaults (kg/cm) silently give wrong units to imperial users. Fix: locale-detect or require explicit selection.
+- C2: Existing user migration underspecified in Technical Approach. Must add explicit SQL logic and acceptance criterion.
+
+**Major (should fix):**
+- M1: Experience level descriptions use gym jargon ("major lifts", "self-programming"). Reword for normal humans.
+- M2: Advanced users get zero value from recommendation step. Show browsable templates instead.
+- M3: Splash screen hold during async onboarding check not specified in Technical Approach.
+- M4: Step 2 scroll/overflow behavior for small screens (iPhone SE) not specified.
+
+**Accessibility gaps:** Add per-element a11y specs (radiogroup roles, checked/selected states, disabled announcement, auto-focus, no color-only selection indicators).
+
+**Also add:** ErrorBoundary around onboarding stack, "no hardcoded hex colors" acceptance criterion.
+
+Full review posted as BLD-34 comment.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED — Technically sound, minimal risk, clean scope.
