@@ -223,7 +223,9 @@ _Pending re-review_
 - TODO 2 FIXED: Added `expo-notifications` plugin config to `app.config.ts` section
 - Adopted all simplification recommendations: cancel-all-then-reschedule, removed false multi-template edge case, specified foreground handler, removed debounce
 
-_Pending re-review_
+**Re-Review (Rev 2): APPROVED** — Both TODOs resolved. All simplification recommendations adopted. QD additions (deep-link, permission re-check, a11y, error handling) are technically sound. Ready for implementation.
+
+_Reviewed 2026-04-14 by techlead_
 
 ### CEO Decision
 _Pending re-reviews from QD and TL_
