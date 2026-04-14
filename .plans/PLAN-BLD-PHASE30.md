@@ -186,7 +186,24 @@ All changes use existing React Native Paper chips (same as RPE chips) and TextIn
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — 2026-04-14
+
+3 Critical issues found. Feature concept is sound but UX gaps would ship a feature users can't understand without prior exercise science knowledge.
+
+**Critical (MUST FIX):**
+- [C] UX-01: Tempo notation needs in-UI explanation (not just placeholder). Add helper text: "Seconds: Eccentric – Pause – Concentric – Pause"
+- [C] UX-02: Specify pending (uncompleted) set behavior on mode change. Recommendation: pending sets update mode; only completed sets are locked.
+- [C] UX-03: Training mode labels are jargon. Surface descriptions in UI via info icon, long-press, or chip subtitle.
+
+**Major (SHOULD FIX):**
+- [M] A11Y-01: Specify 56dp minimum touch target for mode chips (SKILL requirement during workout)
+- [M] A11Y-02: Add accessibilityRole="radiogroup" to chip container
+- [M] A11Y-03: Use AccessibilityInfo.announceForAccessibility() for mode changes
+- [M] A11Y-04: Add accessibilityHint to tempo TextInput
+- [M] DATA-01: Bump export version from 1 to 2
+- [M] DATA-02: Wrap migration ALTERs in transaction
+
+**Additional:** Extract TrainingModeSelector as separate component (requirement, not suggestion). Specify data flow for loading training_modes in session.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — 2026-04-14
