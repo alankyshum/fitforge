@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications";
-import { getSchedule, getAppSetting, getTemplateById } from "./db";
+import { getSchedule, getTemplateById } from "./db";
 
 export async function requestPermission(): Promise<boolean> {
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -64,15 +64,6 @@ export async function handleResponse(
     return;
   }
   navigate("/workout/new", { templateId: id });
-}
-
-export async function syncPermission(): Promise<boolean> {
-  const status = await getPermissionStatus();
-  if (status !== "granted") {
-    const enabled = await getAppSetting("reminders_enabled");
-    if (enabled === "true") return true;
-  }
-  return false;
 }
 
 export function setupHandler(): void {

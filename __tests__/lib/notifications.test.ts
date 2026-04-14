@@ -22,7 +22,7 @@ jest.mock("../../lib/db", () => ({
 describe("notifications", () => {
   let notifications: typeof import("../../lib/notifications");
   let Notifications: typeof import("expo-notifications");
-  let db: { getSchedule: jest.Mock; getAppSetting: jest.Mock; getTemplateById: jest.Mock };
+  let db: { getSchedule: jest.Mock; getTemplateById: jest.Mock };
 
   beforeEach(() => {
     jest.resetModules();
@@ -191,20 +191,6 @@ describe("notifications", () => {
       } as any;
       await notifications.handleResponse(response, navigate, showSnackbar);
       expect(navigate).toHaveBeenCalledWith("/");
-    });
-  });
-
-  describe("syncPermission", () => {
-    it("returns true when permission revoked but setting enabled", async () => {
-      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValueOnce({ status: "denied" });
-      db.getAppSetting.mockResolvedValueOnce("true");
-      const revoked = await notifications.syncPermission();
-      expect(revoked).toBe(true);
-    });
-
-    it("returns false when permission still granted", async () => {
-      const revoked = await notifications.syncPermission();
-      expect(revoked).toBe(false);
     });
   });
 
