@@ -65,13 +65,15 @@ jobs:
       - name: Install fdroidserver
         run: |
           sudo apt-get update
-          sudo apt-get install -y fdroidserver
+          sudo apt-get install -y python3-pip python3-venv
+          python3 -m venv /tmp/fdroid-venv
+          /tmp/fdroid-venv/bin/pip install fdroidserver
 
       - name: Prepare F-Droid repo
         run: |
           cp fitforge.apk fdroid/repo/
           cd fdroid
-          fdroid update --create-metadata --rename-apks
+          /tmp/fdroid-venv/bin/fdroid update --create-metadata --rename-apks
         env:
           FDROID_KEY_STORE_PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
 
