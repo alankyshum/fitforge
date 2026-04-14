@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-13
-Total learnings: 31
+Total learnings: 37
 
 ## How to Use This Knowledge Base
 
@@ -14,11 +14,12 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 15 learnings
+- [React Native + Expo](patterns/react-native.md) — 18 learnings
+- [Testing](patterns/testing.md) — 2 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 2 learnings
-- [Build Configuration](pitfalls/build-config.md) — 2 learnings
+- [Build Configuration](pitfalls/build-config.md) — 3 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 3 learnings
 
@@ -36,6 +37,12 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-13 | BLD-28 | Use Middleware for COOP/COEP Headers — Static Server Config Is Unreliable | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-13 | BLD-28 | Platform-Aware Graceful Degradation for expo-sqlite Web | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-15 | Bundle Static Reference Data as JSON for Read-Only Datasets | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-15 | Set keyboardShouldPersistTaps on FlatList with Embedded TextInputs | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-13 | BLD-24 | Reset Module Singletons with jest.resetModules() + jest.doMock() | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-13 | BLD-24/25/26 | Bootstrap React Native Tests with jest-expo and transformIgnorePatterns | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-13 | BLD-8 | Expo Router: New Screen Files Require Explicit Stack.Screen Registration | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-13 | BLD-8 | Documented Pitfalls Still Recur — Agents Must Read Learnings Before Implementation | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-13 | BLD-20 | Numeric Map Keys Collide Across Unit Systems — Use Unit-Qualified Keys | Pitfalls | [theming.md](pitfalls/theming.md) |

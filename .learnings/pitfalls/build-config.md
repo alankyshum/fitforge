@@ -17,3 +17,11 @@
 **Learning**: Expo Router file-based routing creates routes automatically from file paths, but the root `Stack` in `app/_layout.tsx` uses `headerShown: false` globally. Any screen that needs a header, back button, or themed header styling MUST have an explicit `Stack.Screen` entry with `headerShown: true`, `title`, `headerStyle`, and `headerTintColor`. Without it, the route works but the UX is broken.
 **Action**: When creating a new screen file under `app/`, always add a corresponding `Stack.Screen` entry in `app/_layout.tsx`. Copy the pattern from an existing screen (e.g., `tools/plates`). Verify the header renders correctly before submitting a PR.
 **Tags**: expo-router, stack-screen, routing, header, navigation, layout, build-config
+
+### Use Middleware for COOP/COEP Headers — Static Server Config Is Unreliable
+**Source**: BLD-28 — FIX: expo-sqlite web crash on localhost:8081
+**Date**: 2026-04-13
+**Context**: BLD-1 added COOP/COEP headers via Metro's `config.server.headers` to enable SharedArrayBuffer for expo-sqlite web. The fix appeared to work but expo-sqlite still crashed with `sqlite3_open_v2` / "cannot create file" errors because worker.js and .wasm files did not receive the headers.
+**Learning**: Metro's `config.server.headers` applies only to certain responses (primarily HTML). Web Workers and WASM assets served by Metro do not inherit these headers. Without COOP/COEP on ALL responses (including worker scripts), SharedArrayBuffer remains unavailable inside workers, and OPFS-backed storage fails silently. The fix is `config.server.enhanceMiddleware` — a middleware function that intercepts every response and sets headers universally.
+**Action**: When configuring cross-origin isolation headers for web (COOP/COEP), always use `enhanceMiddleware` in metro.config.js, not `server.headers`. Verify headers reach worker.js and .wasm files by inspecting the Network tab in DevTools. This applies to any library using WASM + Web Workers (sqlite, compression, cryptography).
+**Tags**: metro, coop, coep, shared-array-buffer, web-workers, wasm, expo-sqlite, web-platform, middleware

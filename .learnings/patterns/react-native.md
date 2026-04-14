@@ -121,3 +121,27 @@
 **Learning**: Use `PRAGMA table_info(<table>)` to retrieve the current column list, then conditionally `ALTER TABLE ADD COLUMN` only when the column is absent. This makes migrations idempotent — safe to run on both fresh installs and upgrades. The pattern: query columns into an array, check with `.some(c => c.name === '<col>')`, and skip the ALTER if the column already exists.
 **Action**: For every SQLite schema migration that adds columns, wrap it in a PRAGMA table_info guard. Never use raw ALTER TABLE ADD COLUMN without checking column existence first. Group related column additions under a single PRAGMA call to reduce queries.
 **Tags**: expo-sqlite, sqlite, migration, alter-table, pragma, idempotent, schema-evolution
+
+### Platform-Aware Graceful Degradation for expo-sqlite Web
+**Source**: BLD-28 — FIX: expo-sqlite web crash on localhost:8081
+**Date**: 2026-04-13
+**Context**: Even with correct COOP/COEP headers, OPFS-backed expo-sqlite can fail on web in environments that restrict storage APIs (incognito mode, certain browsers, restrictive CSP). The app crashed entirely with no recovery path.
+**Learning**: When a storage mechanism is platform-conditional, catch the failure at init and fall back to a degraded mode rather than crashing the app. For expo-sqlite web: catch OPFS errors, fall back to `:memory:` database, export an `isMemoryFallback()` flag, and show a dismissable banner warning users that data won't persist. On native platforms, propagate errors normally since OPFS failures are unexpected there.
+**Action**: For any cross-platform storage init, wrap in platform-specific try/catch: `if (Platform.OS === "web") { try primary → catch → fallback }`. Export a flag indicating degraded mode. Show a non-blocking user warning. Never silently degrade without informing the user.
+**Tags**: expo-sqlite, web, opfs, graceful-degradation, platform-specific, fallback, memory-database, cross-platform
+
+### Bundle Static Reference Data as JSON for Read-Only Datasets
+**Source**: BLD-15 — Built-in Food Database (Phase 20)
+**Date**: 2026-04-13
+**Context**: The food database feature needed 150+ food items with macros. The choice was between loading them into SQLite or bundling as a JSON file filtered in-memory.
+**Learning**: For read-only reference datasets under ~10MB, bundling as a JSON file and filtering in-memory with `.filter()` is faster, simpler, and avoids schema complexity compared to SQLite. The data loads once via `require()`, needs no migrations, and search/category filtering operates on the in-memory array. Reserve SQLite for user-generated data that requires CRUD, persistence, and relational queries.
+**Action**: When adding reference data (food databases, exercise libraries, unit tables), evaluate size and mutability first. If <10MB and read-only, use a JSON file in `assets/data/` with an in-memory search function. If the data needs user edits, favorites, or relational joins, use SQLite.
+**Tags**: json, static-data, in-memory, performance, data-architecture, sqlite-alternative, reference-data
+
+### Set keyboardShouldPersistTaps on FlatList with Embedded TextInputs
+**Source**: BLD-15 — Built-in Food Database (Phase 20)
+**Date**: 2026-04-13
+**Context**: The food database screen had a search TextInput in the FlatList header and expandable items with serving multiplier inputs. Tapping an item to expand it dismissed the keyboard, requiring the user to re-tap the search field.
+**Learning**: By default, React Native FlatList dismisses the keyboard when the user taps outside a TextInput. When a list combines search inputs with interactive items (expandable rows, buttons, secondary inputs), this creates a frustrating UX where every non-input tap forces keyboard dismissal. Setting `keyboardShouldPersistTaps="handled"` keeps the keyboard open unless the tap explicitly blurs it.
+**Action**: On any FlatList or ScrollView that contains both TextInput fields and interactive list items, set `keyboardShouldPersistTaps="handled"`. Test the flow: type in search → tap list item → verify keyboard stays open.
+**Tags**: react-native, flatlist, keyboard, textinput, ux, keyboardshouldpersisttaps, scroll-view
