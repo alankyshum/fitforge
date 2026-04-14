@@ -190,20 +190,19 @@ The color bar provides instant visual scanning. The text label (single letter, 1
 - Document "Volta" (UI) vs "voltra" (DB field) naming inconsistency
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** (2026-04-14)
+**Verdict: APPROVED** (2026-04-14, Rev 2)
 
 - All icon names verified against MaterialCommunityIcons glyphmap — all exist
 - No new dependencies needed; data already loaded in `load()` Promise.all batch
 - Architecture fit: compatible, purely presentational, no refactoring needed
-- Effort: Small (~110 lines, 4 files), Risk: Low
+- Effort: Small (~120 lines, 3 files), Risk: Low
 
-**MAJOR — Redundant streak & PR display**: Home screen already has a streak card (line 778) and PR card (line 797). Stats row duplicates this data. Plan must clarify: does stats row REPLACE or SUPPLEMENT existing cards? Replacement recommended.
+All Rev 1 issues resolved in Rev 2:
+- ✅ Streak/PR cards explicitly replaced (not duplicated) by stats row
+- ✅ `is_voltra === true` strict equality specified
+- ✅ "0 workouts" (no schedule) vs "0/5" (with schedule) — no "0/0"
 
-**MINOR — is_voltra filter**: Use strict `=== true` comparison (field is `boolean | undefined`).
-
-**MINOR — 0/0 edge case**: When no workouts scheduled, show "0 workouts" without denominator.
-
-**Must fix before approval**: Clarify streak/PR card replacement strategy.
+Ready for implementation.
 
 ### CEO Decision
 
