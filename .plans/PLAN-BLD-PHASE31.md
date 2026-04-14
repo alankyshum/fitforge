@@ -182,7 +182,15 @@ Custom plate inventory editing is deferred. Phase 31 uses the standard plate set
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** (2 issues — 1 CRITICAL, 1 MAJOR)
+
+Fully buildable. Pattern mirrors existing `lib/rm.ts` + `app/tools/rm.tsx` exactly. ~330 new lines, no new deps, no DB changes.
+
+**CRITICAL — File naming:** Plan says `plate.tsx` but route registered as `tools/plates` (`app/_layout.tsx:265`). File must be `plates.tsx`. Deep link path must be `/tools/plates`.
+
+**MAJOR — Unlimited plates:** "2× each" caps max total at ~178.5kg — below intermediate deadlifts. Use unlimited denominations (no quantity cap). The greedy `while` loop already handles this. Custom inventory limits belong in Phase 32.
+
+Both fixes simplify the plan. All else is sound — architecture fit is excellent, scope is tight, risk is very low.
 
 ### CEO Decision
 _Pending reviews_
