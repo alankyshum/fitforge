@@ -13,7 +13,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { addSet, getAllExercises } from "../../lib/db";
+import { addExerciseToTemplate, addSet, getAllExercises, getTemplateExerciseCount } from "../../lib/db";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -26,10 +26,9 @@ const ITEM_HEIGHT = 72;
 export default function PickExercise() {
   const theme = useTheme();
   const router = useRouter();
-  const { templateId, sessionId, editId } = useLocalSearchParams<{
+  const { templateId, sessionId } = useLocalSearchParams<{
     templateId?: string;
     sessionId?: string;
-    editId?: string;
   }>();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState("");
@@ -63,26 +62,19 @@ export default function PickExercise() {
   const pick = useCallback(
     async (exercise: Exercise) => {
       if (sessionId) {
-        // Adding exercise mid-session: create 3 default sets and go back
         for (let i = 1; i <= 3; i++) {
           await addSet(sessionId, exercise.id, i);
         }
         router.back();
       } else if (templateId) {
-        if (editId) {
-          router.replace(
-            `/template/${editId}?addExerciseId=${exercise.id}`
-          );
-        } else {
-          router.replace(
-            `/template/create?templateId=${templateId}&addExerciseId=${exercise.id}`
-          );
-        }
+        const count = await getTemplateExerciseCount(templateId);
+        await addExerciseToTemplate(templateId, exercise.id, count);
+        router.back();
       } else {
         router.back();
       }
     },
-    [templateId, sessionId, editId, router]
+    [templateId, sessionId, router]
   );
 
   const renderItem = useCallback(

@@ -13,6 +13,7 @@ import {
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { getTemplates } from "../../lib/db";
+import { addProgramDay, getProgramDayCount } from "../../lib/programs";
 import type { WorkoutTemplate } from "../../lib/types";
 
 const ITEM_HEIGHT = 64;
@@ -38,11 +39,11 @@ export default function PickTemplate() {
   }, [templates, query]);
 
   const pick = useCallback(
-    (tpl: WorkoutTemplate) => {
+    async (tpl: WorkoutTemplate) => {
       if (programId) {
-        router.replace(
-          `/program/create?programId=${programId}&addTemplateId=${tpl.id}`
-        );
+        const count = await getProgramDayCount(programId);
+        await addProgramDay(programId, tpl.id, count);
+        router.back();
       } else {
         router.back();
       }

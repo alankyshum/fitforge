@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -14,12 +14,13 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import {
-  addExerciseToTemplate,
   createTemplate,
   getTemplateById,
   removeExerciseFromTemplate,
   reorderTemplateExercises,
+  updateTemplateName,
 } from "../../lib/db";
 import type { TemplateExercise, WorkoutTemplate } from "../../lib/types";
 
@@ -28,46 +29,35 @@ export default function CreateTemplate() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     templateId?: string;
-    addExerciseId?: string;
   }>();
   const [name, setName] = useState("");
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [saving, setSaving] = useState(false);
-  const handled = useRef<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (template) {
+        getTemplateById(template.id).then((tpl) => {
+          if (tpl) setExercises(tpl.exercises ?? []);
+        });
+      } else if (params.templateId) {
+        getTemplateById(params.templateId).then((tpl) => {
+          if (tpl) {
+            setTemplate(tpl);
+            setName(tpl.name);
+            setExercises(tpl.exercises ?? []);
+          }
+        });
+      }
+    }, [template, params.templateId])
+  );
 
   const load = useCallback(async () => {
     if (!template) return;
     const tpl = await getTemplateById(template.id);
     if (tpl) setExercises(tpl.exercises ?? []);
   }, [template]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // Hydrate template from templateId param (returning from picker)
-  useEffect(() => {
-    if (!params.templateId || template) return;
-    getTemplateById(params.templateId).then((tpl) => {
-      if (tpl) {
-        setTemplate(tpl);
-        setName(tpl.name);
-        setExercises(tpl.exercises ?? []);
-      }
-    });
-  }, [params.templateId, template]);
-
-  // Handle exercise added from picker
-  useEffect(() => {
-    if (!params.addExerciseId || !template || handled.current === params.addExerciseId) return;
-    handled.current = params.addExerciseId;
-    addExerciseToTemplate(
-      template.id,
-      params.addExerciseId,
-      exercises.length
-    ).then(() => load());
-  }, [params.addExerciseId, template, exercises.length, load]);
 
   const save = async () => {
     const trimmed = name.trim();
@@ -89,6 +79,9 @@ export default function CreateTemplate() {
           Alert.alert("Validation", "Add at least 1 exercise to your template.");
           setSaving(false);
           return;
+        }
+        if (trimmed !== template.name) {
+          await updateTemplateName(template.id, trimmed);
         }
         router.back();
       }

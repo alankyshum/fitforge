@@ -147,8 +147,6 @@ export default function Nutrition() {
     }
   };
 
-  const empty = logs.length === 0;
-
   const sections = useMemo(() =>
     MEALS
       .map((m) => ({ title: MEAL_LABELS[m], meal: m, data: logs.filter((l) => l.meal === m) }))
@@ -349,7 +347,7 @@ export default function Nutrition() {
         icon="plus"
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         color={theme.colors.onPrimary}
-        onPress={() => router.push("/nutrition/add")}
+        onPress={() => router.push(`/nutrition/add?date=${formatDateKey(date.getTime())}`)}
         accessibilityLabel="Add food"
       />
 

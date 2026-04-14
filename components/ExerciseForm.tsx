@@ -52,6 +52,7 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
   const [secondary, setSecondary] = useState<Set<MuscleGroup>>(
     new Set(initial?.secondary_muscles ?? [])
   );
+  const [instructions, setInstructions] = useState(initial?.instructions ?? "");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; category?: string; muscles?: string }>({});
@@ -88,14 +89,14 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
         difficulty,
         primary_muscles: Array.from(primary),
         secondary_muscles: Array.from(secondary),
-        instructions: "",
+        instructions: instructions.trim(),
       });
     } catch {
       setToast("Failed to save exercise");
     } finally {
       setSaving(false);
     }
-  }, [validate, onSave, name, category, equipment, difficulty, primary, secondary]);
+  }, [validate, onSave, name, category, equipment, difficulty, primary, secondary, instructions]);
 
   const back = useCallback(() => {
     if (dirty) {
@@ -279,6 +280,18 @@ export default function ExerciseForm({ initial, onSave, title }: Props) {
                 </View>
               </View>
             ))}
+
+            {/* Instructions */}
+            <TextInput
+              label="Instructions (optional)"
+              value={instructions}
+              onChangeText={(v) => { setInstructions(v); setDirty(true); }}
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              accessibilityLabel="Exercise instructions"
+              style={styles.input}
+            />
 
             {/* Save / Cancel */}
             <View style={styles.actions}>

@@ -9,7 +9,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   addFoodEntry,
   addDailyLog,
@@ -19,7 +19,7 @@ import { searchFoods, getCategories } from "../../lib/foods";
 import type { FoodEntry, Meal, BuiltinFood, FoodCategory } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 
-function DatabaseTab({ meal, saving, onSaving }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void }) {
+function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: boolean; onSaving: (v: boolean) => void; dateKey: string }) {
   const theme = useTheme();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<FoodCategory | null>(null);
@@ -27,7 +27,7 @@ function DatabaseTab({ meal, saving, onSaving }: { meal: Meal; saving: boolean; 
   const [multiplier, setMultiplier] = useState("1");
   const [saveFav, setSaveFav] = useState(false);
   const categories = getCategories();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateKey;
 
   const results = useMemo(() => searchFoods(query, category), [query, category]);
 
@@ -220,8 +220,15 @@ function DatabaseTab({ meal, saving, onSaving }: { meal: Meal; saving: boolean; 
   );
 }
 
+function localDateKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function AddFood() {
   const theme = useTheme();
+  const params = useLocalSearchParams<{ date?: string }>();
+  const dateKey = params.date || localDateKey();
   const [tab, setTab] = useState("new");
   const [name, setName] = useState("");
   const [calories, setCalories] = useState("");
@@ -240,7 +247,7 @@ export default function AddFood() {
     }, [])
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateKey;
 
   const save = async () => {
     if (!name.trim()) return;
@@ -302,7 +309,7 @@ export default function AddFood() {
             ))}
           </View>
         </View>
-        <DatabaseTab meal={meal} saving={saving} onSaving={setSaving} />
+        <DatabaseTab meal={meal} saving={saving} onSaving={setSaving} dateKey={dateKey} />
       </View>
     );
   }

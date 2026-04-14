@@ -4,7 +4,7 @@ import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 import { createFoodEntry, createDailyLog, createMacroTargets, resetIds } from '../helpers/factories'
-import type { DailyLog, FoodEntry, MacroTargets } from '../../lib/types'
+import type { DailyLog } from '../../lib/types'
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 
@@ -129,7 +129,7 @@ describe('Nutrition Tracking Acceptance', () => {
     const fab = await findByLabelText('Add food')
     fireEvent.press(fab)
 
-    expect(mockGlobalRouter.push).toHaveBeenCalledWith('/nutrition/add')
+    expect(mockGlobalRouter.push).toHaveBeenCalledWith(expect.stringContaining('/nutrition/add?date='))
   })
 
   it('shows Today label for current date', async () => {

@@ -150,7 +150,7 @@ describe('Nutrition Logging', () => {
     await findByText('Today')
     const fab = getByLabelText('Add food')
     fireEvent.press(fab)
-    expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/add')
+    expect(mockRouter.push).toHaveBeenCalledWith(expect.stringContaining('/nutrition/add?date='))
   })
 
   it('edit targets link has a11y label', async () => {

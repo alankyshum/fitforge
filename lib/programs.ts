@@ -1,4 +1,4 @@
-import type { Program, ProgramDay, ProgramLog } from "./types";
+import type { Program, ProgramDay } from "./types";
 import { getDatabase } from "./db/helpers";
 
 // --------------- Programs ---------------
@@ -93,13 +93,14 @@ export async function getActiveProgram(): Promise<Program | null> {
     name: string;
     description: string;
     is_active: number;
+    is_starter: number;
     current_day_id: string | null;
     created_at: number;
     updated_at: number;
     deleted_at: number | null;
   }>("SELECT * FROM programs WHERE is_active = 1 AND deleted_at IS NULL LIMIT 1");
   if (!row) return null;
-  return { ...row, is_active: true };
+  return { ...row, is_active: true, is_starter: row.is_starter === 1 };
 }
 
 export async function activateProgram(id: string): Promise<void> {
@@ -214,6 +215,16 @@ export async function removeProgramDay(id: string): Promise<void> {
       await database.runAsync(
         "UPDATE programs SET current_day_id = ?, updated_at = ? WHERE id = ?",
         [first?.id ?? null, Date.now(), row.program_id]
+      );
+    }
+    const ordered = await database.getAllAsync<{ id: string }>(
+      "SELECT id FROM program_days WHERE program_id = ? ORDER BY position ASC",
+      [row.program_id]
+    );
+    for (let i = 0; i < ordered.length; i++) {
+      await database.runAsync(
+        "UPDATE program_days SET position = ? WHERE id = ?",
+        [i, ordered[i].id]
       );
     }
     await database.runAsync(

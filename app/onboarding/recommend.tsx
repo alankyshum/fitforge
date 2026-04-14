@@ -27,11 +27,14 @@ export default function Recommend() {
   const completeOnboarding = useCompleteOnboarding();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<"template" | "program" | "browse" | undefined>();
 
   async function finish(action?: "template" | "program" | "browse") {
     if (saving) return;
     setSaving(true);
     setError(null);
+    if (action !== undefined) setLastAction(action);
+    const effectiveAction = action ?? lastAction;
     try {
       const settings = await getBodySettings();
       await updateBodySettings(weight, measurement, settings.weight_goal, settings.body_fat_goal);
@@ -39,12 +42,10 @@ export default function Recommend() {
       await setAppSetting("onboarding_complete", "1");
       completeOnboarding();
 
-      if (action === "program") {
+      if (effectiveAction === "program") {
         await activateProgram(PPL.id);
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/(tabs)");
       }
+      router.replace("/(tabs)");
     } catch {
       setSaving(false);
       setError("Something went wrong saving your preferences. Tap to retry or skip.");
@@ -52,12 +53,15 @@ export default function Recommend() {
   }
 
   function skip() {
+    if (saving) return;
+    setSaving(true);
     setAppSetting("onboarding_complete", "1")
       .then(() => {
         completeOnboarding();
         router.replace("/(tabs)");
       })
       .catch(() => {
+        setSaving(false);
         setError("Could not save preferences. Tap Skip to continue anyway.");
       });
   }

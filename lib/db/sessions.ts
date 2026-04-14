@@ -1,5 +1,5 @@
 import type { WorkoutSession, WorkoutSet, TrainingMode, MuscleGroup } from "../types";
-import { query, queryOne, execute, getDatabase } from "./helpers";
+import { query, queryOne, execute } from "./helpers";
 
 type SetRow = {
   id: string;
@@ -222,11 +222,15 @@ export async function getPreviousSets(
   }>(
     `SELECT ws.set_number, ws.weight, ws.reps
      FROM workout_sets ws
-     JOIN workout_sessions wss ON ws.session_id = wss.id
-     WHERE ws.exercise_id = ? AND ws.completed = 1 AND ws.session_id != ?
-       AND wss.completed_at IS NOT NULL
-     ORDER BY ws.completed_at DESC`,
-    [exerciseId, currentSessionId]
+     WHERE ws.exercise_id = ? AND ws.completed = 1
+       AND ws.session_id = (
+         SELECT wss.id FROM workout_sessions wss
+         JOIN workout_sets ws2 ON ws2.session_id = wss.id
+         WHERE ws2.exercise_id = ? AND wss.completed_at IS NOT NULL AND wss.id != ?
+         ORDER BY wss.completed_at DESC LIMIT 1
+       )
+     ORDER BY ws.set_number ASC`,
+    [exerciseId, exerciseId, currentSessionId]
   );
 }
 

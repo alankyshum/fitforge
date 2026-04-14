@@ -40,7 +40,7 @@ import {
 } from "../../lib/db";
 import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
 import { useLayout } from "../../lib/layout";
-import { KG_TO_LB, LB_TO_KG, toDisplay, toKg } from "../../lib/units";
+import { toDisplay, toKg } from "../../lib/units";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import { formatDuration, formatDateShort, movingAvg } from "../../lib/format";
 
@@ -174,7 +174,12 @@ export default function Progress() {
     }
   };
 
-  const handleDelete = (item: BodyWeight) => {
+  const handleDelete = async (item: BodyWeight) => {
+    if (undoRef.current) {
+      clearTimeout(undoRef.current.timer);
+      await deleteBodyWeight(undoRef.current.id);
+      undoRef.current = null;
+    }
     const filtered = entries.filter((e) => e.id !== item.id);
     setEntries(filtered);
     setSnack("Entry deleted");
@@ -185,7 +190,6 @@ export default function Progress() {
       await loadBody();
     }, 3000);
 
-    if (undoRef.current) clearTimeout(undoRef.current.timer);
     undoRef.current = { id: item.id, timer };
   };
 
@@ -510,11 +514,7 @@ export default function Progress() {
     // Chart card — only show if 2+ entries
     const chartCard = chart.length >= 2 ? (() => {
       const avg = movingAvg(chart);
-      const labels = chart.length <= 8
-        ? chart.map((d) => d.date.slice(5))
-        : chart.filter((_, i) => i % Math.ceil(chart.length / 6) === 0 || i === chart.length - 1).map((d) => d.date.slice(5));
 
-      // Pad labels to match data length
       const paddedLabels = chart.map((d, i) => {
         if (chart.length <= 8) return d.date.slice(5);
         if (i % Math.ceil(chart.length / 6) === 0 || i === chart.length - 1) return d.date.slice(5);

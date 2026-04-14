@@ -16,6 +16,7 @@ export {
   createTemplate,
   getTemplates,
   getTemplateById,
+  updateTemplateName,
   deleteTemplate,
   duplicateTemplate,
   duplicateProgram,

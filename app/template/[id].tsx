@@ -16,8 +16,8 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import {
-  addExerciseToTemplate,
   createExerciseLink,
   duplicateTemplate,
   getTemplateById,
@@ -39,13 +39,11 @@ function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): 
 export default function EditTemplate() {
   const theme = useTheme();
   const router = useRouter();
-  const { id, addExerciseId } = useLocalSearchParams<{
+  const { id } = useLocalSearchParams<{
     id: string;
-    addExerciseId?: string;
   }>();
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
-  const handled = useRef<string | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [snackbar, setSnackbar] = useState("");
@@ -74,17 +72,11 @@ export default function EditTemplate() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (id) load();
-  }, [id, load]);
-
-  useEffect(() => {
-    if (!addExerciseId || !id || handled.current === addExerciseId) return;
-    handled.current = addExerciseId;
-    addExerciseToTemplate(id, addExerciseId, exercises.length).then(() =>
-      load()
-    );
-  }, [addExerciseId, id, exercises.length, load]);
+  useFocusEffect(
+    useCallback(() => {
+      if (id) load();
+    }, [id, load])
+  );
 
   useEffect(() => {
     return () => {
@@ -144,7 +136,7 @@ export default function EditTemplate() {
     }, 5000);
   };
 
-  const handleUnlink = async (linkId: string) => {
+  const handleUnlink = useCallback(async (linkId: string) => {
     await unlinkExerciseGroup(linkId);
     await load();
     const prev = exercises.filter((e) => e.link_id === linkId).map((e) => e.id);
@@ -160,12 +152,12 @@ export default function EditTemplate() {
       setSnackbar("");
       setUndo(null);
     }, 5000);
-  };
+  }, [exercises, id, load]);
 
-  const handleUnlinkSingle = async (teId: string, linkId: string) => {
+  const handleUnlinkSingle = useCallback(async (teId: string, linkId: string) => {
     await unlinkSingleExercise(teId, linkId);
     await load();
-  };
+  }, [load]);
 
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<TemplateExercise>) => {
@@ -299,7 +291,7 @@ export default function EditTemplate() {
         </View>
       );
     },
-    [theme, exercises, linkIds, palette, selecting, selected, move, remove]
+    [theme, exercises, linkIds, palette, selecting, selected, move, remove, handleUnlink, handleUnlinkSingle, id, router]
   );
 
   if (!template) {
@@ -384,7 +376,7 @@ export default function EditTemplate() {
 
         <FlatList
           data={exercises}
-          renderItem={starter ? ({ item, index }: ListRenderItemInfo<TemplateExercise>) => {
+          renderItem={starter ? ({ item }: ListRenderItemInfo<TemplateExercise>) => {
             const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
             const color = linkIdx >= 0 ? palette[linkIdx % palette.length] : undefined;
             return (

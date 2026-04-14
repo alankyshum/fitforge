@@ -1,6 +1,6 @@
 import type { WorkoutTemplate, TemplateExercise } from "../types";
 import { query, queryOne, execute, getDatabase } from "./helpers";
-import { mapRow, type ExerciseRow } from "./exercises";
+import { mapRow } from "./exercises";
 
 type TemplateExerciseRow = {
   id: string;
@@ -105,16 +105,29 @@ export async function getTemplateById(
   return tpl;
 }
 
+export async function updateTemplateName(
+  id: string,
+  name: string
+): Promise<void> {
+  await execute(
+    "UPDATE workout_templates SET name = ?, updated_at = ? WHERE id = ?",
+    [name, Date.now(), id]
+  );
+}
+
 export async function deleteTemplate(id: string): Promise<void> {
+  const database = await getDatabase();
   const tpl = await queryOne<{ is_starter: number }>(
     "SELECT is_starter FROM workout_templates WHERE id = ?",
     [id]
   );
   if (tpl?.is_starter === 1) return;
-  await execute("DELETE FROM weekly_schedule WHERE template_id = ?", [id]);
-  await execute("DELETE FROM template_exercises WHERE template_id = ?", [id]);
-  await execute("UPDATE program_days SET template_id = NULL WHERE template_id = ?", [id]);
-  await execute("DELETE FROM workout_templates WHERE id = ? AND is_starter = 0", [id]);
+  await database.withTransactionAsync(async () => {
+    await database.runAsync("DELETE FROM weekly_schedule WHERE template_id = ?", [id]);
+    await database.runAsync("DELETE FROM template_exercises WHERE template_id = ?", [id]);
+    await database.runAsync("UPDATE program_days SET template_id = NULL WHERE template_id = ?", [id]);
+    await database.runAsync("DELETE FROM workout_templates WHERE id = ? AND is_starter = 0", [id]);
+  });
 }
 
 export async function duplicateTemplate(id: string): Promise<string> {
@@ -167,6 +180,19 @@ export async function duplicateProgram(id: string): Promise<string> {
     [id]
   );
 
+  const templateCopies = new Map<string, string>();
+  for (const day of days) {
+    if (day.template_id && !templateCopies.has(day.template_id)) {
+      const tpl = await database.getFirstAsync<{ is_starter: number }>(
+        "SELECT is_starter FROM workout_templates WHERE id = ?",
+        [day.template_id]
+      );
+      if (tpl?.is_starter === 1) {
+        templateCopies.set(day.template_id, await duplicateTemplate(day.template_id));
+      }
+    }
+  }
+
   await database.withTransactionAsync(async () => {
     await database.runAsync(
       "INSERT INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, ?, ?, 0)",
@@ -174,16 +200,7 @@ export async function duplicateProgram(id: string): Promise<string> {
     );
 
     for (const day of days) {
-      let tplId = day.template_id;
-      if (tplId) {
-        const tpl = await database.getFirstAsync<{ is_starter: number }>(
-          "SELECT is_starter FROM workout_templates WHERE id = ?",
-          [tplId]
-        );
-        if (tpl?.is_starter === 1) {
-          tplId = await duplicateTemplate(tplId);
-        }
-      }
+      const tplId = templateCopies.get(day.template_id ?? "") ?? day.template_id;
       await database.runAsync(
         "INSERT INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
         [crypto.randomUUID(), newId, tplId, day.position, day.label]
@@ -226,29 +243,41 @@ export async function addExerciseToTemplate(
 }
 
 export async function removeExerciseFromTemplate(id: string): Promise<void> {
+  const database = await getDatabase();
   const row = await queryOne<{ template_id: string; link_id: string | null }>(
     "SELECT template_id, link_id FROM template_exercises WHERE id = ?",
     [id]
   );
-  await execute("DELETE FROM template_exercises WHERE id = ?", [id]);
-  if (row) {
+  if (!row) return;
+  await database.withTransactionAsync(async () => {
+    await database.runAsync("DELETE FROM template_exercises WHERE id = ?", [id]);
     if (row.link_id) {
-      const remaining = await queryOne<{ count: number }>(
+      const remaining = await database.getFirstAsync<{ count: number }>(
         "SELECT COUNT(*) as count FROM template_exercises WHERE link_id = ?",
         [row.link_id]
       );
       if (remaining && remaining.count < 2) {
-        await execute(
+        await database.runAsync(
           "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE link_id = ?",
           [row.link_id]
         );
       }
     }
-    await execute(
+    const ordered = await database.getAllAsync<{ id: string }>(
+      "SELECT id FROM template_exercises WHERE template_id = ? ORDER BY position ASC",
+      [row.template_id]
+    );
+    for (let i = 0; i < ordered.length; i++) {
+      await database.runAsync(
+        "UPDATE template_exercises SET position = ? WHERE id = ?",
+        [i, ordered[i].id]
+      );
+    }
+    await database.runAsync(
       "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
       [Date.now(), row.template_id]
     );
-  }
+  });
 }
 
 export async function reorderTemplateExercises(
@@ -256,16 +285,18 @@ export async function reorderTemplateExercises(
   orderedIds: string[]
 ): Promise<void> {
   const database = await getDatabase();
-  for (let i = 0; i < orderedIds.length; i++) {
+  await database.withTransactionAsync(async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await database.runAsync(
+        "UPDATE template_exercises SET position = ? WHERE id = ? AND template_id = ?",
+        [i, orderedIds[i], templateId]
+      );
+    }
     await database.runAsync(
-      "UPDATE template_exercises SET position = ? WHERE id = ? AND template_id = ?",
-      [i, orderedIds[i], templateId]
+      "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
+      [Date.now(), templateId]
     );
-  }
-  await database.runAsync(
-    "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
-    [Date.now(), templateId]
-  );
+  });
 }
 
 export async function updateTemplateExercise(
@@ -316,10 +347,20 @@ export async function createExerciseLink(
 export async function unlinkExerciseGroup(linkId: string): Promise<void> {
   const database = await getDatabase();
   await database.withTransactionAsync(async () => {
+    const te = await database.getFirstAsync<{ template_id: string }>(
+      "SELECT template_id FROM template_exercises WHERE link_id = ? LIMIT 1",
+      [linkId]
+    );
     await database.runAsync(
       "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE link_id = ?",
       [linkId]
     );
+    if (te) {
+      await database.runAsync(
+        "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
+        [Date.now(), te.template_id]
+      );
+    }
   });
 }
 
@@ -344,6 +385,10 @@ export async function unlinkSingleExercise(
 ): Promise<void> {
   const database = await getDatabase();
   await database.withTransactionAsync(async () => {
+    const te = await database.getFirstAsync<{ template_id: string }>(
+      "SELECT template_id FROM template_exercises WHERE id = ?",
+      [teId]
+    );
     await database.runAsync(
       "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE id = ?",
       [teId]
@@ -356,6 +401,12 @@ export async function unlinkSingleExercise(
       await database.runAsync(
         "UPDATE template_exercises SET link_id = NULL, link_label = '' WHERE link_id = ?",
         [linkId]
+      );
+    }
+    if (te) {
+      await database.runAsync(
+        "UPDATE workout_templates SET updated_at = ? WHERE id = ?",
+        [Date.now(), te.template_id]
       );
     }
   });

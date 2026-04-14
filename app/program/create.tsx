@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -14,16 +14,15 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import {
   createProgram,
   getProgramById,
   getProgramDays,
   updateProgram,
-  addProgramDay,
   removeProgramDay,
   reorderProgramDays,
 } from "../../lib/programs";
-import { getTemplateById } from "../../lib/db";
 import type { Program, ProgramDay } from "../../lib/types";
 
 export default function CreateProgram() {
@@ -31,14 +30,12 @@ export default function CreateProgram() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     programId?: string;
-    addTemplateId?: string;
   }>();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [saving, setSaving] = useState(false);
-  const [handledTemplate, setHandledTemplate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!program) return;
@@ -46,29 +43,22 @@ export default function CreateProgram() {
     setDays(d);
   }, [program]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // Hydrate existing program for edit
-  useEffect(() => {
-    if (!params.programId || program) return;
-    getProgramById(params.programId).then((p) => {
-      if (p) {
-        setProgram(p);
-        setName(p.name);
-        setDescription(p.description);
-        getProgramDays(p.id).then(setDays);
+  useFocusEffect(
+    useCallback(() => {
+      if (program) {
+        getProgramDays(program.id).then(setDays);
+      } else if (params.programId) {
+        getProgramById(params.programId).then((p) => {
+          if (p) {
+            setProgram(p);
+            setName(p.name);
+            setDescription(p.description);
+            getProgramDays(p.id).then(setDays);
+          }
+        });
       }
-    });
-  }, [params.programId, program]);
-
-  // Handle template added from picker
-  useEffect(() => {
-    if (!params.addTemplateId || !program || handledTemplate === params.addTemplateId) return;
-    setHandledTemplate(params.addTemplateId);
-    addProgramDay(program.id, params.addTemplateId, days.length).then(() => load());
-  }, [params.addTemplateId, program, days.length, load, handledTemplate]);
+    }, [program, params.programId])
+  );
 
   const save = async () => {
     const trimmed = name.trim();
@@ -83,6 +73,11 @@ export default function CreateProgram() {
         setProgram(p);
         Alert.alert("Program Created", "Now add workout days to your program.");
       } else {
+        if (days.length === 0) {
+          Alert.alert("Validation", "Add at least 1 workout day.");
+          setSaving(false);
+          return;
+        }
         await updateProgram(program.id, trimmed, description.trim());
         router.back();
       }

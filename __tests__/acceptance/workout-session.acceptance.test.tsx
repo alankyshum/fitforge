@@ -47,7 +47,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   usePathname: () => '/test',
   useFocusEffect: jest.fn(),
-  Stack: { Screen: ({ options }: any) => null },
+  Stack: { Screen: () => null },
   Redirect: () => null,
 }))
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
@@ -135,8 +135,8 @@ describe('Workout Session Acceptance', () => {
       expect.any(Array),
     )
 
-    const buttons = alertSpy.mock.calls[0][2] as any[]
-    const completeBtn = buttons.find((b: any) => b.text === 'Complete')
+    const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
+    const completeBtn = buttons.find((b) => b.text === 'Complete')
     await completeBtn.onPress()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-2')
@@ -164,8 +164,8 @@ describe('Workout Session Acceptance', () => {
       expect.any(Array),
     )
 
-    const buttons = alertSpy.mock.calls[0][2] as any[]
-    const discardBtn = buttons.find((b: any) => b.text === 'Discard')
+    const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
+    const discardBtn = buttons.find((b) => b.text === 'Discard')
     await discardBtn.onPress()
 
     expect(mockDb.cancelSession).toHaveBeenCalledWith('sess-3')
@@ -218,5 +218,217 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(doneBtn)
 
     expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)')
+  })
+
+  // --- New tests ---
+
+  it('displays multiple exercise names when session has different exercises', async () => {
+    const session = createSession({ id: 'sess-multi', name: 'Full Body', started_at: Date.now() - 60000 })
+    const squat = createExercise({ id: 'ex-2', name: 'Squat' })
+    const sets = [
+      { ...createSet({ id: 'set-m1', session_id: 'sess-multi', exercise_id: 'ex-1', set_number: 1, weight: 80, reps: 8, completed: false }), exercise_name: 'Bench Press', exercise_deleted: false },
+      { ...createSet({ id: 'set-m2', session_id: 'sess-multi', exercise_id: 'ex-2', set_number: 1, weight: 100, reps: 5, completed: false }), exercise_name: 'Squat', exercise_deleted: false },
+    ]
+    mockParams.id = 'sess-multi'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockImplementation((eid: string) => {
+      if (eid === 'ex-1') return Promise.resolve(exercise)
+      if (eid === 'ex-2') return Promise.resolve(squat)
+      return Promise.resolve(null)
+    })
+
+    const { findByText } = renderScreen(<ActiveSession />)
+
+    expect(await findByText('Bench Press')).toBeTruthy()
+    expect(await findByText('Squat')).toBeTruthy()
+  })
+
+  it('shows exercise name with removed suffix for deleted exercises', async () => {
+    const session = createSession({ id: 'sess-del', name: 'Old Workout', started_at: Date.now() - 60000 })
+    const sets = [
+      { ...createSet({ id: 'set-d1', session_id: 'sess-del', exercise_id: 'ex-1', set_number: 1, weight: 60, reps: 10, completed: false }), exercise_name: 'Cable Fly', exercise_deleted: true },
+    ]
+    mockParams.id = 'sess-del'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(null)
+
+    const { findByText } = renderScreen(<ActiveSession />)
+
+    expect(await findByText('Cable Fly (removed)')).toBeTruthy()
+  })
+
+  it('displays previous set data for each set row', async () => {
+    const session = createSession({ id: 'sess-prev', name: 'Push Day', started_at: Date.now() - 60000 })
+    const sets = makeSessionSets('sess-prev')
+    mockParams.id = 'sess-prev'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+    mockDb.getPreviousSets.mockResolvedValue([
+      { set_number: 1, weight: 75, reps: 8 },
+      { set_number: 2, weight: 75, reps: 7 },
+    ])
+
+    const { findByText } = renderScreen(<ActiveSession />)
+
+    await findByText('Bench Press')
+    expect(await findByText('75×8')).toBeTruthy()
+    expect(await findByText('75×7')).toBeTruthy()
+  })
+
+  it('calls addSet when Add Set button is pressed', async () => {
+    const session = createSession({ id: 'sess-add', name: 'Push Day', started_at: Date.now() - 60000 })
+    const sets = makeSessionSets('sess-add')
+    mockParams.id = 'sess-add'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const { findByLabelText } = renderScreen(<ActiveSession />)
+
+    const addBtn = await findByLabelText('Add set to Bench Press')
+    fireEvent.press(addBtn)
+
+    await waitFor(() => {
+      expect(mockDb.addSet).toHaveBeenCalledWith('sess-add', 'ex-1', 4, null, null, null, null)
+    })
+  })
+
+  it('renders checked state for completed sets and unchecked for pending', async () => {
+    const session = createSession({ id: 'sess-state', name: 'Push Day', started_at: Date.now() - 60000 })
+    const sets = makeSessionSets('sess-state')
+    mockParams.id = 'sess-state'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const { findByLabelText } = renderScreen(<ActiveSession />)
+
+    const completedCheck = await findByLabelText('Mark set 1 incomplete')
+    expect(completedCheck.props.accessibilityState).toEqual({ checked: true })
+
+    const pendingCheck = await findByLabelText('Mark set 2 complete')
+    expect(pendingCheck.props.accessibilityState).toEqual({ checked: false })
+
+    const pendingCheck3 = await findByLabelText('Mark set 3 complete')
+    expect(pendingCheck3.props.accessibilityState).toEqual({ checked: false })
+  })
+
+  it('calls completeSet when uncompleted set checkbox is toggled', async () => {
+    const session = createSession({ id: 'sess-chk', name: 'Push Day', started_at: Date.now() - 60000 })
+    const sets = makeSessionSets('sess-chk')
+    mockParams.id = 'sess-chk'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const screen = renderScreen(<ActiveSession />)
+    await screen.findByText('Bench Press')
+
+    // Paper Checkbox has status prop; accessible wrapper hides it from a11y queries
+    const unchecked = screen.UNSAFE_queryAllByProps({ status: 'unchecked' })
+    expect(unchecked.length).toBeGreaterThanOrEqual(2)
+    fireEvent.press(unchecked[0])
+
+    await waitFor(() => {
+      expect(mockDb.completeSet).toHaveBeenCalled()
+    })
+  })
+
+  it('calls uncompleteSet when completed set checkbox is toggled', async () => {
+    const session = createSession({ id: 'sess-unchk', name: 'Push Day', started_at: Date.now() - 60000 })
+    const sets = makeSessionSets('sess-unchk')
+    mockParams.id = 'sess-unchk'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const screen = renderScreen(<ActiveSession />)
+    await screen.findByText('Bench Press')
+
+    const checked = screen.UNSAFE_queryAllByProps({ status: 'checked' })
+    expect(checked.length).toBeGreaterThanOrEqual(1)
+    fireEvent.press(checked[0])
+
+    await waitFor(() => {
+      expect(mockDb.uncompleteSet).toHaveBeenCalled()
+    })
+  })
+
+  it('navigates to summary after finishing workout with completed sets', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    const session = createSession({ id: 'sess-nav', name: 'Push Day', started_at: Date.now() - 120000 })
+    const sets = makeSessionSets('sess-nav')
+    mockParams.id = 'sess-nav'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const { findByLabelText } = renderScreen(<ActiveSession />)
+
+    const finishBtn = await findByLabelText('Finish workout')
+    fireEvent.press(finishBtn)
+
+    const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
+    const completeBtn = buttons.find((b) => b.text === 'Complete')
+    await completeBtn.onPress()
+
+    expect(mockDb.completeSession).toHaveBeenCalledWith('sess-nav')
+    expect(mockRouter.replace).toHaveBeenCalledWith('/session/summary/sess-nav')
+
+    alertSpy.mockRestore()
+  })
+
+  it('navigates home after finishing workout with no completed sets', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    const session = createSession({ id: 'sess-empty', name: 'Quick', started_at: Date.now() - 30000 })
+    const uncompleted = [
+      { ...createSet({ id: 'set-e1', session_id: 'sess-empty', exercise_id: 'ex-1', set_number: 1, weight: null, reps: null, completed: false }), exercise_name: 'Bench Press', exercise_deleted: false },
+    ]
+    mockParams.id = 'sess-empty'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(uncompleted)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const { findByLabelText } = renderScreen(<ActiveSession />)
+
+    const finishBtn = await findByLabelText('Finish workout')
+    fireEvent.press(finishBtn)
+
+    const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
+    const completeBtn = buttons.find((b) => b.text === 'Complete')
+    await completeBtn.onPress()
+
+    expect(mockDb.completeSession).toHaveBeenCalledWith('sess-empty')
+    expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)')
+
+    alertSpy.mockRestore()
+  })
+
+  it('cancel confirmation offers Keep Going to dismiss', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert')
+    const session = createSession({ id: 'sess-keep', name: 'Push Day', started_at: Date.now() - 30000 })
+    const sets = makeSessionSets('sess-keep')
+    mockParams.id = 'sess-keep'
+    mockDb.getSessionById.mockResolvedValue(session)
+    mockDb.getSessionSets.mockResolvedValue(sets)
+    mockDb.getExerciseById.mockResolvedValue(exercise)
+
+    const { findByLabelText } = renderScreen(<ActiveSession />)
+
+    const cancelBtn = await findByLabelText('Cancel workout')
+    fireEvent.press(cancelBtn)
+
+    const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
+    const keepBtn = buttons.find((b) => b.text === 'Keep Going')
+    expect(keepBtn).toBeDefined()
+    expect(keepBtn.style).toBe('cancel')
+
+    expect(mockDb.cancelSession).not.toHaveBeenCalled()
+    expect(mockRouter.back).not.toHaveBeenCalled()
+
+    alertSpy.mockRestore()
   })
 })

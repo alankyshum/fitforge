@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { AppState, FlatList, Linking, StyleSheet, Switch, TextInput, View } from "react-native";
+import { FlatList, Linking, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -161,8 +161,8 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getWorkoutCSVData(sinceForRange(range));
+      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
       const csv = workoutCSV(rows);
-      if (rows.length === 0) setSnack("No data to export");
       const file = new File(Paths.cache, `fitforge-workouts-${dateStamp()}.csv`);
       await file.write(csv);
       await Sharing.shareAsync(file.uri, {
@@ -180,8 +180,8 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getNutritionCSVData(sinceForRange(range));
+      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
       const csv = nutritionCSV(rows);
-      if (rows.length === 0) setSnack("No data to export");
       const file = new File(Paths.cache, `fitforge-nutrition-${dateStamp()}.csv`);
       await file.write(csv);
       await Sharing.shareAsync(file.uri, {
@@ -199,8 +199,8 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getBodyWeightCSVData(sinceForRange(range));
+      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
       const csv = bodyWeightCSV(rows);
-      if (rows.length === 0) setSnack("No data to export");
       const file = new File(Paths.cache, `fitforge-body-weight-${dateStamp()}.csv`);
       await file.write(csv);
       await Sharing.shareAsync(file.uri, {
@@ -218,8 +218,8 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getBodyMeasurementsCSVData(sinceForRange(range));
+      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
       const csv = bodyMeasurementsCSV(rows);
-      if (rows.length === 0) setSnack("No data to export");
       const file = new File(Paths.cache, `fitforge-body-measurements-${dateStamp()}.csv`);
       await file.write(csv);
       await Sharing.shareAsync(file.uri, {
@@ -280,7 +280,7 @@ export default function Settings() {
         return;
       }
 
-      if (data.version !== 1) {
+      if (data.version !== 1 && data.version !== 2) {
         setSnack("Unsupported format version");
         setLoading(false);
         return;

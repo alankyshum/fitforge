@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, FlatList, Modal, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
@@ -9,6 +9,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Stack, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   clearSchedule,
@@ -45,9 +46,9 @@ export default function Schedule() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => { load(); }, [load])
+  );
 
   const entry = (day: number) => schedule.find((s) => s.day_of_week === day);
 
@@ -115,7 +116,7 @@ export default function Schedule() {
         <Stack.Screen options={{ title: "Weekly Schedule" }} />
         <View style={[styles.center, { backgroundColor: theme.colors.background }]}>
           <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
-            Couldn't load templates. Tap to retry.
+            {"Couldn't load templates. Tap to retry."}
           </Text>
           <Button mode="contained" onPress={load} accessibilityLabel="Retry loading templates">
             Retry

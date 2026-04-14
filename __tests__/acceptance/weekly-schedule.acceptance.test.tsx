@@ -8,14 +8,22 @@ import { createWorkoutTemplate, resetIds } from '../helpers/factories'
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
 
-jest.mock('expo-router', () => ({
-  useRouter: () => mockRouter,
-  useLocalSearchParams: () => ({}),
-  usePathname: () => '/test',
-  useFocusEffect: jest.fn(),
-  Stack: { Screen: () => null },
-  Redirect: () => null,
-}))
+jest.mock('expo-router', () => {
+  const RealReact = require('react')
+  return {
+    useRouter: () => mockRouter,
+    useLocalSearchParams: () => ({}),
+    usePathname: () => '/test',
+    useFocusEffect: (cb: () => (() => void) | void) => {
+      RealReact.useEffect(() => {
+        const cleanup = cb()
+        return typeof cleanup === 'function' ? cleanup : undefined
+      }, [])
+    },
+    Stack: { Screen: () => null },
+    Redirect: () => null,
+  }
+})
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'Icon')
 jest.mock('../../lib/errors', () => ({ logError: jest.fn() }))
@@ -97,7 +105,7 @@ describe('Weekly Schedule Acceptance', () => {
     )
 
     const destructiveAction = alertSpy.mock.calls[0][2]!.find(
-      (btn: any) => btn.style === 'destructive'
+      (btn: { style?: string; onPress?: () => void }) => btn.style === 'destructive'
     )
     await destructiveAction!.onPress!()
 
