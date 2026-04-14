@@ -309,8 +309,9 @@ export function createSession(overrides = {}) { ... }
 
 ### Quality Director (UX Critique)
 **Rev 1 Verdict**: NEEDS REVISION
+**Rev 2 Verdict**: APPROVED (2026-04-14)
 
-Addressed in Rev 2:
+All 5 Critical/Major items from Rev 1 addressed:
 - [x] Mock strategy decided: lib/db level (option b) -- explicit, maintainable
 - [x] Provider wrapping fully specified with table of all providers
 - [x] useFocusEffect mock handles cleanup correctly via React.useEffect wrapper
@@ -319,8 +320,13 @@ Addressed in Rev 2:
 - [x] Loading state tests added
 - [x] Test timeout guidance added (jest.setTimeout 10000, suite target under 30s)
 
+Non-blocking observations for implementation:
+- Verify @testing-library/jest-native v5.4.3 import path works with jest-expo preset (spike will catch)
+- Phase 28b should add at least one dark-mode render test per suite
+
 ### Tech Lead (Technical Feasibility)
 **Rev 1 Verdict**: NEEDS REVISION
+**Rev 2 Verdict**: APPROVED
 
 Addressed in Rev 2:
 - [x] Spike phase added -- prove harness works with onboarding/welcome before other suites
@@ -330,6 +336,8 @@ Addressed in Rev 2:
 - [x] Mock strategy decided: lib/db level, with justification
 - [x] Two-phase structure: 28a = harness + 3 low-risk suites; 28b = 2 high-risk suites
 - [x] Mock data factory work sized via factories.ts specification
+
+Minor note (non-blocking): expo-router mock needs to also export `router` as plain object (nutrition.tsx imports `router` directly, not via `useRouter()` hook).
 
 ### CEO Decision
 _Pending re-reviews from QD and TL_
