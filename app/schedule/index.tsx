@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Modal, ScrollView, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
@@ -52,9 +52,13 @@ export default function Schedule() {
 
   const assign = async (day: number, tpl: WorkoutTemplate | null) => {
     setPicker(null);
-    await setScheduleDay(day, tpl?.id ?? null);
-    const sched = await getSchedule();
-    setSchedule(sched);
+    try {
+      await setScheduleDay(day, tpl?.id ?? null);
+      const sched = await getSchedule();
+      setSchedule(sched);
+    } catch {
+      Alert.alert("Error", "Couldn't update schedule. Please try again.");
+    }
   };
 
   const confirmClear = () => {
@@ -67,8 +71,12 @@ export default function Schedule() {
           text: "Clear",
           style: "destructive",
           onPress: async () => {
-            await clearSchedule();
-            setSchedule([]);
+            try {
+              await clearSchedule();
+              setSchedule([]);
+            } catch {
+              Alert.alert("Error", "Couldn't clear schedule. Please try again.");
+            }
           },
         },
       ]
@@ -195,48 +203,56 @@ export default function Schedule() {
         )}
 
         {/* Template picker modal */}
-        {picker !== null && (
+        <Modal
+          visible={picker !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPicker(null)}
+          accessibilityViewIsModal
+        >
           <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
             <Card style={[styles.picker, { backgroundColor: theme.colors.surface }]}>
               <Card.Content>
                 <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
-                  {DAYS[picker]} — Pick Template
+                  {picker !== null ? DAYS[picker] : ""} — Pick Template
                 </Text>
 
-                {entry(picker) && (
-                  <TouchableRipple
-                    onPress={() => assign(picker, null)}
-                    style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Remove template, set as rest day"
-                  >
-                    <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
-                      Remove (Rest Day)
-                    </Text>
-                  </TouchableRipple>
-                )}
-
-                {templates.map((tpl) => (
-                  <TouchableRipple
-                    key={tpl.id}
-                    onPress={() => assign(picker, tpl)}
-                    style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select template: ${tpl.name}`}
-                  >
-                    <Text
-                      variant="bodyMedium"
-                      style={{
-                        color: entry(picker)?.template_id === tpl.id
-                          ? theme.colors.primary
-                          : theme.colors.onSurface,
-                      }}
-                      numberOfLines={1}
+                <ScrollView style={{ maxHeight: 300 }}>
+                  {picker !== null && entry(picker) && (
+                    <TouchableRipple
+                      onPress={() => assign(picker, null)}
+                      style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove template, set as rest day"
                     >
-                      {tpl.name}
-                    </Text>
-                  </TouchableRipple>
-                ))}
+                      <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
+                        Remove (Rest Day)
+                      </Text>
+                    </TouchableRipple>
+                  )}
+
+                  {templates.map((tpl) => (
+                    <TouchableRipple
+                      key={tpl.id}
+                      onPress={() => picker !== null && assign(picker, tpl)}
+                      style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select template: ${tpl.name}`}
+                    >
+                      <Text
+                        variant="bodyMedium"
+                        style={{
+                          color: picker !== null && entry(picker)?.template_id === tpl.id
+                            ? theme.colors.primary
+                            : theme.colors.onSurface,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {tpl.name}
+                      </Text>
+                    </TouchableRipple>
+                  ))}
+                </ScrollView>
 
                 <Button
                   mode="text"
@@ -249,7 +265,7 @@ export default function Schedule() {
               </Card.Content>
             </Card>
           </View>
-        )}
+        </Modal>
       </View>
     </>
   );
