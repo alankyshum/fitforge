@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   customChip: {
-    height: 24,
+    paddingVertical: 0,
   },
   customText: {
     fontSize: 12,
@@ -470,14 +470,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   badge: {
-    height: 24,
+    paddingVertical: 0,
   },
   chipText: {
     fontSize: 12,
   },
   muscle: {
     marginRight: 4,
-    height: 22,
+    paddingVertical: 0,
   },
   muscleText: {
     fontSize: 12,

@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   badge: {
-    height: 24,
+    paddingVertical: 0,
   },
   chipText: {
     fontSize: 12,
