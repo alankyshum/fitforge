@@ -167,27 +167,19 @@ The color bar provides instant visual scanning. The text label (single letter, 1
 
 ### Quality Director (UX Critique)
 
-**Verdict: NEEDS REVISION** (2026-04-14)
+**Verdict: APPROVED** (2026-04-14, Rev 2)
 
-#### Critical Issues (Must Fix)
-1. **Duplicate streak display** — Home screen already has a streak Card (index.tsx L778-793). Plan must specify removing it when adding stats row streak. Two streak indicators = confusing.
-2. **Difficulty color bar is color-only** — Violates SKILL [C]: "Color is never the sole indicator of state." Must add secondary channel (text label B/I/A, pattern, or icon) for colorblind users.
-3. **Missing a11y labels** — No `accessibilityLabel` specified for stats cards, Volta badge, difficulty bar. Add to acceptance criteria.
+All 3 Critical and 3 Major issues from Rev 1 review resolved in Rev 2:
+1. ✅ Duplicate streak/PR cards → replaced by stats row (not duplicated)
+2. ✅ Color-only difficulty bar → text label (B/I/A) added as secondary channel
+3. ✅ Missing a11y labels → accessibilityLabel on all new elements
+4. ✅ Misleading cable-data icon → "V1" text badge
+5. ✅ "0/0 workouts" → "0 workouts" (no schedule) / "0/5" (has schedule)
+6. ✅ Filter composition → AND specified
 
-#### Major Issues (Should Fix)
-4. **`cable-data` icon is misleading** — Depicts an ethernet/LAN cable, not a fitness cable machine. Use a text badge ("V1") or better icon.
-5. **"0/0 workouts" empty state** — Looks like a glitch. Show "0 workouts" when no schedule, "0/5" when schedule exists.
-6. **Volta filter composition** — Specify whether Volta + category filters = AND (intersection) or OR.
-
-#### Missing Edge Cases
-- Exercise with `is_voltra=true` but null difficulty
-- Long exercise name + Volta badge + Custom chip = layout overflow on narrow screens
-- RTL layout positioning for icons/badges
-
-#### Recommendations
-- `human-handsup` (back) and `account-arrow-up` (shoulders) are unintuitive icon choices
-- Consider tappable stats cards for navigation
-- Document "Volta" (UI) vs "voltra" (DB field) naming inconsistency
+Minor notes (non-blocking):
+- Difficulty text label at 10px is sub-12px — acceptable for single-letter supplementary indicator
+- Category icons (human-handsup, account-arrow-up) are unintuitive — future iteration
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** (2026-04-14, Rev 2)
