@@ -30,5 +30,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: "./assets/favicon.png",
   },
   scheme: "fitforge",
-  plugins: ["expo-router"],
+  plugins: ["expo-router", "expo-notifications"],
 });

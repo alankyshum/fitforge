@@ -15,8 +15,10 @@ import {
   getSchedule,
   getTemplates,
   setScheduleDay,
+  getAppSetting,
   type ScheduleEntry,
 } from "../../lib/db";
+import { scheduleReminders } from "../../lib/notifications";
 import type { WorkoutTemplate } from "../../lib/types";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -50,12 +52,23 @@ export default function Schedule() {
 
   const entry = (day: number) => schedule.find((s) => s.day_of_week === day);
 
+  const reschedule = async () => {
+    try {
+      const enabled = await getAppSetting("reminders_enabled");
+      if (enabled !== "true") return;
+      const raw = await getAppSetting("reminder_time");
+      const [h, m] = (raw ?? "08:00").split(":").map(Number);
+      await scheduleReminders({ hour: h, minute: m });
+    } catch {}
+  };
+
   const assign = async (day: number, tpl: WorkoutTemplate | null) => {
     setPicker(null);
     try {
       await setScheduleDay(day, tpl?.id ?? null);
       const sched = await getSchedule();
       setSchedule(sched);
+      await reschedule();
     } catch {
       Alert.alert("Error", "Couldn't update schedule. Please try again.");
     }
@@ -74,6 +87,7 @@ export default function Schedule() {
             try {
               await clearSchedule();
               setSchedule([]);
+              await reschedule();
             } catch {
               Alert.alert("Error", "Couldn't clear schedule. Please try again.");
             }

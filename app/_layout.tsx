@@ -1,26 +1,31 @@
-import { useColorScheme, Platform } from "react-native";
-import { PaperProvider, Banner } from "react-native-paper";
+import { useColorScheme, Platform, AppState } from "react-native";
+import { PaperProvider, Banner, Snackbar } from "react-native-paper";
 import { ThemeProvider } from "@react-navigation/native";
-import { Redirect, Stack, usePathname } from "expo-router";
+import { Redirect, Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
 import { light, dark, navigationLight, navigationDark } from "../constants/theme";
-import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
+import { getDatabase, isMemoryFallback, isOnboardingComplete, getAppSetting, setAppSetting } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import { log as logInteraction } from "../lib/interactions";
+import { setupHandler, handleResponse, getPermissionStatus } from "../lib/notifications";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync();
+setupHandler();
 
 export default function RootLayout() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const paperTheme = isDark ? dark : light;
+  const router = useRouter();
   const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [onboarded, setOnboarded] = useState(true);
+  const [snack, setSnack] = useState("");
   const pathname = usePathname();
   const prev = useRef(pathname);
 
@@ -47,6 +52,39 @@ export default function RootLayout() {
         SplashScreen.hideAsync();
       });
     setupGlobalHandler();
+  }, []);
+
+  // Notification tap handler
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      handleResponse(
+        response,
+        (path, params) => {
+          if (params) router.push({ pathname: path as any, params });
+          else router.push(path as any);
+        },
+        setSnack
+      );
+    });
+    return () => sub.remove();
+  }, [router]);
+
+  // Permission re-check on app foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", async (state) => {
+      if (state !== "active") return;
+      try {
+        const status = await getPermissionStatus();
+        if (status !== "granted") {
+          const enabled = await getAppSetting("reminders_enabled");
+          if (enabled === "true") {
+            await setAppSetting("reminders_enabled", "false");
+            setSnack("Notification permission was revoked. Reminders disabled.");
+          }
+        }
+      } catch {}
+    });
+    return () => sub.remove();
   }, []);
 
   const headerStyle = {
@@ -290,6 +328,15 @@ export default function RootLayout() {
             />
           </Stack>
           <StatusBar style="auto" />
+          <Snackbar
+            visible={!!snack}
+            onDismiss={() => setSnack("")}
+            duration={3000}
+            accessibilityLiveRegion="polite"
+            action={{ label: "OK", onPress: () => setSnack("") }}
+          >
+            {snack}
+          </Snackbar>
         </ThemeProvider>
       </PaperProvider>
     </ErrorBoundary>
