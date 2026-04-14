@@ -180,7 +180,20 @@ Use the app's existing `useTheme()` hook from react-native-paper to access dark/
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION
+**Reviewed at**: 2026-04-14T02:26:00Z
+
+**Critical Issues (Must Fix)**:
+1. **Color-blind differentiation**: Red (#D32F2F) vs orange (#F57C00) is nearly indistinguishable for deuteranopia (~8% of males). Add a second visual channel — recommend different stroke styles (primary: 2px solid, secondary: 1px dashed) to supplement color.
+2. **Missing `accessibilityRole="image"`** on the diagram container so screen readers announce it as a visual element.
+3. **Hardcoded colors**: Add acceptance criterion requiring muscle highlight colors in `constants/theme.ts` as semantic tokens, not inline hex values.
+
+**Major (Should Fix)**:
+- Add SVG quality gate acceptance criterion (PR must include screenshots at 320px and 600px widths).
+- Add edge case: empty `primary_muscles` array → show neutral silhouettes with "No muscle data" legend.
+- Legend should use existing `MUSCLE_LABELS` record for display names.
+
+**Overall**: Solid plan architecture. Fix the 3 Critical items above and this is approved.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: APPROVED (with minor revisions)
