@@ -12,6 +12,7 @@ import {
   Button,
   IconButton,
   SegmentedButtons,
+  Snackbar,
   Text,
   useTheme,
 } from "react-native-paper"
@@ -71,6 +72,7 @@ export default function TimerScreen() {
   const [mode, setMode] = useState<Mode>("tabata")
   const [state, setState] = useState<State>(init("tabata"))
   const [pauseMsg, setPauseMsg] = useState("")
+  const [error, setError] = useState("")
   const lastTap = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -104,7 +106,9 @@ export default function TimerScreen() {
             const cfg = JSON.parse(raw) as Config
             setState(init(mode, cfg))
           }
-        } catch { /* use defaults on parse or DB error */ }
+        } catch {
+          setError("Could not load saved settings")
+        }
       })()
     }, [mode])
   )
@@ -113,7 +117,9 @@ export default function TimerScreen() {
   const save = useCallback(async (m: Mode, cfg: Config) => {
     try {
       await setAppSetting(STORAGE_KEYS[m], JSON.stringify(cfg))
-    } catch { /* non-critical: config won't persist */ }
+    } catch {
+      setError("Could not save settings")
+    }
   }, [])
 
   // Tick interval
@@ -508,6 +514,14 @@ export default function TimerScreen() {
           </View>
         </ScrollView>
       </Animated.View>
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError("")}
+        duration={3000}
+        accessibilityLiveRegion="polite"
+      >
+        {error}
+      </Snackbar>
     </>
   )
 }
