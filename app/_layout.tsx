@@ -70,6 +70,7 @@ export default function RootLayout() {
   }, [router]);
 
   // Permission re-check on app foreground
+  // Cleanup via sub.remove() — modern RN equivalent of removeEventListener
   useEffect(() => {
     const sub = AppState.addEventListener("change", async (state) => {
       if (state !== "active") return;
@@ -83,7 +84,7 @@ export default function RootLayout() {
           }
         }
       } catch {
-        // Permission check failed silently — non-critical background operation
+        // Permission check failed — non-critical background operation
       }
     });
     return () => sub.remove();
