@@ -196,9 +196,9 @@ All changes use existing React Native Paper chips (same as RPE chips) and TextIn
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** — 2026-04-14
+**Verdict: NEEDS REVISION** → **APPROVED (Rev 2)** — 2026-04-14
 
-3 Critical issues found. Feature concept is sound but UX gaps would ship a feature users can't understand without prior exercise science knowledge.
+Initial review found 3 Critical + 6 Major issues. All addressed in Rev 2. Re-reviewed and approved.
 
 **Critical (MUST FIX) — ALL ADDRESSED IN Rev 2:**
 - [C] UX-01: ✅ FIXED — Added persistent helper text below tempo field: "Seconds: Eccentric – Pause – Concentric – Pause"
