@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Modal, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, FlatList, Modal, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
@@ -217,42 +217,51 @@ export default function Schedule() {
                   {picker !== null ? DAYS[picker] : ""} — Pick Template
                 </Text>
 
-                <ScrollView style={{ maxHeight: 300 }}>
-                  {picker !== null && entry(picker) && (
-                    <TouchableRipple
-                      onPress={() => assign(picker, null)}
-                      style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Remove template, set as rest day"
-                    >
-                      <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
-                        Remove (Rest Day)
-                      </Text>
-                    </TouchableRipple>
-                  )}
-
-                  {templates.map((tpl) => (
-                    <TouchableRipple
-                      key={tpl.id}
-                      onPress={() => picker !== null && assign(picker, tpl)}
-                      style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select template: ${tpl.name}`}
-                    >
-                      <Text
-                        variant="bodyMedium"
-                        style={{
-                          color: picker !== null && entry(picker)?.template_id === tpl.id
-                            ? theme.colors.primary
-                            : theme.colors.onSurface,
-                        }}
-                        numberOfLines={1}
+                <FlatList
+                  data={
+                    picker !== null && entry(picker)
+                      ? [{ id: "__remove__", name: "Remove (Rest Day)" } as WorkoutTemplate, ...templates]
+                      : templates
+                  }
+                  keyExtractor={(item) => item.id}
+                  style={{ maxHeight: 300 }}
+                  renderItem={({ item }) => {
+                    if (item.id === "__remove__") {
+                      return (
+                        <TouchableRipple
+                          onPress={() => assign(picker!, null)}
+                          style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Remove template, set as rest day"
+                        >
+                          <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
+                            Remove (Rest Day)
+                          </Text>
+                        </TouchableRipple>
+                      );
+                    }
+                    return (
+                      <TouchableRipple
+                        onPress={() => picker !== null && assign(picker, item)}
+                        style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Select template: ${item.name}`}
                       >
-                        {tpl.name}
-                      </Text>
-                    </TouchableRipple>
-                  ))}
-                </ScrollView>
+                        <Text
+                          variant="bodyMedium"
+                          style={{
+                            color: picker !== null && entry(picker)?.template_id === item.id
+                              ? theme.colors.primary
+                              : theme.colors.onSurface,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </Text>
+                      </TouchableRipple>
+                    );
+                  }}
+                />
 
                 <Button
                   mode="text"

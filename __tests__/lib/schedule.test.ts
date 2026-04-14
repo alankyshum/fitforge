@@ -237,3 +237,18 @@ function mondayTimestamp(): number {
   d.setDate(d.getDate() - offset);
   return d.getTime();
 }
+
+describe("schedule migration", () => {
+  it("creates weekly_schedule table during migration", async () => {
+    db = require("../../lib/db");
+    await db.getDatabase();
+    const calls = mockDb.execAsync.mock.calls.map((c: string[]) => c[0]);
+    const migration = calls.find((sql: string) =>
+      sql.includes("CREATE TABLE IF NOT EXISTS weekly_schedule")
+    );
+    expect(migration).toBeDefined();
+    expect(migration).toContain("day_of_week INTEGER NOT NULL");
+    expect(migration).toContain("template_id TEXT NOT NULL");
+    expect(migration).toContain("UNIQUE(day_of_week)");
+  });
+});
