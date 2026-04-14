@@ -249,3 +249,11 @@
 **Learning**: When a pure state machine function silently rejects a state transition (returns unchanged state instead of throwing), the UI must either hide/disable the corresponding control in that state or compose the necessary transitions (e.g., `reset` then `start`). Tests that assert "does nothing" for a given state can mask a contract mismatch between the state machine and UI layer.
 **Action**: For every state machine guard clause that returns unchanged state, verify the UI either hides/disables the control in that state OR composes a valid transition chain. During code review, flag any "does nothing in state X" test and cross-check that the UI prevents invoking the function in state X.
 **Tags**: state-machine, ui-contract, guard-clause, silent-failure, pure-functions, testing, ux
+
+### Lazy-Load Audio with replayAsync for Repeated Sound Effects
+**Source**: BLD-90 — Audio Cues for Timers (Phase 33)
+**Date**: 2026-04-14
+**Context**: Timer screens need rapid, repeated audio cues (tick, beep, complete) that fire on state transitions. Creating a new Audio.Sound per play causes latency and memory leaks. Using playAsync on an already-playing sound throws errors.
+**Learning**: Pre-load all sounds lazily on first play into a module-level Map singleton, guarded by a boolean loading flag to prevent concurrent init. Use replayAsync() (not playAsync()) for repeat playback — it resets position and plays without requiring stop/unload. Swallow all errors since audio is non-critical UX. Set playsInSilentModeIOS: false to respect the hardware silent switch. Clean up with unloadAsync() on each sound in a useFocusEffect cleanup return.
+**Action**: When adding sound effects with expo-av: (1) define a typed cue union and a SOURCES record mapping cues to require() assets, (2) lazy-load all sounds into a module-level Map on first play() call, (3) always use replayAsync() for playback, (4) wrap every async audio call in try/catch that swallows errors, (5) call unload() in useFocusEffect cleanup or useEffect cleanup to release native resources.
+**Tags**: expo-av, audio, sound-effects, lazy-loading, singleton, replayAsync, timer, cleanup, react-native

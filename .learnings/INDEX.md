@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-14
-Total learnings: 55
+Total learnings: 56
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 31 learnings
+- [React Native + Expo](patterns/react-native.md) — 32 learnings
 - [Testing](patterns/testing.md) — 3 learnings
 
 ### Pitfalls
@@ -37,6 +37,7 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-14 | BLD-90 | Lazy-Load Audio with replayAsync for Repeated Sound Effects | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-88 | Pure State Machine Guard Clauses Create Silent UI Failures | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-84 | Integer Arithmetic for Precise Decimal Calculations | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-14 | BLD-23 | Animated.Value with useRef for Non-Interactive Transient Animations | Patterns | [react-native.md](patterns/react-native.md) |
