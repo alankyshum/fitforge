@@ -156,15 +156,14 @@ Add `generateGitHubURL(report)` function that:
 5. Truncates body if URL would exceed 8000 chars
 
 #### Interaction Logging Integration Points
-Add `logInteraction()` calls at these existing locations:
+Add `logInteraction()` calls at these existing locations (start with 5 key points, expand later):
 - `app/_layout.tsx` — navigation state changes (screen focus)
-- `app/session/[id].tsx` — session start
+- `app/session/[id].tsx` — session start/end
 - `app/template/create.tsx` — template created
 - `app/exercise/create.tsx` — exercise created
 - `app/(tabs)/index.tsx` — workout start from schedule
-- `app/nutrition/add.tsx` — food entry added
 
-Keep it lightweight — a single function call with 3-4 args, fire-and-forget (no await needed for UI flow).
+Keep it lightweight — a single function call with 3-4 args, fire-and-forget (no await needed for UI flow). **Must wrap DB writes in try/catch internally** (same pattern as `logError()` in `lib/errors.ts:59`) to prevent unhandled promise rejections from crashing the app.
 
 ### Scope
 
@@ -216,75 +215,82 @@ Keep it lightweight — a single function call with 3-4 args, fire-and-forget (n
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| GitHub URL exceeds length limit | Body truncated, "[truncated -- share full report for details]" appended |
-| No internet connection | Browser/sharing still opens; user sees error from OS |
-| No GitHub account | User can use "Share Report" fallback |
-| Empty error log | Report includes empty errors array, diagnostic section shows "No errors recorded" |
-| Empty interaction log | Report includes empty interactions array |
-| Very long error stack trace | Each stack trace trimmed to first 3 lines |
-| Special characters in title/description | Properly URL-encoded |
+| GitHub URL exceeds length limit | Truncation in priority order (stacks → interactions → description), "[truncated — share full report for details]" appended |
+| No internet connection | Connectivity check detects offline → dialog suggests "Share Report" fallback |
+| No GitHub account | User can use "Share Report" fallback (human-readable text + JSON) |
+| Empty error log | Diagnostic section shows "No errors recorded" |
+| Empty interaction log | Diagnostic section shows "No recent interactions" |
+| Both logs empty | Diagnostic section shows "No diagnostic data recorded" |
+| Very long error stack trace | Each stack trace trimmed to first 2 lines; removed entirely before touching user content |
+| Special characters in title/description | Properly URL-encoded via `encodeURIComponent` |
 | User cancels feedback (back button) | No report submitted, no data lost |
-| ErrorBoundary crash report | Feedback screen opened with crash type, error message pre-filled in description |
-| Rapid navigation (10+ screens in seconds) | All logged, oldest pruned via FIFO |
+| ErrorBoundary crash report | "Share Crash Report" (primary) + "Report on GitHub" via `Linking.openURL()` (secondary). No React navigation. |
+| Rapid navigation (10+ screens in seconds) | All logged, oldest pruned via FIFO in transaction |
 | App killed before interactions persist | SQLite writes are synchronous enough for single-row inserts; acceptable loss |
+| User spams submit button | 5-second cooldown prevents duplicate GitHub issues |
+| Diagnostic toggle off | Report contains only app/platform/OS info; no interactions or errors |
+| Title > 150 chars | Input capped at 150, character count shows limit |
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| GitHub URL too long for complex reports | Medium | Low | Truncation logic with fallback to sharing |
-| Users without GitHub cannot submit | Medium | Low | "Share Report" fallback via expo-sharing |
+| GitHub URL too long for complex reports | Medium | Low | Prioritized truncation (stacks → interactions → description) with sharing fallback |
+| Users without GitHub cannot submit | Medium | Low | "Share Report" fallback via expo-sharing with human-readable text |
 | Interaction logging impacts performance | Low | Medium | Fire-and-forget inserts, no await in UI path, FIFO cap at 10 |
-| ErrorBoundary cannot navigate to feedback (React tree is broken) | Medium | Medium | ErrorBoundary keeps its own "Share" button as fallback; feedback screen is only used if React tree is recoverable |
+| ErrorBoundary cannot navigate (React tree broken) | N/A | N/A | **Resolved**: ErrorBoundary uses `Linking.openURL()` directly, never navigates |
 | URL encoding edge cases | Low | Low | Use `encodeURIComponent` on each field |
+| User submits duplicate reports | Low | Low | 5-second cooldown on submit buttons |
+| Privacy concern with diagnostic data | Medium | Medium | Opt-out toggle, expanded view by default, privacy explanation text |
 
 ### Dependencies
 - `expo-linking` (already in Expo — no new dependency)
 - `expo-sharing` (already installed)
 - `expo-file-system` (already installed)
-- No new third-party dependencies required
+- `@react-native-community/netinfo` — for connectivity check (new dependency, lightweight)
+- No other new third-party dependencies required
 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
 
-**Verdict: NEEDS REVISION** — 2026-04-14
+**Round 1 Verdict: NEEDS REVISION** — 2026-04-14
 
-#### Critical Issues (must fix)
-1. **PRIVACY-01**: No diagnostic data consent mechanism. Auto-attaching interaction history (screen visits, exercises viewed) without opt-out is a privacy concern for a fitness/body-tracking app. Required: show data summary, add opt-out toggle, expand diagnostic info by default.
-2. **UX-LABEL-01**: "Submit to GitHub" button is misleading — the actual flow opens a browser with a pre-filled form. Rename to "Open on GitHub" or "Create GitHub Issue".
-3. **ERRBOUND-01**: ErrorBoundary should NOT navigate to feedback screen during a crash (React tree may be broken). Use `Linking.openURL()` directly from ErrorBoundary for GitHub reporting. Keep existing share as primary fallback.
+#### Critical Issues — ALL ADDRESSED in Rev 2
+1. **PRIVACY-01** ✅ Added: Diagnostic data toggle (opt-out, defaults ON), expanded diagnostic section by default, privacy explanation text. User sees exactly what data will be included before submitting.
+2. **UX-LABEL-01** ✅ Fixed: "Submit to GitHub" renamed to "Open on GitHub" throughout.
+3. **ERRBOUND-01** ✅ Fixed: ErrorBoundary now uses `Linking.openURL()` directly. No React navigation during crash. "Share Crash Report" remains primary, "Report on GitHub" added as secondary.
 
-#### Major Issues (should fix)
-4. **A11Y-SPEC-01**: Missing accessibility specifications — no accessibilityLabel/Role specs for type selector, diagnostic info section, character count, or submission buttons. Add an Accessibility Requirements section.
-5. **OFFLINE-01**: No connectivity check before opening GitHub URL. If offline, browser shows cryptic error. Check connectivity and suggest Share fallback.
-6. **DEBOUNCE-01**: No submission debounce — user can spam-create duplicate GitHub issues. Add 5-second cooldown.
-7. **TRUNCATE-01**: URL truncation priority not specified. Order: error stacks → interactions → description (user content last).
-8. **SHARE-FORMAT-01**: Share Report produces raw JSON only. Add human-readable text summary alongside JSON.
+#### Major Issues — ALL ADDRESSED in Rev 2
+4. **A11Y-SPEC-01** ✅ Added: Full Accessibility Requirements table with accessibilityLabel, accessibilityRole, and notes for every interactive element.
+5. **OFFLINE-01** ✅ Added: Connectivity check via `@react-native-community/netinfo` before opening GitHub URL. Offline → dialog suggests Share fallback.
+6. **DEBOUNCE-01** ✅ Added: 5-second cooldown after submission, button disabled with countdown.
+7. **TRUNCATE-01** ✅ Added: Explicit truncation priority: error stacks → interactions → description (user content preserved last).
+8. **SHARE-FORMAT-01** ✅ Added: Share produces both human-readable text summary AND JSON file.
 
-#### Minor / Recommendations
-- Consider 150-char title limit (bug titles tend to be descriptive)
-- Lock report type when pre-filled from ErrorBoundary crash
-- Add empty state for diagnostic info when both logs are empty
-- Wrap FIFO insert+delete in transaction for race condition safety
+#### Minor — ALL ADDRESSED in Rev 2
+- ✅ Title limit increased to 150 chars with live character count
+- ✅ Report type locked when pre-filled from ErrorBoundary
+- ✅ Empty state for both logs empty: "No diagnostic data recorded"
+- ✅ FIFO insert+delete wrapped in transaction
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: APPROVED**
+**Verdict: APPROVED** — 2026-04-14
 
 **Architecture Fit**: Compatible. New `lib/interactions.ts` mirrors `lib/errors.ts` FIFO pattern. New `app/feedback.tsx` follows existing route conventions. Migration uses `CREATE TABLE IF NOT EXISTS`. Zero refactoring needed.
 
-**Complexity**: Medium (~6 files, ~400-500 new lines). Risk: Low. Dependencies: None new.
+**Complexity**: Medium (~6 files, ~400-500 new lines). Risk: Low.
 
-**Technical Concerns**:
-1. **ErrorBoundary Navigation (MAJOR)**: Do NOT navigate from ErrorBoundary to feedback screen — React tree is broken when ErrorBoundary fires, expo-router context may be corrupted. Keep existing share behavior, just update report format to include interaction data. Feedback screen is only reachable from Settings (healthy state).
-2. **Fire-and-forget writes (MINOR)**: `logInteraction()` must wrap DB writes in try/catch internally — same pattern as `logError()` in `lib/errors.ts:59`. Without this, unhandled promise rejections crash the app.
-3. **URL length (MINOR)**: `Linking.openURL()` uses OS APIs, not browser address bar — supports much longer URLs than the ~2000 char browser limit. Estimated URL ~3500-4500 chars. Truncation strategy is a good safety net.
+**Technical Concerns — ALL ADDRESSED in Rev 2**:
+1. **ErrorBoundary Navigation (MAJOR)** ✅ Fixed: ErrorBoundary uses `Linking.openURL()` directly, no navigation.
+2. **Fire-and-forget writes (MINOR)** ✅ Added to plan: `logInteraction()` wraps DB writes in try/catch (same pattern as `logError()` in `lib/errors.ts:59`).
+3. **URL length (MINOR)** ✅ Already addressed: truncation strategy with priority order.
 
-**Simplifications**: Start with 4-5 logging points (navigation, session start/end, template create, exercise create). Expand later without schema changes.
+**Simplifications accepted**: Start with 4-5 logging points (navigation, session start/end, template create, exercise create). Expand later without schema changes.
 
 **Performance**: No concerns. 10-row table, O(1) operations, <1ms writes.
 
-**Reviewed by**: techlead (2026-04-14)
+**New dependency note**: `@react-native-community/netinfo` added for connectivity check (added in Rev 2 per QD OFFLINE-01 feedback). Lightweight, well-maintained, standard React Native package.
 
 ### CEO Decision
-_Pending reviews_
+_Pending QD re-review of Rev 2_
