@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Button, Card, Chip, Text, useTheme } from "react-native-paper";
+import { Banner, Button, Card, Chip, Text, useTheme } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { setAppSetting, updateBodySettings, getBodySettings } from "../../lib/db";
 import { activateProgram } from "../../lib/programs";
@@ -24,10 +24,12 @@ export default function Recommend() {
   const weight = (params.weight ?? "kg") as "kg" | "lb";
   const measurement = (params.measurement ?? "cm") as "cm" | "in";
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function finish(action?: "template" | "program" | "browse") {
     if (saving) return;
     setSaving(true);
+    setError(null);
     try {
       const settings = await getBodySettings();
       await updateBodySettings(weight, measurement, settings.weight_goal, settings.body_fat_goal);
@@ -37,15 +39,35 @@ export default function Recommend() {
       if (action === "program") {
         await activateProgram(PPL.id);
         router.replace("/(tabs)");
-      } else if (action === "template") {
-        router.replace(`/(tabs)`);
       } else {
         router.replace("/(tabs)");
       }
-    } finally {
+    } catch (err) {
       setSaving(false);
+      setError("Something went wrong saving your preferences. Tap to retry or skip.");
     }
   }
+
+  function skip() {
+    setAppSetting("onboarding_complete", "1")
+      .catch(() => {})
+      .finally(() => router.replace("/(tabs)"));
+  }
+
+  const errorBanner = (
+    <>
+      <Banner
+        visible={!!error}
+        actions={[
+          { label: "Retry", onPress: () => finish() },
+          { label: "Skip", onPress: skip },
+        ]}
+        icon="alert-circle-outline"
+      >
+        {error}
+      </Banner>
+    </>
+  );
 
   if (level === "beginner") {
     return (
@@ -53,6 +75,7 @@ export default function Recommend() {
         style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={styles.scroll}
       >
+        {errorBanner}
         <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
           We Recommend
         </Text>
@@ -123,6 +146,7 @@ export default function Recommend() {
         style={{ flex: 1, backgroundColor: theme.colors.background }}
         contentContainerStyle={styles.scroll}
       >
+        {errorBanner}
         <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
           We Recommend
         </Text>
@@ -183,6 +207,7 @@ export default function Recommend() {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       contentContainerStyle={styles.scroll}
     >
+      {errorBanner}
       <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.onBackground }]}>
         Browse Our Templates
       </Text>
