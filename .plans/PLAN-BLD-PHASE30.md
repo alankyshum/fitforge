@@ -3,7 +3,7 @@
 **Issue**: BLD-81
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT
+**Status**: DRAFT → Rev 2 (addressing review feedback)
 
 ## Problem Statement
 
@@ -37,34 +37,36 @@ Add training mode selection to the workout session screen for Volta exercises. W
 
 For exercises where `is_voltra === true` and `training_modes.length > 1`:
 
-1. **Mode selector row**: Below the exercise group header, show a horizontal row of chips representing available training modes. Default to "weight" (standard mode).
-2. **Chip appearance**: Use the same chip style as RPE chips (already in session UI). Active chip uses `primary` color; inactive chips are `outline` style.
-3. **Mode persistence**: Selected mode applies to all NEW sets added for that exercise in this session. Existing completed sets retain their recorded mode.
+1. **Mode selector row**: Below the exercise group header, show a horizontal row of chips representing available training modes. Default to the first mode in the exercise's `training_modes` array (not hardcoded to "weight" — some Volta exercises may not have "weight").
+2. **Chip appearance**: Use the same chip style as RPE chips (already in session UI). Active chip uses `primary` color; inactive chips are `outline` style. **Minimum touch target: 56dp** (SKILL requirement for workout screens).
+3. **Mode persistence**: Selected mode applies to all **pending (uncompleted) sets AND new sets** added for that exercise in this session. **Only completed sets are locked** — their recorded mode cannot be changed. This means switching mode mid-session updates any rows the user hasn't finished yet.
 4. **Mode badge on completed sets**: Show a small badge (e.g., "ECC" for eccentric_overload) on completed set rows to indicate which mode was used.
+5. **Mode descriptions**: Each chip supports a **long-press to show a brief description** of the training mode (e.g., long-press "Eccentric" → tooltip: "Slow eccentric phase with overload — heavier resistance on the lowering portion"). This surfaces the description from the mode labels table so users don't need exercise science knowledge.
 
 #### Tempo Input (Eccentric Mode Only)
 
 When `eccentric_overload` mode is selected:
 
 1. **Tempo field**: Show an optional text field below the mode selector with placeholder "Tempo (e.g. 3-1-5-1)"
-2. **Format**: Free-text, user types tempo notation. No validation beyond max length (15 chars).
-3. **Per-set storage**: Tempo is stored on the set row (same as RPE and notes).
-4. **Display in history**: Show tempo next to set details when viewing past eccentric sets.
+2. **Helper text**: Below the tempo field, show persistent helper text: **"Seconds: Eccentric – Pause – Concentric – Pause"** so users understand what the 4 numbers mean without prior knowledge.
+3. **Format**: Free-text, user types tempo notation. No validation beyond max length (15 chars). Strings that are only dashes/spaces → store as NULL.
+4. **Per-set storage**: Tempo is stored on the set row (same as RPE and notes).
+5. **Display in history**: Show tempo next to set details when viewing past eccentric sets.
 
 #### Mode Labels
 
-Use short, readable labels for training modes:
+Use short, readable labels for training modes. **Each mode has a user-facing description** accessible via long-press on the chip:
 
-| Mode Key | Display Label | Short Label | Description |
-|----------|--------------|-------------|-------------|
-| `weight` | Standard | STD | Normal cable weight resistance |
-| `eccentric_overload` | Eccentric | ECC | Slow eccentric phase with overload |
-| `band` | Band | BND | Resistance band mode |
-| `damper` | Damper | DMP | Damper resistance mode |
-| `isokinetic` | Isokinetic | ISO | Constant speed resistance |
-| `isometric` | Isometric | ISOM | Static hold mode |
-| `custom_curves` | Custom | CRV | Custom resistance curve |
-| `rowing` | Rowing | ROW | Rowing movement mode |
+| Mode Key | Display Label | Short Label | Description (shown on long-press) |
+|----------|--------------|-------------|-----------------------------------|
+| `weight` | Standard | STD | Normal cable weight resistance — standard lifting |
+| `eccentric_overload` | Eccentric | ECC | Heavier resistance on the lowering phase for muscle growth |
+| `band` | Band | BND | Resistance band attached for variable tension |
+| `damper` | Damper | DMP | Damper provides smooth, constant resistance |
+| `isokinetic` | Isokinetic | ISO | Machine controls speed — constant velocity throughout |
+| `isometric` | Isometric | ISOM | Hold position against resistance — no movement |
+| `custom_curves` | Custom | CRV | Custom resistance profile set on the Volta |
+| `rowing` | Rowing | ROW | Rowing movement pattern with cable resistance |
 
 #### Navigation and Flow
 
@@ -74,10 +76,11 @@ Use short, readable labels for training modes:
 
 #### Accessibility
 
-- Mode chips must have `accessibilityRole="radio"` and `accessibilityState={{ selected: true/false }}`
-- Mode selector row needs `accessibilityLabel="Training mode selector for {exercise name}"`
-- Tempo field needs `accessibilityLabel="Tempo notation, for example 3 1 5 1"`
-- Screen reader announces mode changes: "Switched to Eccentric mode"
+- Mode chip container must have `accessibilityRole="radiogroup"` and `accessibilityLabel="Training mode selector for {exercise name}"`
+- Individual mode chips must have `accessibilityRole="radio"` and `accessibilityState={{ selected: true/false }}`
+- **Minimum touch target: 56dp** for all mode chips (SKILL requirement during active workout)
+- Tempo field needs `accessibilityLabel="Tempo notation, for example 3 1 5 1"` and `accessibilityHint="Enter four numbers separated by dashes: eccentric, pause, concentric, pause seconds"`
+- Screen reader announces mode changes using `AccessibilityInfo.announceForAccessibility("Switched to Eccentric mode")`
 
 ### Technical Approach
 
@@ -93,22 +96,27 @@ ALTER TABLE workout_sets ADD COLUMN tempo TEXT DEFAULT NULL;
 - `training_mode`: One of the `TrainingMode` values (or NULL for legacy/non-Volta sets, treated as "weight")
 - `tempo`: Free-text tempo notation (e.g., "3-1-5-1"), NULL if not set
 
-Migration: standard PRAGMA table_info guard pattern (already established in codebase).
+Migration: standard PRAGMA table_info guard pattern (already established in codebase). **Wrap both ALTER statements in a single transaction** for atomicity.
 
 #### Data Flow
 
-1. **Session load**: When loading exercise groups, also load each exercise's `training_modes` and `is_voltra` flag
-2. **Mode state**: Track selected mode per exercise group in component state: `Record<string, TrainingMode>`
+1. **Session load**: When loading exercise groups, exercise metadata (`training_modes`, `is_voltra`) is already fetched via `getExerciseById()` (session screen line 182). No additional queries needed.
+2. **Mode state**: Track selected mode per exercise group in component state: `Record<string, TrainingMode>`. Default to the first element in each exercise's `training_modes` array.
 3. **Set creation**: When `addSet` is called, pass the currently selected training mode and tempo
 4. **Set display**: When rendering completed sets, read `training_mode` and `tempo` from the set row
-5. **Export/Import**: Add `training_mode` and `tempo` to CSV export and import (existing export infra)
+5. **Export/Import**: Add `training_mode` and `tempo` to CSV export and import. **Bump export version from 1 to 2** to signal new columns.
 
 #### DB Functions to Add/Modify
 
 - `addSet()`: Add `trainingMode?: TrainingMode` and `tempo?: string` parameters
-- `getSessionSets()`: Already returns all columns; just need to include new columns in the type
+- `getSessionSets()`: **Update `SetRow` type, `WorkoutSet` type, AND the `rows.map()` return mapping** (lines 988-1001 manually map each field — new columns will be silently dropped if mapping isn't updated)
 - `updateSetTempo()`: New function for updating tempo on a set
-- Export/import functions: Include new columns
+- Import function (line ~1376): **Update the INSERT column list and values array** to include `training_mode` and `tempo`
+- Export functions: Include new columns, emit version 2 header
+
+#### Component Extraction (MANDATORY)
+
+Extract `TrainingModeSelector` as a **separate component file** under `components/`. This is mandatory — the session screen is already 1154 lines at the complexity limit. The selector component encapsulates: chip row, mode state, long-press descriptions, tempo field (when eccentric), and accessibility attributes.
 
 #### Type Changes
 
@@ -165,9 +173,11 @@ All changes use existing React Native Paper chips (same as RPE chips) and TextIn
 |----------|-------------------|
 | Exercise has only ["weight"] mode | No mode selector shown — standard behavior |
 | Exercise has no training_modes (null) | No mode selector shown — standard behavior |
+| Malformed training_modes JSON | Fallback to empty array — no mode selector shown |
 | Non-Volta exercise | No mode selector — selector only for is_voltra exercises |
-| User switches mode mid-session | Existing completed sets keep their original mode; new sets use new mode |
+| User switches mode mid-session | Pending (uncompleted) sets update to new mode; completed sets keep their original mode |
 | Tempo field with empty input | Store NULL (not empty string) |
+| Tempo with only dashes/spaces | Store NULL (treat as empty) |
 | Tempo field with very long input | Max 15 chars enforced |
 | Legacy sets (pre-migration, NULL mode) | Display as standard (no badge), no crash |
 | Import data with unknown training_mode | Ignore unknown modes, store as NULL |
@@ -178,10 +188,10 @@ All changes use existing React Native Paper chips (same as RPE chips) and TextIn
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Session screen is already 1154 lines | High | Medium | Extract mode selector as separate component |
-| Migration adds nullable columns | Low | Low | Standard PRAGMA guard; NULL = no mode (backward compatible) |
+| Session screen is already 1154 lines | High | Medium | **Mandatory** extraction of TrainingModeSelector as separate component |
+| Migration adds nullable columns | Low | Low | Standard PRAGMA guard; NULL = no mode (backward compatible); wrapped in transaction |
 | Chip row takes vertical space | Medium | Low | Only shown for Volta exercises with multiple modes |
-| User confusion about training modes | Medium | Medium | Add brief description tooltip on mode chips |
+| User confusion about training modes | Medium | Medium | Long-press descriptions on each chip + tempo helper text |
 
 ## Review Feedback
 
@@ -190,31 +200,35 @@ All changes use existing React Native Paper chips (same as RPE chips) and TextIn
 
 3 Critical issues found. Feature concept is sound but UX gaps would ship a feature users can't understand without prior exercise science knowledge.
 
-**Critical (MUST FIX):**
-- [C] UX-01: Tempo notation needs in-UI explanation (not just placeholder). Add helper text: "Seconds: Eccentric – Pause – Concentric – Pause"
-- [C] UX-02: Specify pending (uncompleted) set behavior on mode change. Recommendation: pending sets update mode; only completed sets are locked.
-- [C] UX-03: Training mode labels are jargon. Surface descriptions in UI via info icon, long-press, or chip subtitle.
+**Critical (MUST FIX) — ALL ADDRESSED IN Rev 2:**
+- [C] UX-01: ✅ FIXED — Added persistent helper text below tempo field: "Seconds: Eccentric – Pause – Concentric – Pause"
+- [C] UX-02: ✅ FIXED — Specified that pending (uncompleted) sets update mode on switch; only completed sets are locked
+- [C] UX-03: ✅ FIXED — Added long-press descriptions on all mode chips with plain-language explanations
 
-**Major (SHOULD FIX):**
-- [M] A11Y-01: Specify 56dp minimum touch target for mode chips (SKILL requirement during workout)
-- [M] A11Y-02: Add accessibilityRole="radiogroup" to chip container
-- [M] A11Y-03: Use AccessibilityInfo.announceForAccessibility() for mode changes
-- [M] A11Y-04: Add accessibilityHint to tempo TextInput
-- [M] DATA-01: Bump export version from 1 to 2
-- [M] DATA-02: Wrap migration ALTERs in transaction
+**Major (SHOULD FIX) — ALL ADDRESSED IN Rev 2:**
+- [M] A11Y-01: ✅ FIXED — Added 56dp minimum touch target requirement
+- [M] A11Y-02: ✅ FIXED — Added accessibilityRole="radiogroup" on chip container
+- [M] A11Y-03: ✅ FIXED — Specified AccessibilityInfo.announceForAccessibility()
+- [M] A11Y-04: ✅ FIXED — Added accessibilityHint to tempo TextInput
+- [M] DATA-01: ✅ FIXED — Export version bump from 1 to 2
+- [M] DATA-02: ✅ FIXED — Migration ALTERs wrapped in transaction
 
-**Additional:** Extract TrainingModeSelector as separate component (requirement, not suggestion). Specify data flow for loading training_modes in session.
+**Additional — ADDRESSED:**
+- ✅ Malformed training_modes JSON → fallback to empty array (added to edge cases)
+- ✅ Tempo with only dashes/spaces → store NULL (added to edge cases)
+- ✅ TrainingModeSelector extraction is now MANDATORY requirement
+- ✅ Data flow clarified: exercise metadata already fetched via getExerciseById()
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — 2026-04-14
 
 Technically sound and fully buildable. Low risk, no new dependencies, uses established patterns.
 
-**Key notes for implementer:**
-1. `getSessionSets()` manually maps fields — update `SetRow` type, `WorkoutSet` type, AND the `rows.map()` return mapping (not just the type)
-2. Import function (line ~1376) hardcodes INSERT column list — must add `training_mode` and `tempo`
-3. Extract `TrainingModeSelector` as a separate component (mandatory, not optional — session screen already at 1154 lines)
-4. Consider defaulting to first mode in exercise's `training_modes` array rather than always "weight"
+**Key notes for implementer — ALL INCORPORATED IN Rev 2:**
+1. ✅ `getSessionSets()` manual mapping explicitly called out — update SetRow, WorkoutSet, AND rows.map()
+2. ✅ Import function INSERT column list update explicitly documented
+3. ✅ Component extraction now MANDATORY
+4. ✅ Default mode changed from hardcoded "weight" to first element in training_modes array
 
 ### CEO Decision
-_Pending reviews_
+_Pending QD re-review of Rev 2_
