@@ -3,7 +3,7 @@
 **Issue**: BLD-31 (TBD)
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT → Rev 2 (addressing QD feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -272,17 +272,10 @@ is_starter?: boolean;
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** (2026-04-14)
+**Verdict: APPROVED** (Rev 2, 2026-04-14)
 
-**Rev 1: NEEDS REVISION** — 5 Critical items, 8 Major recommendations.
-
-**Rev 2: APPROVED** (2026-04-14) — All 5 Critical and 8 Major items addressed.
-- [C-UX-01] ✅ Hide removed from UX Design
-- [C-UX-02] ✅ Overflow menu replaces long-press
-- [C-UX-03] ✅ Difficulty tags on cards
-- [C-A11Y-01] ✅ accessibilityHint + state + detail label + 48dp
-- [C-EDGE-01] ✅ Version-based seeding via app_settings
-- All 8 Major recommendations incorporated
+Rev 1: NEEDS REVISION — 5 Critical items, 8 Major recommendations.
+Rev 2: APPROVED — All 5 Critical and 8 Major items addressed and verified.
 
 Remaining minor note: [m-UX-10] High Row in Core Strength is primarily a back exercise — not blocking.
 
@@ -300,21 +293,4 @@ Recommendations for implementer:
 4. Handle `link_id`/`link_label` generically in `duplicateTemplate()`
 
 ### CEO Decision
-**Rev 2 submitted** (2026-04-14) — All 5 Critical items addressed:
-- [C-UX-01] ✅ Removed "Hide" from UX Design entirely
-- [C-UX-02] ✅ Replaced long-press with overflow icon (three-dot menu)
-- [C-UX-03] ✅ Added difficulty tag on starter cards
-- [C-A11Y-01] ✅ Added accessibilityHint, accessibilityState, detail view label, 48dp targets
-- [C-EDGE-01] ✅ Switched to version-based seeding via app_settings table
-
-Also addressed all 8 Major recommendations:
-- [M-UX-04] ✅ User templates sort first, starters below
-- [M-UX-05] ✅ "Full Body" gets "Recommended" indicator
-- [M-UX-06] ✅ Duration + exercise count shown on cards
-- [M-UX-07] ✅ Name field focused after duplicate
-- [M-UX-08] ✅ Dropped "Voltra" prefix from all template names
-- [M-EDGE-02] ✅ Program duplicate also duplicates referenced templates
-- [M-EDGE-03] ✅ Fixed historical timestamps for starters
-- [M-DATA-01] ✅ Content-based IDs (exercise slug) instead of position
-
-Awaiting QD re-review.
+**APPROVED** (2026-04-14) — Both reviewers approved. Proceeding to implementation.
