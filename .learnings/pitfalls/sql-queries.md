@@ -26,6 +26,14 @@
 **Action**: When implementing grouping features, list ALL functions that can remove a member from a group (delete, unlink, move, bulk-update). Add the minimum-membership check to each one. During code review, search for all writes to the grouping column (e.g., `link_id`) and verify each path includes the invariant check.
 **Tags**: sqlite, data-integrity, group-invariant, minimum-membership, defensive-programming, entity-grouping
 
+### Bounded Query Results Produce Wrong Aggregates When Re-Filtered Client-Side
+**Source**: BLD-79, BLD-80 — Visual Polish & Home Stats Row Data Accuracy
+**Date**: 2026-04-14
+**Context**: The home stats row derived "weekly workout count" by filtering `getRecentSessions(5)` results by the current week. `getRecentSessions(5)` returns at most 5 sessions regardless of timeframe, so the weekly filter over-counted (all 5 happened to be this week) or under-counted (sessions from earlier weeks consumed the 5-slot cap). The label said "this week" but the underlying data was "recent N."
+**Learning**: A query bounded by row count (`LIMIT N`) returns an arbitrary time window. Client-side time-filtering of bounded results is silently incorrect when the bound is smaller than the filtered set. Similarly, labeling bounded data with a time-scoped label ("this week") is a semantic mismatch — the query scope and the display scope must agree.
+**Action**: When displaying time-scoped statistics (e.g., "this week"), use a query explicitly bounded by that time window (e.g., `getWeekAdherence()`), not a count-bounded query re-filtered on the client. When a count-bounded query is the only available source, label the stat as "recent" not "this week." During review, check that every stat card's label matches its data source's actual scope.
+**Tags**: sqlite, data-accuracy, bounded-query, time-filtering, stats-ui, label-mismatch, code-review
+
 ### Map Custom User Data When Restructuring Category Enums
 **Source**: BLD-30 — Strategic Pivot: Cable Machine + Voltra Exercise Database (Phase 22)
 **Date**: 2026-04-14
