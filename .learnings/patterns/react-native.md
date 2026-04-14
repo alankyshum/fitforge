@@ -241,3 +241,11 @@
 **Learning**: React Native's hitSlop prop on Pressable/TouchableOpacity expands the touchable area beyond the component's visual bounds without affecting layout or rendering. Setting hitSlop with 12 on each side on a 24dp element creates a 48dp touch target invisibly. This separates visual size from interaction size — a distinction unique to React Native with no CSS equivalent.
 **Action**: When a Pressable element is visually smaller than 48x48dp, add hitSlop with padding values that bring the total to at least 48dp per axis. Prefer hitSlop over padding/margin because it does not shift surrounding elements. During a11y review, check that every icon-only button either has dimensions of at least 48dp or uses hitSlop to reach that threshold.
 **Tags**: react-native, accessibility, a11y, touch-target, hitslop, pressable, compact-ui, icon-button, 48dp
+
+### Pure State Machine Guard Clauses Create Silent UI Failures
+**Source**: BLD-88 — Interval Workout Timers (Phase 32)
+**Date**: 2026-04-14
+**Context**: The timer state machine's `start()` function had a guard clause `if (status === "completed") return state` that silently rejected the call. The UI's `handleStart` offered a "Start" button in the completed state. Pressing it invoked `start()`, which returned unchanged state — the button did nothing with no user feedback. A unit test verified "does not start if completed," enshrining the bug as expected behavior.
+**Learning**: When a pure state machine function silently rejects a state transition (returns unchanged state instead of throwing), the UI must either hide/disable the corresponding control in that state or compose the necessary transitions (e.g., `reset` then `start`). Tests that assert "does nothing" for a given state can mask a contract mismatch between the state machine and UI layer.
+**Action**: For every state machine guard clause that returns unchanged state, verify the UI either hides/disables the control in that state OR composes a valid transition chain. During code review, flag any "does nothing in state X" test and cross-check that the UI prevents invoking the function in state X.
+**Tags**: state-machine, ui-contract, guard-clause, silent-failure, pure-functions, testing, ux
