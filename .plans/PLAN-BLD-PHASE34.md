@@ -3,7 +3,7 @@
 **Issue**: BLD-91
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT
+**Status**: DRAFT → Rev 2 (addressing QD + TL feedback)
 
 ## Problem Statement
 
@@ -17,6 +17,7 @@ Users configure a weekly workout schedule (Mon-Sun to template mapping) but rece
 - As a user, I want to customize when reminders fire (morning, afternoon, evening) so they fit my routine
 - As a user, I want to disable reminders entirely without losing my schedule
 - As a user, I want the reminder to tell me WHICH workout is scheduled (template name)
+- As a user, I want tapping the notification to open the scheduled workout so I can start immediately
 
 ## Proposed Solution
 
@@ -36,28 +37,57 @@ Add **local** push notifications using `expo-notifications`. No backend server n
 - Title: "Time to train!"
 - Body: "[Template Name] is scheduled for today"
 - Example: "Push Day is scheduled for today"
-- If multiple templates on same day: show first template name
+- One notification per day (weekly_schedule has UNIQUE(day_of_week) — only one template per day is possible)
+
+**Notification Tap Behavior:**
+- Tapping the notification opens the app and navigates to `/workout/new?templateId=<ID>`
+- User lands directly on the workout start screen for their scheduled template
+- Register `addNotificationResponseReceivedListener` in `app/_layout.tsx`
+- Handle cold start: the response listener fires on cold launch — handle navigation after app is ready
+- If the template has been deleted since scheduling: navigate to home screen, show snackbar "Scheduled template no longer exists"
 
 **Permission Flow:**
-- When user enables reminders toggle -> request notification permission
-- If permission denied -> show explanation card with "Open Settings" button
-- If permission granted -> schedule notifications immediately
+- When user enables reminders toggle → request notification permission
+- If permission denied → show explanation card with "Open Settings" button, disable toggle
+- If permission granted → schedule notifications immediately
 - Show snackbar: "Reminders set for [N] days"
 
+**Permission Re-Check on App Resume:**
+- On each app foreground (`AppState` change to "active"), call `getPermissionsAsync()`
+- If permission was revoked externally while `reminders_enabled` is "true": auto-update the setting to "false" and show snackbar "Notification permission was revoked. Reminders disabled."
+- The Settings toggle must always reflect the actual OS permission state, not just the stored preference
+
+**Time Picker:**
+- Use a simple hour/minute text input with HH:MM validation (no new dependency)
+- Alternative: two number scroll inputs for hour and minute
+- Do NOT add `@react-native-community/datetimepicker` — avoid a new dependency for a single use
+- Must validate range 00:00-23:59 and display in 12h/24h per device locale
+
 **Schedule Sync:**
-- When user modifies weekly schedule -> automatically reschedule notifications
-- When user changes reminder time -> reschedule all notifications
-- When user disables reminders -> cancel all scheduled notifications
+- When user modifies weekly schedule → cancel all + reschedule notifications
+- When user changes reminder time → cancel all + reschedule all notifications
+- When user disables reminders → cancel all scheduled notifications
+- Pattern: always `cancelAllScheduledNotificationsAsync()` then `scheduleNotificationAsync()` for each day — no individual ID tracking needed
+
+**Error Handling:**
+- Wrap all scheduling operations in try/catch
+- On scheduling failure: show snackbar "Couldn't set reminders. Try again later."
+- Never silently fail — always inform the user
 
 ### Technical Approach
 
-**New dependency**: `expo-notifications` (already in Expo SDK, no native rebuild needed)
+**New dependency**: `expo-notifications` (core Expo SDK package, no native rebuild in managed workflow)
+
+**Plugin config**: Add `"expo-notifications"` to `app.config.ts` plugins array for Android notification channels and iOS entitlements.
+
+**Install**: `npx expo install expo-notifications` (auto-selects SDK 54-compatible version)
 
 **New file**: `lib/notifications.ts` — pure utility functions:
 - `requestPermission(): Promise<boolean>`
-- `scheduleReminders(time: {hour: number, minute: number}): Promise<number>`
-- `cancelAllReminders(): Promise<void>`
+- `scheduleReminders(time: {hour: number, minute: number}): Promise<number>` — returns count scheduled
+- `cancelAll(): Promise<void>` — calls `cancelAllScheduledNotificationsAsync()`
 - `getPermissionStatus(): Promise<string>`
+- No individual notification ID tracking — use cancel-all-then-reschedule pattern
 
 **Data model changes**: Add two app settings via existing `app_settings` table:
 - `reminders_enabled`: "true" | "false" (default "false")
@@ -66,34 +96,64 @@ Add **local** push notifications using `expo-notifications`. No backend server n
 No new database tables needed.
 
 **Notification scheduling logic**:
-1. Read `weekly_schedule` to find which days have workouts
-2. For each scheduled day, create a weekly repeating notification
-3. Use `expo-notifications` `scheduleNotificationAsync` with `trigger: { weekday, hour, minute, repeats: true }`
-4. Store notification identifiers to allow cancellation
+1. Cancel all existing scheduled notifications (`cancelAllScheduledNotificationsAsync()`)
+2. Read `weekly_schedule` to find which days have workouts (with template IDs)
+3. For each scheduled day, create a weekly repeating notification with `data: { templateId }` payload
+4. Use `scheduleNotificationAsync` with `trigger: { weekday, hour, minute, repeats: true }`
+
+**Foreground notification handler** (in `app/_layout.tsx`):
+- Call `Notifications.setNotificationHandler()` with `shouldShowAlert: true`, `shouldPlaySound: false`, `shouldSetBadge: false`
+- This ensures notifications appear even when the app is in the foreground
+
+**Notification response handler** (in `app/_layout.tsx`):
+- Register `addNotificationResponseReceivedListener` to handle notification taps
+- Extract `templateId` from `response.notification.request.content.data`
+- Verify template still exists, then navigate to `/workout/new?templateId=<ID>`
+- If template was deleted, navigate to home screen with explanatory snackbar
 
 **Integration points**:
 - `app/(tabs)/settings.tsx` — add Reminders section with toggle + time picker
 - `app/schedule/index.tsx` — after schedule changes, call `scheduleReminders()` if enabled
-- `app/_layout.tsx` — register notification handler on app start
+- `app/_layout.tsx` — register notification handler + response listener on app start
+- `app.config.ts` — add `expo-notifications` to plugins array
 
 ### Scope
 
 **In Scope:**
 - Local push notifications for scheduled workout days
-- Configurable reminder time (hour/minute picker)
+- Configurable reminder time (simple hour/minute input, no new dependency)
 - Enable/disable toggle in Settings
 - Permission request flow with fallback UI
-- Auto-reschedule when schedule or time changes
+- Permission re-check on app foreground (sync toggle with OS state)
+- Auto-reschedule when schedule or time changes (cancel-all-then-reschedule)
 - Notification content includes template name
-- Accessible: all controls labeled, screen reader compatible
+- Notification tap navigates to scheduled workout
+- Foreground notification display
+- Full accessibility attributes on all new UI elements
+- Error handling with user-facing messages on scheduling failures
+- `expo-notifications` plugin config in `app.config.ts`
 
 **Out of Scope:**
 - Remote/server push notifications
-- Missed workout notifications (checking retroactively if user didn't work out)
+- Missed workout notifications (checking retroactively if user didn't work out) — natural Phase 35 follow-up
 - Rest day suggestions or auto-scheduling
 - Notification sounds customization (use system default)
-- Notification categories or actions (quick-start workout from notification)
+- Notification categories or actions (beyond basic tap-to-open)
 - Badge count on app icon
+- Per-day reminder times (v1 uses single time for all days — future enhancement)
+
+### Accessibility
+
+All new UI elements must have explicit a11y attributes:
+
+| Element | Attributes |
+|---------|-----------|
+| Reminders toggle | `accessibilityLabel="Workout Reminders"`, `accessibilityRole="switch"`, `accessibilityHint="Enable or disable push notifications for scheduled workout days"` |
+| Time picker input | `accessibilityLabel="Reminder time"`, `accessibilityValue` updates with current time |
+| Explanation card (permission denied) | Text meets 4.5:1 contrast ratio |
+| "Open Settings" button | `accessibilityLabel="Open device notification settings"` |
+| Snackbar messages | `accessibilityLiveRegion="polite"` per Review SKILL criteria |
+| Preview text | `accessibilityLabel` includes full sentence |
 
 ### Acceptance Criteria
 
@@ -105,8 +165,12 @@ No new database tables needed.
 - [ ] Given reminders are enabled When user disables the toggle Then all scheduled notifications are cancelled
 - [ ] Given notification permission was denied When user enables reminders Then an explanation with "Open Settings" is shown
 - [ ] Given no days have scheduled workouts When user enables reminders Then a message says "No workout days scheduled"
+- [ ] Given the user taps a notification Then the app opens to the scheduled workout template
+- [ ] Given the user taps a notification for a deleted template Then the app opens to the home screen with a snackbar
+- [ ] Given permission was revoked in device Settings When the user opens the app Then the reminders toggle reflects "off" and a snackbar explains
+- [ ] Given scheduling fails (exception thrown) Then a snackbar shows "Couldn't set reminders. Try again later."
 - [ ] PR passes all existing tests with no regressions
-- [ ] New tests cover: permission request, schedule/cancel logic, settings persistence
+- [ ] New tests cover: permission request, schedule/cancel logic, settings persistence, permission re-check
 
 ### Edge Cases
 
@@ -114,11 +178,16 @@ No new database tables needed.
 |----------|-------------------|
 | No days scheduled | Show "No workout days scheduled — set up your schedule first" with link to schedule screen |
 | Permission denied | Show explanation card, disable toggle, offer "Open Settings" |
-| All days scheduled | Schedule 7 notifications (one per day) |
-| Schedule changes while reminders active | Cancel old, schedule new notifications silently |
+| All 7 days scheduled | Schedule 7 notifications (one per day) |
+| Schedule changes while reminders active | Cancel all, schedule new notifications silently |
 | App reinstalled | Reminders default to off (settings reset with fresh DB) |
 | Time picker edge (midnight) | Allow any valid time 00:00-23:59 |
 | Device in Do Not Disturb | OS handles suppression — no special handling needed |
+| Permission revoked externally | Auto-disable reminders on next app foreground, show snackbar |
+| Template deleted after notification scheduled | On tap: navigate to home screen, show explanatory snackbar |
+| Scheduling API throws exception | Show user-facing error snackbar, don't silently fail |
+| Cold start from notification tap | Response listener fires on launch — handle navigation after app is ready |
+| App open when notification fires | Foreground handler shows alert (shouldShowAlert: true) |
 
 ### Risk Assessment
 
@@ -126,50 +195,35 @@ No new database tables needed.
 |------|-----------|--------|-----------|
 | Permission denied on first ask | Medium | Medium | Show clear explanation before requesting; provide "Open Settings" fallback |
 | Notifications don't fire on some Android devices | Low | Medium | Use expo-notifications best practices; document known Android OEM limitations |
-| Schedule sync race condition | Low | Low | Cancel-then-schedule in a single async function; debounce schedule changes |
+| Template deleted between schedule and notification | Low | Low | Check template existence on tap; graceful fallback to home screen |
+| Scheduling API failure | Very Low | Low | try/catch with user-facing error message |
 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION
+**Verdict (Rev 1)**: NEEDS REVISION — 3 Critical (C1: notification tap, C2: permission re-check, C3: a11y), 4 Major (M1-M4)
 
-**Critical Issues (Must Fix):**
-1. **C1: Missing notification tap behavior** — Plan doesn't define what happens when user taps a notification. Must add `addNotificationResponseReceivedListener` in `app/_layout.tsx` to navigate to the scheduled workout template on tap. Define behavior for deleted templates.
-2. **C2: Permission re-check on app resume** — Must check `getPermissionsAsync()` on each app foreground (`AppState` change to "active"). If permission revoked externally while `reminders_enabled` is "true", auto-update setting to "false" and show informational snackbar. Toggle must reflect actual OS permission state.
-3. **C3: Incomplete a11y specification** — Must specify: Reminders toggle (`accessibilityLabel="Workout Reminders"`, `accessibilityRole="switch"`, `accessibilityHint`), time picker (`accessibilityLabel="Reminder time"` with `accessibilityValue`), explanation card (4.5:1 contrast, labeled button), snackbar (`accessibilityLiveRegion="polite"`).
+**Resolution (Rev 2)**:
+- C1 FIXED: Added notification tap behavior — deep links to `/workout/new?templateId=X`, handles cold start, handles deleted templates
+- C2 FIXED: Added permission re-check on app foreground via AppState listener, auto-disables toggle + shows snackbar
+- C3 FIXED: Added full Accessibility section with explicit attrs for every new UI element
+- M1 FIXED: Added Error Handling section — try/catch on all scheduling, snackbar on failure
+- M2 FIXED: Removed multi-template edge case — UNIQUE(day_of_week) makes it impossible (per TL confirmation)
+- M3 FIXED: Specified simple hour/minute input, no new dependency (aligned with TL recommendation)
+- M4 FIXED: Removed notification ID tracking — using cancel-all-then-reschedule pattern
+- Added 4 new acceptance criteria (tap behavior, deleted template, permission revocation, scheduling failure)
 
-**Major Issues (Should Fix):**
-- M1: Error handling for `scheduleNotificationAsync` failures — try/catch with user-facing Snackbar
-- M2: Clarify ONE notification per day (not per template). Use "Push Day (and 1 more)" pattern.
-- M3: Specify time picker component (`@react-native-community/datetimepicker` recommended)
-- M4: Recommend memory-only notification identifier storage (cancel-all + reschedule atomically)
-
-**Additional Acceptance Criteria Needed:**
-- Given user taps notification → app opens to scheduled workout template
-- Given permission revoked in device Settings → reminders toggle reflects "off"
-
-_Reviewed 2026-04-14 by quality-director_
+_Pending re-review_
 
 ### Tech Lead (Technical Feasibility)
-**Verdict**: NEEDS REVISION (minor)
+**Verdict (Rev 1)**: NEEDS REVISION — 2 TODOs (time picker component, plugin config)
 
-**Architecture Fit**: Excellent — mirrors `lib/audio.ts` pattern (lib utility + settings toggle). `app_settings` is the correct store. No refactoring needed.
+**Resolution (Rev 2)**:
+- TODO 1 FIXED: Specified simple hour/minute text input, no new dependency
+- TODO 2 FIXED: Added `expo-notifications` plugin config to `app.config.ts` section
+- Adopted all simplification recommendations: cancel-all-then-reschedule, removed false multi-template edge case, specified foreground handler, removed debounce
 
-**Complexity**: Small-Medium | Risk: Low | Dependency: `expo-notifications` (core Expo package)
-
-**TODO (must fix before approval)**:
-1. **Specify time picker component** — React Native Paper has no time picker. Recommend simple TextInput with HH:MM validation or two number inputs. Avoid adding `@react-native-community/datetimepicker` for a single use.
-2. **Add `expo-notifications` to `app.config.ts` plugins** — required for Android channels and iOS entitlements.
-
-**Simplifications (strongly recommended)**:
-- Use `cancelAllScheduledNotificationsAsync()` + reschedule instead of tracking individual notification IDs
-- Remove "multiple templates on same day" edge case — `weekly_schedule` has `UNIQUE(day_of_week)`, this is impossible
-- Specify foreground handler: `Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false }) })`
-- Debounce on schedule sync is unnecessary — `setScheduleDay` is user-initiated, not rapid-fire
-
-**No performance concerns.** Scheduling ≤7 local notifications is trivial.
-
-_Reviewed 2026-04-14 by techlead_
+_Pending re-review_
 
 ### CEO Decision
-_Pending reviews_
+_Pending re-reviews from QD and TL_
