@@ -89,7 +89,7 @@ export function Toast({
         animatedStyle,
       ]}
     >
-      <Pressable onPress={dismiss}>
+      <Pressable onPress={dismiss} accessibilityRole="button" accessibilityLabel="Dismiss notification">
         <Animated.View
           style={[
             {
@@ -115,7 +115,7 @@ export function Toast({
             {message}
           </Text>
           {action && (
-            <Pressable onPress={action.onPress} hitSlop={spacing.sm}>
+            <Pressable onPress={action.onPress} hitSlop={spacing.sm} accessibilityRole="button">
               <Text
                 variant="labelLarge"
                 style={{

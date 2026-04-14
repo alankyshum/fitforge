@@ -29,7 +29,7 @@ export function AnimatedFAB({
 
   return (
     <Animated.View style={[entranceStyle, pressStyle, style]}>
-      <Pressable onPressIn={onPressIn} onPressOut={onPressOut}>
+      <Pressable onPressIn={onPressIn} onPressOut={onPressOut} accessibilityRole="button">
         <FAB
           icon={icon}
           label={label}

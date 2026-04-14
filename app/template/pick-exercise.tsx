@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   View,
   type ListRenderItemInfo,
@@ -9,7 +10,6 @@ import {
   Chip,
   Searchbar,
   Text,
-  TouchableRipple,
   useTheme,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -87,14 +87,15 @@ export default function PickExercise() {
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<Exercise>) => (
-      <TouchableRipple
+      <Pressable
         onPress={() => pick(item)}
-        style={[
+        style={({ pressed }) => [
           styles.item,
           {
             backgroundColor: theme.colors.surface,
             borderBottomColor: theme.colors.outlineVariant,
           },
+          pressed && { opacity: 0.7 },
         ]}
         accessibilityLabel={`Select ${item.name}${item.is_custom ? " (Custom)" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
         accessibilityRole="button"
@@ -129,7 +130,7 @@ export default function PickExercise() {
             </Text>
           </View>
         </View>
-      </TouchableRipple>
+      </Pressable>
     ),
     [theme, pick]
   );
