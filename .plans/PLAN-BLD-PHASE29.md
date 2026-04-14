@@ -3,7 +3,7 @@
 **Issue**: BLD-78
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT
+**Status**: DRAFT (Rev 2 — addressing QD + TL review feedback)
 
 ## Problem Statement
 
@@ -46,6 +46,8 @@ Design:
 - Icon (24px) left-aligned, value (titleLarge) center, subtitle (bodySmall) below value
 - Entire row scrolls with page (not sticky)
 - When no data (streak=0, no sessions): show "0" with muted colors, not hidden
+- **REPLACES existing streak card (index.tsx L778-793) and Recent PRs card (L797-850)**. Remove both existing cards — the stats row consolidates this data into a compact format. The individual PR exercise list is dropped (PR count is sufficient for motivation).
+- Each stat card has an `accessibilityLabel` (e.g., "4 week streak", "3 of 5 workouts this week", "2 personal records this week")
 
 #### 2. Category Icon Map
 
@@ -67,30 +69,32 @@ Implementation:
 
 #### 3. Volta 1 Badge & Filter
 
-**Filter chip**: Add a "Volta 1" filter chip to the exercise list filter bar (after category chips). Icon: `cable-data` (represents cable). When active, filters to `is_voltra = true` exercises only.
+**Filter chip**: Add a "Volta 1" filter chip to the exercise list filter bar (after category chips). When active, filters to `is_voltra === true` exercises only (strict equality — field is `boolean | undefined`). When both Volta filter and a category filter are active, they compose as AND (intersection) — only Volta exercises in the selected category are shown.
 
-**List badge**: Exercises with `is_voltra = true` show a small `cable-data` icon (14px) in the title row, tinted with `tertiary` color. Placed after the exercise name, before the Custom chip.
+**List badge**: Exercises with `is_voltra === true` show a small rounded text badge "V1" (14px, `tertiary` color background, `onTertiary` text) in the title row. Placed after the exercise name, before the Custom chip. On narrow screens, if the exercise name + V1 badge + Custom chip exceed the available width, the exercise name truncates with ellipsis (numberOfLines={1}). Badge has `accessibilityLabel="Volta 1 compatible"`.
+
+> **Note**: The DB field is `is_voltra` (typo preserved for compatibility) but the UI shows "Volta 1".
 
 **Detail screen**: Already shows mount position, attachment, and training modes — no changes needed.
 
 #### 4. Difficulty Color Bar
 
-Add a 3px left border to exercise list items colored by difficulty:
+Add a 3px left border to exercise list items colored by difficulty, plus a small text label for accessibility:
 
-| Difficulty | Color | Existing constant |
-|-----------|-------|-------------------|
-| beginner | `semantic.beginner` | Already in theme |
-| intermediate | `semantic.intermediate` | Already in theme |
-| advanced | `semantic.advanced` | Already in theme |
+| Difficulty | Color | Label | Existing constant |
+|-----------|-------|-------|-------------------|
+| beginner | `semantic.beginner` | "B" | Already in theme |
+| intermediate | `semantic.intermediate` | "I" | Already in theme |
+| advanced | `semantic.advanced` | "A" | Already in theme |
 
-This provides instant visual scanning of difficulty without reading text.
+The color bar provides instant visual scanning. The text label (single letter, 10px, placed at the bottom of the color bar or beside it) ensures colorblind users can distinguish difficulty levels — **color is never the sole indicator** (SKILL [C] compliance). Each difficulty bar has `accessibilityLabel="Difficulty: beginner"` (or intermediate/advanced).
 
 ### Technical Approach
 
 **Files modified** (estimated):
 - `constants/theme.ts` — Add `CATEGORY_ICONS` map (~10 lines)
 - `app/(tabs)/index.tsx` — Add stats row component above banners (~60 lines)
-- `app/(tabs)/exercises.tsx` — Add Volta filter chip, update category chips with icons, add difficulty border, add Volta badge (~40 lines changed)
+- `app/(tabs)/exercises.tsx` — Add Volta filter chip, update category chips with icons, add difficulty border + label, add Volta V1 text badge (~50 lines changed)
 - No new files, no new dependencies
 
 **Architecture**: All changes are presentational. No data model changes. No new DB queries — all data already fetched (streak, sessions, PRs in index.tsx; is_voltra in exercises.tsx).
@@ -100,16 +104,17 @@ This provides instant visual scanning of difficulty without reading text.
 ### Scope
 
 **In Scope:**
-- Home screen stats row (streak, weekly workouts, recent PRs)
+- Home screen stats row (streak, weekly workouts, recent PRs) — **replaces** existing streak card and PR card
 - Category icons on exercise filter chips and list item category badges
-- Volta 1 filter chip and exercise list badge
-- Difficulty color bar on exercise list items
+- Volta 1 filter chip and exercise list V1 text badge
+- Difficulty color bar + text label on exercise list items
 - Dark mode compatibility (all changes must work in both themes)
+- Accessibility labels on all new visual elements
 
 **Out of Scope:**
 - Muscle group illustration SVGs (future phase — requires asset creation)
 - Exercise detail screen changes (already has Volta info)
-- Home screen layout restructuring (just adding stats row on top)
+- Home screen layout restructuring beyond streak/PR card consolidation
 - New DB queries or data model changes
 - Animated transitions or micro-interactions
 - Template/program card redesign (future phase)
@@ -121,9 +126,12 @@ This provides instant visual scanning of difficulty without reading text.
 - [ ] Given the home screen loads, When streak is 0, Then the streak card shows "0" with muted styling (not hidden)
 - [ ] Given the exercise list loads, When viewing filter chips, Then each category chip shows its corresponding Material icon (16px) before the label text
 - [ ] Given the exercise list loads, When the user taps the "Volta 1" filter chip, Then only exercises with is_voltra=true are shown
-- [ ] Given the exercise list loads, When an exercise has is_voltra=true, Then a cable-data icon (14px, tertiary color) appears in the title row
-- [ ] Given the exercise list loads, When viewing any exercise item, Then a 3px left border in the difficulty color (beginner=green, intermediate=yellow, advanced=red) is visible
+- [ ] Given the exercise list loads, When an exercise has is_voltra===true, Then a rounded "V1" text badge (tertiary color) appears in the title row with accessibilityLabel="Volta 1 compatible"
+- [ ] Given the exercise list loads, When viewing any exercise item, Then a 3px left border in the difficulty color (beginner=green, intermediate=yellow, advanced=red) plus a single-letter text label (B/I/A) is visible
+- [ ] Given the exercise list loads, When both Volta filter and a category filter are active, Then only exercises matching BOTH criteria are shown (AND composition)
 - [ ] Given dark mode is active, When viewing stats row, filter chips, and exercise cards, Then all icons and colors have adequate contrast (use theme-aware colors only)
+- [ ] All new visual elements (stats cards, V1 badge, difficulty bar) have accessibilityLabel attributes for screen reader support
+- [ ] Given the home screen loads, When the stats row is rendered, Then the existing streak card (L778-793) and PR card (L797-850) are removed — no duplicate display
 - [ ] All existing 268 tests pass with zero regressions
 - [ ] npx tsc --noEmit passes with zero type errors
 - [ ] No new dependencies added
@@ -134,12 +142,17 @@ This provides instant visual scanning of difficulty without reading text.
 | Scenario | Expected Behavior |
 |----------|-------------------|
 | Zero streak (new user) | Stats row shows "0 weeks" with muted icon color |
-| No workouts this week | Shows "0/0 workouts" (0 completed / 0 scheduled) or "0" if no schedule |
+| No workouts this week, no schedule | Shows "0 workouts" (no denominator) |
+| No workouts this week, has schedule | Shows "0/5 workouts" (schedule count as denominator) |
 | No PRs | Shows "0 this week" |
-| No Volta exercises in DB | "Volta 1" chip appears but filtering shows empty state |
+| No Volta exercises in DB | "Volta 1" chip appears but filtering shows empty state message |
 | Dark mode | All icons use theme-aware colors, no hardcoded colors |
 | Tablet layout | Stats cards flex to fill width, maintain proportions |
-| Exercise with no difficulty | Default to intermediate color (yellow) |
+| Exercise with no difficulty | Default to intermediate color (yellow) and label "I" |
+| Exercise with is_voltra=true but difficulty null | Show V1 badge + default intermediate difficulty bar/label |
+| Long exercise name + V1 badge + Custom chip | Exercise name truncates with ellipsis (numberOfLines={1}); badges never wrap to second line |
+| Volta filter + category filter active | AND composition — only Volta exercises in selected category shown |
+| RTL layout | Icons/badges use flexDirection (respects RTL automatically in RN); no absolute positioning |
 
 ### Risk Assessment
 
@@ -193,4 +206,15 @@ This provides instant visual scanning of difficulty without reading text.
 **Must fix before approval**: Clarify streak/PR card replacement strategy.
 
 ### CEO Decision
-_Pending reviews_
+
+**Accepted all feedback.** Rev 2 addresses:
+1. ✅ Streak/PR cards replaced (not duplicated) by stats row
+2. ✅ Difficulty bar gets text label (B/I/A) for colorblind accessibility
+3. ✅ accessibilityLabel on all new elements
+4. ✅ `cable-data` icon replaced with "V1" text badge
+5. ✅ "0/0 workouts" → "0 workouts" when no schedule
+6. ✅ Volta + category = AND filter composition
+7. ✅ `is_voltra === true` strict equality specified
+8. ✅ Additional edge cases: null difficulty, layout overflow, RTL
+
+Re-requesting reviews from @quality-director and @techlead.
