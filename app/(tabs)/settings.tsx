@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, StyleSheet, Switch, View } from "react-native";
+import { AppState, FlatList, Linking, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme } from "react-native-paper";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -16,11 +16,18 @@ import {
   getCSVCounts,
   getAppSetting,
   setAppSetting,
+  getSchedule,
 } from "../../lib/db";
 import type { WorkoutCSVRow, NutritionCSVRow, BodyWeightCSVRow, BodyMeasurementsCSVRow } from "../../lib/db";
 import { getErrorCount, clearErrorLog } from "../../lib/errors";
 import { csvEscape } from "../../lib/csv";
 import { setEnabled as setAudioEnabled } from "../../lib/audio";
+import {
+  requestPermission,
+  scheduleReminders,
+  cancelAll,
+  getPermissionStatus,
+} from "../../lib/notifications";
 
 function workoutCSV(rows: WorkoutCSVRow[]): string {
   const header = "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id";
@@ -114,6 +121,10 @@ export default function Settings() {
   const [range, setRange] = useState("30");
   const [counts, setCounts] = useState({ sessions: 0, entries: 0 });
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [reminders, setReminders] = useState(false);
+  const [reminderTime, setReminderTime] = useState("08:00");
+  const [permDenied, setPermDenied] = useState(false);
+  const [scheduleCount, setScheduleCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -127,6 +138,18 @@ export default function Settings() {
         setAudioEnabled(true);
         setSnack("Could not load sound setting");
       });
+      Promise.all([
+        getAppSetting("reminders_enabled"),
+        getAppSetting("reminder_time"),
+        getPermissionStatus(),
+        getSchedule(),
+      ]).then(([enabled, time, perm, sched]) => {
+        const on = enabled === "true" && perm === "granted";
+        setReminders(on);
+        if (time) setReminderTime(time);
+        setPermDenied(perm === "denied");
+        setScheduleCount(sched.length);
+      }).catch(() => {});
     }, [])
   );
 
@@ -285,6 +308,138 @@ export default function Settings() {
           <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
             Settings
           </Text>
+
+      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 16 }}>
+            Reminders
+          </Text>
+
+          <View style={styles.row}>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+              Workout Reminders
+            </Text>
+            <Switch
+              value={reminders}
+              onValueChange={async (val) => {
+                if (val) {
+                  if (scheduleCount === 0) {
+                    setSnack("No workout days scheduled — set up your schedule first");
+                    return;
+                  }
+                  try {
+                    const granted = await requestPermission();
+                    if (!granted) {
+                      setPermDenied(true);
+                      setSnack("Notification permission denied");
+                      return;
+                    }
+                    setPermDenied(false);
+                    const [h, m] = reminderTime.split(":").map(Number);
+                    const count = await scheduleReminders({ hour: h, minute: m });
+                    await setAppSetting("reminders_enabled", "true");
+                    setReminders(true);
+                    setSnack(`Reminders set for ${count} day${count !== 1 ? "s" : ""}`);
+                  } catch {
+                    setSnack("Couldn't set reminders. Try again later.");
+                  }
+                } else {
+                  try {
+                    await cancelAll();
+                    await setAppSetting("reminders_enabled", "false");
+                    setReminders(false);
+                  } catch {
+                    setSnack("Couldn't disable reminders. Try again later.");
+                  }
+                }
+              }}
+              accessibilityLabel="Workout Reminders"
+              accessibilityRole="switch"
+              accessibilityHint="Enable or disable push notifications for scheduled workout days"
+            />
+          </View>
+
+          {reminders && (
+            <>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                {`You'll be reminded at ${reminderTime} on days with scheduled workouts`}
+              </Text>
+              <View style={styles.row}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, marginRight: 12 }}>
+                  Time
+                </Text>
+                <TextInput
+                  value={reminderTime}
+                  onChangeText={setReminderTime}
+                  onBlur={async () => {
+                    const match = reminderTime.match(/^(\d{1,2}):(\d{2})$/);
+                    if (!match) {
+                      setReminderTime("08:00");
+                      setSnack("Invalid time format. Use HH:MM");
+                      return;
+                    }
+                    const h = Number(match[1]);
+                    const m = Number(match[2]);
+                    if (h > 23 || m > 59) {
+                      setReminderTime("08:00");
+                      setSnack("Invalid time. Hours 0-23, minutes 0-59");
+                      return;
+                    }
+                    const padded = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+                    setReminderTime(padded);
+                    try {
+                      await setAppSetting("reminder_time", padded);
+                      await scheduleReminders({ hour: h, minute: m });
+                    } catch {
+                      setSnack("Couldn't set reminders. Try again later.");
+                    }
+                  }}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={5}
+                  style={[
+                    styles.timeInput,
+                    {
+                      color: theme.colors.onSurface,
+                      borderColor: theme.colors.outlineVariant,
+                      backgroundColor: theme.colors.surfaceVariant,
+                    },
+                  ]}
+                  accessibilityLabel="Reminder time"
+                  accessibilityValue={{ text: reminderTime }}
+                />
+              </View>
+            </>
+          )}
+
+          {!reminders && scheduleCount === 0 && (
+            <Button
+              mode="text"
+              onPress={() => router.push("/schedule")}
+              compact
+              style={{ alignSelf: "flex-start" }}
+              accessibilityLabel="Set up your weekly schedule"
+            >
+              Set up weekly schedule
+            </Button>
+          )}
+
+          {permDenied && !reminders && (
+            <View style={{ marginTop: 8 }}>
+              <Text variant="bodySmall" style={{ color: theme.colors.error, marginBottom: 8 }}>
+                Notification permission is denied. Enable it in your device settings to use reminders.
+              </Text>
+              <Button
+                mode="outlined"
+                onPress={() => Linking.openSettings()}
+                compact
+                accessibilityLabel="Open device notification settings"
+              >
+                Open Settings
+              </Button>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
 
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
@@ -535,5 +690,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+  },
+  timeInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    textAlign: "center",
+    width: 80,
   },
 });
