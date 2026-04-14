@@ -6,6 +6,7 @@ import {
   type ListRenderItemInfo,
 } from "react-native";
 import { Chip, FAB, Searchbar, Text, TouchableRipple, useTheme } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getAllExercises, getExerciseById } from "../../lib/db";
 import {
@@ -15,7 +16,7 @@ import {
   type Category,
   type Exercise,
 } from "../../lib/types";
-import { semantic, difficultyText } from "../../constants/theme";
+import { semantic, difficultyText, CATEGORY_ICONS } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
 
 const ITEM_HEIGHT = 84;
@@ -26,8 +27,8 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: semantic.advanced,
 };
 
-type FilterType = Category | "custom";
-const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
+type FilterType = Category | "custom" | "volta";
+const FILTER_ALL: FilterType[] = [...CATEGORIES, "volta", "custom"];
 
 export default function Exercises() {
   const theme = useTheme();
@@ -50,10 +51,12 @@ export default function Exercises() {
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     const customFilter = selected.has("custom");
-    const cats = new Set([...selected].filter((s): s is Category => s !== "custom"));
+    const voltaFilter = selected.has("volta");
+    const cats = new Set([...selected].filter((s): s is Category => s !== "custom" && s !== "volta"));
     return exercises.filter((ex) => {
       if (q && !ex.name.toLowerCase().includes(q)) return false;
       if (customFilter && !ex.is_custom) return false;
+      if (voltaFilter && ex.is_voltra !== true) return false;
       if (cats.size > 0 && !cats.has(ex.category)) return false;
       return true;
     });
@@ -80,7 +83,11 @@ export default function Exercises() {
   );
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Exercise>) => (
+    ({ item }: ListRenderItemInfo<Exercise>) => {
+      const diff = item.difficulty || "intermediate";
+      const color = DIFFICULTY_COLORS[diff] || semantic.intermediate;
+      const label = diff === "beginner" ? "B" : diff === "advanced" ? "A" : "I";
+      return (
       <TouchableRipple
         onPress={() => onPress(item)}
         style={[
@@ -88,58 +95,82 @@ export default function Exercises() {
           { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
           layout.wide && detail?.id === item.id && { backgroundColor: theme.colors.primaryContainer },
         ]}
-        accessibilityLabel={`${item.name}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}`}
+        accessibilityLabel={`${item.name}${item.is_voltra === true ? ", Volta 1 compatible" : ""}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
         accessibilityRole="button"
       >
-        <View>
-          <View style={styles.titleRow}>
-            <Text variant="titleSmall" numberOfLines={1} style={[{ color: theme.colors.onSurface }, styles.titleText]}>
-              {item.name}
-            </Text>
-            {item.is_custom && (
+        <View style={styles.itemInner}>
+          <View
+            style={[styles.diffBar, { backgroundColor: color }]}
+            accessibilityLabel={`Difficulty: ${diff}`}
+          >
+            <Text style={[styles.diffLabel, { color: theme.colors.onPrimary }]}>{label}</Text>
+          </View>
+          <View style={styles.itemContent}>
+            <View style={styles.titleRow}>
+              <Text variant="titleSmall" numberOfLines={1} style={[{ color: theme.colors.onSurface }, styles.titleText]}>
+                {item.name}
+              </Text>
+              {item.is_voltra === true && (
+                <View
+                  style={[styles.v1Badge, { backgroundColor: theme.colors.tertiary }]}
+                  accessibilityLabel="Volta 1 compatible"
+                >
+                  <Text style={[styles.v1Text, { color: theme.colors.onTertiary }]}>V1</Text>
+                </View>
+              )}
+              {item.is_custom && (
+                <Chip
+                  compact
+                  textStyle={styles.customText}
+                  style={[styles.customChip, { backgroundColor: theme.colors.tertiaryContainer }]}
+                >
+                  Custom
+                </Chip>
+              )}
+            </View>
+            <View style={styles.row}>
               <Chip
                 compact
-                textStyle={styles.customText}
-                style={[styles.customChip, { backgroundColor: theme.colors.tertiaryContainer }]}
+                textStyle={styles.chipText}
+                style={[styles.badge, { backgroundColor: theme.colors.primaryContainer }]}
+                icon={() => CATEGORY_ICONS[item.category] ? (
+                  <MaterialCommunityIcons
+                    name={CATEGORY_ICONS[item.category] as keyof typeof MaterialCommunityIcons.glyphMap}
+                    size={16}
+                    color={theme.colors.onPrimaryContainer}
+                  />
+                ) : null}
               >
-                Custom
+                {CATEGORY_LABELS[item.category]}
               </Chip>
-            )}
-          </View>
-          <View style={styles.row}>
-            <Chip
-              compact
-              textStyle={styles.chipText}
-              style={[styles.badge, { backgroundColor: theme.colors.primaryContainer }]}
-            >
-              {CATEGORY_LABELS[item.category]}
-            </Chip>
-            {item.attachment && (
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
-                {ATTACHMENT_LABELS[item.attachment]}
-              </Text>
-            )}
-          </View>
-          <View style={styles.row}>
-            {item.primary_muscles.slice(0, 3).map((m) => (
-              <Chip
-                key={m}
-                compact
-                textStyle={styles.muscleText}
-                style={[styles.muscle, { backgroundColor: theme.colors.secondaryContainer }]}
-              >
-                {m}
-              </Chip>
-            ))}
-            {item.primary_muscles.length > 3 && (
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                +{item.primary_muscles.length - 3}
-              </Text>
-            )}
+              {item.attachment && (
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginLeft: 8 }}>
+                  {ATTACHMENT_LABELS[item.attachment]}
+                </Text>
+              )}
+            </View>
+            <View style={styles.row}>
+              {item.primary_muscles.slice(0, 3).map((m) => (
+                <Chip
+                  key={m}
+                  compact
+                  textStyle={styles.muscleText}
+                  style={[styles.muscle, { backgroundColor: theme.colors.secondaryContainer }]}
+                >
+                  {m}
+                </Chip>
+              ))}
+              {item.primary_muscles.length > 3 && (
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  +{item.primary_muscles.length - 3}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       </TouchableRipple>
-    ),
+      );
+    },
     [onPress, theme, layout.wide, detail]
   );
 
@@ -169,7 +200,7 @@ export default function Exercises() {
     [loading, theme]
   );
 
-  const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : CATEGORY_LABELS[f]);
+  const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : f === "volta" ? "Volta 1" : CATEGORY_LABELS[f]);
 
   const list = (
     <View style={layout.wide ? { flex: 6 } : { flex: 1 }}>
@@ -192,6 +223,13 @@ export default function Exercises() {
               onPress={() => toggle(f)}
               style={styles.filterChip}
               compact
+              icon={f !== "custom" && f !== "volta" && CATEGORY_ICONS[f] ? () => (
+                <MaterialCommunityIcons
+                  name={CATEGORY_ICONS[f] as keyof typeof MaterialCommunityIcons.glyphMap}
+                  size={16}
+                  color={theme.colors.onSurface}
+                />
+              ) : undefined}
               accessibilityLabel={`Filter by ${filterLabel(f)}`}
               accessibilityRole="button"
               accessibilityState={{ selected: selected.has(f) }}
@@ -380,11 +418,31 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   item: {
-    paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     minHeight: ITEM_HEIGHT,
     justifyContent: "center",
+  },
+  itemInner: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  diffBar: {
+    width: 3,
+    borderRadius: 2,
+    marginRight: 12,
+    marginLeft: 16,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 2,
+  },
+  diffLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  itemContent: {
+    flex: 1,
+    paddingRight: 16,
   },
   titleRow: {
     flexDirection: "row",
@@ -399,6 +457,17 @@ const styles = StyleSheet.create({
   },
   customText: {
     fontSize: 12,
+  },
+  v1Badge: {
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  v1Text: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   row: {
     flexDirection: "row",

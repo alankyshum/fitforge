@@ -253,10 +253,73 @@ export default function Workouts() {
     });
   };
 
+  const scheduled = adherence.filter((a) => a.scheduled);
+  const weekDone = sessions.filter((s) => {
+    const m = mondayOf(new Date());
+    return s.started_at >= m;
+  }).length;
+  const weekLabel = scheduled.length > 0
+    ? `${weekDone}/${scheduled.length}`
+    : `${weekDone}`;
+  const weekSub = scheduled.length > 0 ? "workouts" : weekDone === 1 ? "workout" : "workouts";
+  const prCount = recentPRs.length;
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {/* Stats Row */}
+      <View style={styles.statsRow}>
+        <View
+          style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
+          accessibilityLabel={`${streak} week streak`}
+        >
+          <MaterialCommunityIcons
+            name="fire"
+            size={24}
+            color={streak > 0 ? theme.colors.primary : theme.colors.onSurfaceVariant}
+          />
+          <Text variant="titleLarge" style={{ color: streak > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }}>
+            {streak}
+          </Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            {streak === 1 ? "week" : "weeks"}
+          </Text>
+        </View>
+        <View
+          style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
+          accessibilityLabel={scheduled.length > 0 ? `${weekDone} of ${scheduled.length} workouts this week` : `${weekDone} workouts this week`}
+        >
+          <MaterialCommunityIcons
+            name="dumbbell"
+            size={24}
+            color={weekDone > 0 ? theme.colors.primary : theme.colors.onSurfaceVariant}
+          />
+          <Text variant="titleLarge" style={{ color: weekDone > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }}>
+            {weekLabel}
+          </Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            {weekSub}
+          </Text>
+        </View>
+        <View
+          style={[styles.statCard, { backgroundColor: theme.colors.surface }]}
+          accessibilityLabel={`${prCount} personal records this week`}
+        >
+          <MaterialCommunityIcons
+            name="trophy"
+            size={24}
+            color={prCount > 0 ? theme.colors.primary : theme.colors.onSurfaceVariant}
+          />
+          <Text variant="titleLarge" style={{ color: prCount > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }}>
+            {prCount}
+          </Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+            this week
+          </Text>
+        </View>
+      </View>
+
       {/* Resume active session banner */}
       {active && (
         <Card
@@ -774,82 +837,6 @@ export default function Workouts() {
         </>
       )}
 
-      {/* Streak Card */}
-      {streak > 0 && (
-        <Card
-          style={[styles.streak, { backgroundColor: theme.colors.primaryContainer }]}
-          accessibilityLabel={`Training streak: ${streak} week${streak > 1 ? "s" : ""}`}
-        >
-          <Card.Content style={styles.streakContent}>
-            <Text variant="headlineSmall" style={{ color: theme.colors.onPrimaryContainer }}>
-              🔥 {streak}
-            </Text>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onPrimaryContainer }}>
-              week streak
-            </Text>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* Recent Personal Records */}
-      <Card
-        style={[styles.prCard, { backgroundColor: theme.colors.surface }]}
-        accessibilityLabel="Recent personal records"
-      >
-        <Card.Content>
-          <View style={styles.prHeader}>
-            <MaterialCommunityIcons name="trophy" size={20} color={theme.colors.primary} />
-            <Text
-              variant="titleMedium"
-              style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
-            >
-              Recent Personal Records
-            </Text>
-          </View>
-          {recentPRs.length === 0 ? (
-            <Text
-              variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", paddingVertical: 12 }}
-              accessibilityLabel="No personal records yet. Complete workouts to start tracking."
-            >
-              Complete workouts to start tracking PRs!
-            </Text>
-          ) : (
-            recentPRs.map((pr, i) => (
-              <Card
-                key={`${pr.session_id}-${pr.exercise_id}`}
-                style={[styles.prRow, i < recentPRs.length - 1 && styles.prRowSpaced]}
-                onPress={() => router.push(`/session/detail/${pr.session_id}`)}
-                accessibilityLabel={`Personal record: ${pr.name}, ${pr.weight}, achieved on ${new Date(pr.date).toLocaleDateString()}`}
-                accessibilityRole="button"
-              >
-                <Card.Content style={styles.prRowContent}>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.onSurface, flex: 1 }}
-                    numberOfLines={1}
-                  >
-                    {pr.name}
-                  </Text>
-                  <Text
-                    variant="bodyMedium"
-                    style={{ color: theme.colors.primary, fontWeight: "600", marginHorizontal: 8 }}
-                  >
-                    {pr.weight}
-                  </Text>
-                  <Text
-                    variant="bodySmall"
-                    style={{ color: theme.colors.onSurfaceVariant }}
-                  >
-                    {new Date(pr.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                  </Text>
-                </Card.Content>
-              </Card>
-            ))
-          )}
-        </Card.Content>
-      </Card>
-
       {/* Recent Workouts */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -946,6 +933,19 @@ const styles = StyleSheet.create({
   banner: {
     marginBottom: 12,
   },
+  statsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    height: 72,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 4,
+  },
   nextBanner: {
     marginBottom: 12,
   },
@@ -962,34 +962,6 @@ const styles = StyleSheet.create({
   },
   segmented: {
     marginBottom: 16,
-  },
-  streak: {
-    marginBottom: 16,
-  },
-  streakContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  prCard: {
-    marginBottom: 16,
-  },
-  prHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  prRow: {
-    elevation: 0,
-    minHeight: 48,
-  },
-  prRowSpaced: {
-    marginBottom: 4,
-  },
-  prRowContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 48,
   },
   quickStartContent: {
     paddingVertical: 8,

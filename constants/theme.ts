@@ -107,6 +107,16 @@ export const muscle = {
   },
 };
 
+// Category icon map for MaterialCommunityIcons
+export const CATEGORY_ICONS: Record<string, string> = {
+  abs_core: "stomach",
+  arms: "arm-flex",
+  back: "human-handsup",
+  chest: "weight-lifter",
+  legs_glutes: "walk",
+  shoulders: "account-arrow-up",
+};
+
 export function difficultyText(level: string): string {
   if (level === "intermediate") return semantic.onIntermediate;
   if (level === "advanced") return semantic.onAdvanced;
