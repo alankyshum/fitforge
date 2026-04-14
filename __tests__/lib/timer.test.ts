@@ -102,10 +102,12 @@ describe("timer", () => {
       expect(s2.startedAt).toBe(1000)
     })
 
-    it("does not start if completed", () => {
+    it("starts from completed state", () => {
       const s = { ...init("tabata"), status: "completed" as const }
       const s2 = start(s, 1000)
-      expect(s2.status).toBe("completed")
+      expect(s2.status).toBe("running")
+      expect(s2.phase).toBe("work")
+      expect(s2.round).toBe(1)
     })
 
     it("starts emom at round 1", () => {

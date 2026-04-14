@@ -82,14 +82,12 @@ export function totalDuration(mode: Mode, config: Config): number {
 
 export function start(state: State, now: number): State {
   if (state.status === "running") return state
-  if (state.status === "completed") return state
-  const phase: Phase = state.mode === "amrap" ? "work" : "work"
   const round = state.mode === "tabata" ? 1 : (state.mode === "emom" ? 1 : 0)
   const rem = duration(state.mode, state.config)
   return {
     ...state,
     status: "running",
-    phase,
+    phase: "work",
     round,
     remaining: rem,
     total: rem,

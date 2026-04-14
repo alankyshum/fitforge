@@ -115,24 +115,22 @@ export default function TimerScreen() {
     }
 
     intervalRef.current = setInterval(() => {
-      setState(prev => {
-        const result = tick(prev, Date.now())
-        if (result.transition === "work") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
-        } else if (result.transition === "rest") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-        } else if (result.transition === "minute") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-        } else if (result.transition === "warning30" || result.transition === "warning10") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-        } else if (result.transition === "completed") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
-          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300)
-        }
-        return result.state
-      })
+      const result = tick(appRef.current, Date.now())
+      if (result.transition === "work") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
+      } else if (result.transition === "rest") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      } else if (result.transition === "minute") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+      } else if (result.transition === "warning30" || result.transition === "warning10") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+      } else if (result.transition === "completed") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150)
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300)
+      }
+      setState(result.state)
     }, 200)
 
     return () => {
@@ -199,9 +197,13 @@ export default function TimerScreen() {
 
   const handleStart = useCallback(() => {
     debounced(() => {
-      if (state.status === "idle" || state.status === "completed") {
+      if (state.status === "idle") {
         save(mode, state.config)
         setState(prev => start(prev, Date.now()))
+        setPauseMsg("")
+      } else if (state.status === "completed") {
+        save(mode, state.config)
+        setState(prev => start(reset(prev), Date.now()))
         setPauseMsg("")
       } else if (state.status === "running") {
         setState(prev => pause(prev, Date.now()))
