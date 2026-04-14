@@ -366,6 +366,18 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(
     "CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)"
   );
+
+  // Migration: create weekly_schedule table
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS weekly_schedule (
+      id TEXT PRIMARY KEY,
+      day_of_week INTEGER NOT NULL,
+      template_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      FOREIGN KEY (template_id) REFERENCES workout_templates(id),
+      UNIQUE(day_of_week)
+    )`
+  );
 }
 
 async function seed(database: SQLite.SQLiteDatabase): Promise<void> {
