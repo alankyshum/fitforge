@@ -24,6 +24,7 @@ import {
   getSessionWeightIncreases,
 } from "../../../lib/db";
 import type { WorkoutSession, WorkoutSet } from "../../../lib/types";
+import { TRAINING_MODE_LABELS } from "../../../lib/types";
 import { toDisplay } from "../../../lib/units";
 
 type PR = { exercise_id: string; name: string; weight: number; previous_max: number };
@@ -81,6 +82,16 @@ export default function Summary() {
     () => sets.filter((s) => s.completed),
     [sets],
   );
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, { name: string; sets: typeof completed }>();
+    for (const s of completed) {
+      const key = s.exercise_id;
+      if (!map.has(key)) map.set(key, { name: s.exercise_name ?? key, sets: [] });
+      map.get(key)!.sets.push(s);
+    }
+    return [...map.values()];
+  }, [completed]);
 
   const volume = useMemo(() => {
     let total = 0;
@@ -176,6 +187,7 @@ export default function Summary() {
             ...(allPrs.length > 0 ? [{ key: "prs" }] : []),
             ...(increases.length > 0 ? [{ key: "increases" }] : []),
             ...(comparison?.previous ? [{ key: "comparison" }] : []),
+            ...(grouped.length > 0 ? [{ key: "sets" }] : []),
           ] as { key: string }[]
         }
         keyExtractor={(s) => s.key}
@@ -406,6 +418,68 @@ export default function Summary() {
             );
           }
 
+          if (item.key === "sets") {
+            return (
+              <Card style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+                <Card.Content>
+                  <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons
+                      name="dumbbell"
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      variant="titleMedium"
+                      style={{ color: theme.colors.onSurface, marginLeft: 8, fontWeight: "700" }}
+                    >
+                      Sets
+                    </Text>
+                  </View>
+                  {grouped.map((group) => (
+                    <View key={group.name} style={styles.exerciseGroup}>
+                      <Text
+                        variant="labelLarge"
+                        style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}
+                      >
+                        {group.name}
+                      </Text>
+                      {group.sets.map((set) => (
+                        <View key={set.id} style={styles.setRow}>
+                          <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
+                            {set.weight ?? 0} × {set.reps ?? 0}
+                          </Text>
+                          {set.training_mode && set.training_mode !== "weight" && (
+                            <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
+                              <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
+                                {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
+                              </Text>
+                            </View>
+                          )}
+                          {set.tempo && (
+                            <Text
+                              variant="bodySmall"
+                              style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}
+                            >
+                              ♩ {set.tempo}
+                            </Text>
+                          )}
+                          {set.rpe != null && (
+                            <Text
+                              variant="bodySmall"
+                              style={{ color: theme.colors.onSurfaceVariant, marginLeft: 4 }}
+                            >
+                              RPE {set.rpe}
+                            </Text>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </Card.Content>
+              </Card>
+            );
+          }
+
           return null;
         }}
         ListFooterComponent={
@@ -500,6 +574,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 8,
+  },
+  exerciseGroup: {
+    marginBottom: 8,
+  },
+  setRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 3,
+    paddingLeft: 8,
+  },
+  modeBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
   },
   actions: {
     marginTop: 16,
