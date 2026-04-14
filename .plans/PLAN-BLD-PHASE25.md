@@ -155,7 +155,19 @@ Query `workout_sessions` for this week (Mon-Sun) with `completed_at IS NOT NULL`
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-14)
+
+**Critical Issues (must fix):**
+1. Template deletion orphans schedule entries — `PRAGMA foreign_keys` not enabled, FK constraints are decorative. Add app-level cascade in `deleteTemplate()`: delete schedule entries before deleting template.
+2. Post-completion "Today's Workout" card keeps showing "Start" after workout is done — user can accidentally start duplicate session. Add completed state to card.
+
+**Major Issues (should fix):**
+3. `accessibilityRole="radiogroup"` is wrong — day cells are independent buttons, not mutually exclusive radio options.
+4. Auto-fill from program doesn't specify which weekdays get assigned or let user preview/adjust.
+5. "missed = subtle warning" color risks guilt/churn — use neutral unfilled dots instead.
+6. Schedule screen missing loading/empty/error states (SKILL requirement).
+
+**Minor/Recommendations:** Clear schedule needs confirmation dialog. Document Monday-start as known limitation. Clarify schedule vs program Next card interaction.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — Technically sound, data model is clean, fits existing patterns, no new dependencies.
