@@ -87,7 +87,10 @@ export default function TimerScreen() {
     useCallback(() => {
       getAppSetting("timer_sound_enabled").then((val) => {
         setAudioEnabled(val !== "false")
-      }).catch(() => {})
+      }).catch(() => {
+        setAudioEnabled(true)
+        setError("Could not load sound setting")
+      })
       return () => { unloadAudio() }
     }, [])
   )

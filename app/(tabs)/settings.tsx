@@ -122,7 +122,11 @@ export default function Settings() {
         const on = val !== "false";
         setSoundEnabled(on);
         setAudioEnabled(on);
-      }).catch(() => {});
+      }).catch(() => {
+        setSoundEnabled(true);
+        setAudioEnabled(true);
+        setSnack("Could not load sound setting");
+      });
     }, [])
   );
 

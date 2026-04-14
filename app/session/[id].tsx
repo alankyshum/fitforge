@@ -112,7 +112,10 @@ export default function ActiveSession() {
   useEffect(() => {
     getAppSetting("timer_sound_enabled").then((val) => {
       setAudioEnabled(val !== "false")
-    }).catch(() => {})
+    }).catch(() => {
+      setAudioEnabled(true)
+      setSnackbar("Could not load sound setting")
+    })
   }, []);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
   const [modes, setModes] = useState<Record<string, TrainingMode>>({});
