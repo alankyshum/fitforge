@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   starterChipText: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
