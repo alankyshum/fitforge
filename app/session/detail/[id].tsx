@@ -278,7 +278,7 @@ export default function SessionDetail() {
                     </Text>
                     {set.training_mode && set.training_mode !== "weight" && (
                       <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-                        <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 10, fontWeight: "700" }}>
+                        <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
                           {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
                         </Text>
                       </View>

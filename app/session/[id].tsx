@@ -410,7 +410,8 @@ export default function ActiveSession() {
   const handleAddSet = async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
     const num = (group?.sets.length ?? 0) + 1;
-    const mode = modes[exerciseId] ?? null;
+    const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
+    const mode = modes[exerciseId] ?? fallback;
     const tp = mode === "eccentric_overload" ? (tempoDraft[exerciseId] || null) : null;
     await addSet(id!, exerciseId, num, null, null, mode, tp);
     await load();
@@ -866,7 +867,7 @@ export default function ActiveSession() {
                   )}
                   {set.completed && set.training_mode && set.training_mode !== "weight" && (
                     <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-                      <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 10, fontWeight: "700" }}>
+                      <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
                         {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
                       </Text>
                     </View>

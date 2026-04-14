@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Pressable,
@@ -27,6 +27,12 @@ export default function TrainingModeSelector({ modes, selected, exercise, tempo,
     setTooltip(TRAINING_MODE_LABELS[mode].description);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setTooltip(null), 3000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, []);
 
   const handleSelect = useCallback((mode: TrainingMode) => {
