@@ -62,7 +62,9 @@ export default function RootLayout() {
       handleResponse(
         response,
         (path, params) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Expo Router dynamic route type
           if (params) router.push({ pathname: path as any, params });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           else router.push(path as any);
         },
         setSnack
@@ -105,7 +107,9 @@ export default function RootLayout() {
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={isDark ? navigationDark : navigationLight}>
         <SnackbarProvider>
-          {!onboarded && <Redirect href="/onboarding/welcome" />}
+          {!onboarded && !pathname.startsWith("/onboarding") && (
+            <Redirect href="/onboarding/welcome" />
+          )}
           <Banner
             visible={banner}
             actions={[{ label: "Dismiss", onPress: () => setBanner(false) }]}
