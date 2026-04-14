@@ -3,7 +3,7 @@
 **Issue**: BLD-63
 **Author**: CEO
 **Date**: 2026-04-14
-**Status**: DRAFT
+**Status**: DRAFT (Rev 2 — addresses QD review)
 
 ## Problem Statement
 
@@ -35,20 +35,25 @@ Build an in-app feedback system with three report types (bug, feature request, c
    - "Request a Feature" button (outlined)
    - "View Error Log" button (outlined, existing)
    - Error count badge preserved
-2. **ErrorBoundary** — Update existing "Share Crash Report" to use the new feedback system with type=crash auto-selected
+2. **ErrorBoundary** — Keep existing "Share Crash Report" button as primary action. Add a secondary "Report on GitHub" button that uses `Linking.openURL()` directly (does NOT navigate to feedback screen — React tree may be broken after crash). The GitHub URL is generated from error + interaction data at the ErrorBoundary level.
 
 #### Feedback Screen (`app/feedback.tsx`)
 - **Type selector**: Segmented buttons — Bug Report / Feature Request / Crash Report
-- **Title field**: TextInput (required, max 100 chars)
+  - When pre-filled from ErrorBoundary (type=crash), the type selector is **locked** (disabled) to prevent accidental changes
+- **Title field**: TextInput (required, max 150 chars, with live character count)
 - **Description field**: Multiline TextInput (required for bugs/features, optional for crashes)
-- **Auto-attached data** (shown as expandable "Diagnostic Info" section):
+- **Diagnostic Info section** (expanded by default, collapsible):
   - App version, platform, OS version
-  - Last 10 interactions (timestamped)
+  - Last 10 interactions (timestamped) — shown in human-readable list
   - Recent errors (last 5 from error_log, for bug/crash types)
   - Device info
+  - **"Include diagnostic data" toggle** (on by default) — user can opt out of attaching interaction history and error logs to the report. When off, only app version/platform/OS are included.
+  - **Privacy note**: Small text below toggle: "Diagnostic data helps us fix issues faster. No personal data is collected."
 - **Actions**:
-  - "Submit to GitHub" (primary) — opens pre-filled GitHub issue in device browser via `expo-linking`
-  - "Share Report" (outlined) — shares full report via expo-sharing (fallback for users without GitHub)
+  - "Open on GitHub" (primary) — opens pre-filled GitHub issue in device browser via `expo-linking`
+  - "Share Report" (outlined) — shares report via expo-sharing (fallback for users without GitHub)
+  - **5-second cooldown** after submission — button disabled with countdown to prevent duplicate submissions
+- **Offline handling**: Before opening GitHub URL, check connectivity via `NetInfo`. If offline, show a dialog: "You appear to be offline. Would you like to share the report instead?" with "Share Report" action.
 - **Confirmation**: After submission, show Snackbar "Report opened in browser" or "Report shared"
 
 #### GitHub Issue Auto-Creation
@@ -81,7 +86,12 @@ The issue body will be auto-filled with:
 ...
 ```
 
-**URL length consideration**: GitHub issue URLs have practical limits (~8000 chars). The report must be truncated if it exceeds this. Interaction descriptions are kept short. Stack traces are trimmed to first 3 lines each.
+**URL length consideration**: GitHub issue URLs have practical limits (~8000 chars). The report must be truncated if it exceeds this. **Truncation priority order** (remove in this order to stay under limit):
+1. Error stack traces (trim to first 2 lines each, then remove entirely)
+2. Interaction log entries (remove oldest first)
+3. Description text (truncate with "[truncated]" marker — user content is preserved last)
+
+Interaction descriptions are kept short. A "[truncated — share full report for details]" notice is appended when truncation occurs.
 
 #### Interaction Logger
 A lightweight event logger that records the last 10 user interactions in memory (AsyncStorage or SQLite). Each interaction captures:
@@ -108,7 +118,7 @@ Interactions are recorded at key points:
 - `lib/types.ts` — Add `Interaction` type
 - `app/(tabs)/settings.tsx` — Replace "Crash Reporting" section with "Feedback & Reports"
 - `app/_layout.tsx` — Add Stack.Screen for feedback route + integrate interaction logger for navigation events
-- `components/ErrorBoundary.tsx` — Update "Share Crash Report" to navigate to feedback screen or use new report format
+- `components/ErrorBoundary.tsx` — Add "Report on GitHub" button using `Linking.openURL()` directly (no navigation to feedback screen). Keep existing share as primary fallback.
 
 #### Data Model
 ```sql
@@ -120,7 +130,7 @@ CREATE TABLE IF NOT EXISTS interaction_log (
   timestamp INTEGER NOT NULL
 );
 ```
-FIFO: After each insert, delete rows where id NOT IN (SELECT id ORDER BY timestamp DESC LIMIT 10).
+FIFO: After each insert, delete rows where id NOT IN (SELECT id ORDER BY timestamp DESC LIMIT 10). **Wrap insert+delete in a transaction** for race condition safety.
 
 #### Report Generation
 Update `generateReport()` to produce a comprehensive report:
@@ -259,7 +269,22 @@ Keep it lightweight — a single function call with 3-4 args, fire-and-forget (n
 - Wrap FIFO insert+delete in transaction for race condition safety
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: APPROVED**
+
+**Architecture Fit**: Compatible. New `lib/interactions.ts` mirrors `lib/errors.ts` FIFO pattern. New `app/feedback.tsx` follows existing route conventions. Migration uses `CREATE TABLE IF NOT EXISTS`. Zero refactoring needed.
+
+**Complexity**: Medium (~6 files, ~400-500 new lines). Risk: Low. Dependencies: None new.
+
+**Technical Concerns**:
+1. **ErrorBoundary Navigation (MAJOR)**: Do NOT navigate from ErrorBoundary to feedback screen — React tree is broken when ErrorBoundary fires, expo-router context may be corrupted. Keep existing share behavior, just update report format to include interaction data. Feedback screen is only reachable from Settings (healthy state).
+2. **Fire-and-forget writes (MINOR)**: `logInteraction()` must wrap DB writes in try/catch internally — same pattern as `logError()` in `lib/errors.ts:59`. Without this, unhandled promise rejections crash the app.
+3. **URL length (MINOR)**: `Linking.openURL()` uses OS APIs, not browser address bar — supports much longer URLs than the ~2000 char browser limit. Estimated URL ~3500-4500 chars. Truncation strategy is a good safety net.
+
+**Simplifications**: Start with 4-5 logging points (navigation, session start/end, template create, exercise create). Expand later without schema changes.
+
+**Performance**: No concerns. 10-row table, O(1) operations, <1ms writes.
+
+**Reviewed by**: techlead (2026-04-14)
 
 ### CEO Decision
 _Pending reviews_
