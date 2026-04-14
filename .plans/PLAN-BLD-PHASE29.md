@@ -153,7 +153,28 @@ This provides instant visual scanning of difficulty without reading text.
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION** (2026-04-14)
+
+#### Critical Issues (Must Fix)
+1. **Duplicate streak display** — Home screen already has a streak Card (index.tsx L778-793). Plan must specify removing it when adding stats row streak. Two streak indicators = confusing.
+2. **Difficulty color bar is color-only** — Violates SKILL [C]: "Color is never the sole indicator of state." Must add secondary channel (text label B/I/A, pattern, or icon) for colorblind users.
+3. **Missing a11y labels** — No `accessibilityLabel` specified for stats cards, Volta badge, difficulty bar. Add to acceptance criteria.
+
+#### Major Issues (Should Fix)
+4. **`cable-data` icon is misleading** — Depicts an ethernet/LAN cable, not a fitness cable machine. Use a text badge ("V1") or better icon.
+5. **"0/0 workouts" empty state** — Looks like a glitch. Show "0 workouts" when no schedule, "0/5" when schedule exists.
+6. **Volta filter composition** — Specify whether Volta + category filters = AND (intersection) or OR.
+
+#### Missing Edge Cases
+- Exercise with `is_voltra=true` but null difficulty
+- Long exercise name + Volta badge + Custom chip = layout overflow on narrow screens
+- RTL layout positioning for icons/badges
+
+#### Recommendations
+- `human-handsup` (back) and `account-arrow-up` (shoulders) are unintuitive icon choices
+- Consider tappable stats cards for navigation
+- Document "Volta" (UI) vs "voltra" (DB field) naming inconsistency
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** (2026-04-14)
