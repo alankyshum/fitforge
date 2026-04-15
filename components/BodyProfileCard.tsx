@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -186,10 +187,13 @@ export default function BodyProfileCard() {
             <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
               Body Profile
             </Text>
-            <View style={styles.summaryGrid}>
-              {items.map((item) => (
+            <FlatList
+              data={items}
+              numColumns={2}
+              scrollEnabled={false}
+              keyExtractor={(item) => item.label}
+              renderItem={({ item }) => (
                 <View
-                  key={item.label}
                   style={styles.summaryItem}
                   accessibilityLabel={item.a11yLabel}
                 >
@@ -206,8 +210,8 @@ export default function BodyProfileCard() {
                     {item.value}
                   </Text>
                 </View>
-              ))}
-            </View>
+              )}
+            />
           </View>
         );
       }
@@ -286,12 +290,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
   },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
   summaryItem: {
-    width: "50%",
+    flex: 1,
     marginBottom: 8,
   },
   modalOverlay: {
