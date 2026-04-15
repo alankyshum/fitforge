@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 59
+Total learnings: 61
 
 ## How to Use This Knowledge Base
 
@@ -22,6 +22,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Build Configuration](pitfalls/build-config.md) — 4 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 6 learnings
+- [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 3 learnings
@@ -37,6 +38,8 @@ _(no learnings yet)_
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-112 | Double-Cast Through `unknown` for Unrelated Type Assertions | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
+| 2026-04-15 | BLD-112 | `Array.includes()` Fails on Readonly Tuple Types | Pitfalls | [type-safety.md](pitfalls/type-safety.md) |
 | 2026-04-15 | BLD-99 | Separate Additive Seed Data into Dedicated Module Files | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-95/96 | Expo Router Directory Routes Register as `directory/index` | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-15 | BLD-95/96 | Static Route-Name Validation Test for Expo Router | Patterns | [testing.md](patterns/testing.md) |
