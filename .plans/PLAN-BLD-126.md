@@ -199,7 +199,18 @@ interface HealthService {
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — 7 Critical issues found (2026-04-15)
+
+Must fix before approval:
+1. Define toggle behavior when permission prompt is dismissed (not denied) — toggle should revert to OFF
+2. Define concrete nutrition sync trigger (per-meal write, not vague 'end of day')
+3. Add accessibility labels and roles for ALL new interactive elements (master toggle, sub-toggles, Sync Now, status)
+4. Add deduplication strategy — track synced IDs in SQLite to prevent duplicate HealthKit entries
+5. Clarify nutrition sync data integrity — per-meal vs daily snapshot, and how edits propagate
+6. Add expo-dev-client migration as a separate prerequisite issue with own acceptance criteria
+7. Specify 48x48dp touch targets for all new toggles and buttons
+
+See BLD-126 issue comments for full review with detailed rationale.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
