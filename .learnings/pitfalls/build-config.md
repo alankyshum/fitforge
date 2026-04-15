@@ -49,3 +49,11 @@
 **Learning**: `accessibilityRole="button"` tells assistive technology that the element is interactive. Assigning it to non-interactive elements creates a confusing experience — users hear "button" but tapping does nothing. Use `accessibilityRole="summary"` or `"text"` for display-only content, and only use `"button"` when the element has a corresponding `onPress`/`onLongPress` handler.
 **Action**: Before assigning `accessibilityRole="button"` to any component, verify it has an `onPress` handler. For informational cards, badges, and display-only elements, use `accessibilityRole="summary"` or omit the role entirely. Add this check to code review checklists for accessibility compliance.
 **Tags**: accessibility, accessibilityrole, screen-reader, a11y, button, react-native, cards, voiceover, talkback
+
+### Expo Go Cannot Load Custom Native Modules — Migrate to expo-dev-client First
+**Source**: BLD-136 — expo-dev-client migration for Health integration
+**Date**: 2026-04-15
+**Context**: When planning Apple HealthKit integration, the team discovered that Expo Go does not support custom native modules. A prerequisite infrastructure migration to expo-dev-client was needed before any native API work could begin.
+**Learning**: Expo Go only supports modules included in the Expo SDK. Any feature requiring platform-specific native APIs (HealthKit, Health Connect, NFC, Bluetooth, custom native code) requires migrating to expo-dev-client. This migration is a build infrastructure change (4 files: package.json, app.config.ts, eas.json, README) with no user-facing code changes, but it changes the entire dev workflow from `npx expo start` to `npx expo run:ios` / `npx expo start --dev-client`.
+**Action**: When planning features that use platform-specific native APIs, check whether the project uses Expo Go. If so, schedule expo-dev-client migration as Phase 0 before any native module work. Also create separate eas.json profiles for simulator (`development` with `ios.simulator: true`) and physical device (`development-device`) builds.
+**Tags**: expo, expo-go, expo-dev-client, native-modules, healthkit, eas-build, migration, build-infrastructure
