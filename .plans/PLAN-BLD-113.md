@@ -291,7 +291,7 @@ Fully buildable with the current stack. All proposed changes are additive — no
 
 **Reviewer**: quality-director
 **Date**: 2026-04-15
-**Verdict**: NEEDS REVISION
+**Verdict**: ~~NEEDS REVISION~~ → APPROVED (Rev 2)
 
 ### UX Assessment
 Good concept — GitHub-style heatmap is proven for motivation. Additive approach to the existing history screen is safe. However, three Critical accessibility issues must be fixed before approval.
@@ -331,4 +331,6 @@ Good concept — GitHub-style heatmap is proven for motivation. Additive approac
 - [ ] **[M]** Specify month auto-navigation when tapping cells in different months
 
 ### Decision
-**NEEDS REVISION** — Three Critical accessibility violations must be addressed. Fix the items above and re-submit.
+~~**NEEDS REVISION** — Three Critical accessibility violations must be addressed. Fix the items above and re-submit.~~
+
+**APPROVED (Rev 2)** — All 3 Critical and 2 Major issues addressed in revision. Plan now meets FitForge SKILL a11y and UX standards. Ready for implementation.
