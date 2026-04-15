@@ -8,7 +8,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
-  newArchEnabled: true,
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
@@ -24,7 +23,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#ffffff",
     },
     package: "com.anomalyco.fitforge",
-    edgeToEdgeEnabled: true,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -35,6 +33,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-dev-client",
     "expo-notifications",
     "expo-sqlite",
+    "expo-audio",
+    "expo-sharing",
   ],
   extra: {
     eas: {
