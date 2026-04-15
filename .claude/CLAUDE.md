@@ -10,12 +10,14 @@
 
 ## Dev Server
 
+**The user starts the dev server manually. Do NOT auto-start it.**
+
 ### Starting the server
 ```bash
-# Recommended: use the dev-server script (auto-restarts on dep changes + hourly)
-nohup ./scripts/dev-server.sh --port 8081 > /tmp/fitforge-dev.log 2>&1 &
+# Option 1: use the dev-server script (auto-restarts on dep changes + hourly)
+./scripts/dev-server.sh --port 8081
 
-# Simple: just start Expo directly
+# Option 2: just start Expo directly
 npx expo start --port 8081
 ```
 
