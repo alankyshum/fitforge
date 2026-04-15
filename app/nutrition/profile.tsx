@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import {
+  Banner,
   Button,
   Card,
   SegmentedButtons,
@@ -22,13 +23,24 @@ import {
 } from "../../lib/nutrition-calc";
 import { updateMacroTargets } from "../../lib/db";
 
-const ACTIVITY_LEVELS: ActivityLevel[] = [
-  "sedentary",
-  "lightly_active",
-  "moderately_active",
-  "very_active",
-  "extra_active",
-];
+const ACTIVITY_BUTTONS = [
+  { value: "sedentary", label: ACTIVITY_LABELS.sedentary.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.sedentary, style: { minHeight: 48 } },
+  { value: "lightly_active", label: ACTIVITY_LABELS.lightly_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.lightly_active, style: { minHeight: 48 } },
+  { value: "moderately_active", label: ACTIVITY_LABELS.moderately_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.moderately_active, style: { minHeight: 48 } },
+  { value: "very_active", label: ACTIVITY_LABELS.very_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.very_active, style: { minHeight: 48 } },
+  { value: "extra_active", label: ACTIVITY_LABELS.extra_active.split(" ")[0], accessibilityLabel: ACTIVITY_LABELS.extra_active, style: { minHeight: 48 } },
+] as const;
+
+const GOAL_BUTTONS = [
+  { value: "cut", label: GOAL_LABELS.cut, accessibilityLabel: GOAL_LABELS.cut },
+  { value: "maintain", label: GOAL_LABELS.maintain, accessibilityLabel: GOAL_LABELS.maintain },
+  { value: "bulk", label: GOAL_LABELS.bulk, accessibilityLabel: GOAL_LABELS.bulk },
+] as const;
+
+const SEX_BUTTONS = [
+  { value: "male", label: "Male", accessibilityLabel: "Male" },
+  { value: "female", label: "Female", accessibilityLabel: "Female" },
+] as const;
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -42,34 +54,42 @@ export default function ProfileScreen() {
   const [heightUnit, setHeightUnit] = useState<"cm" | "in">("cm");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       async function load() {
-        const [saved, bodySettings, latestWeight] = await Promise.all([
-          getAppSetting("nutrition_profile"),
-          getBodySettings(),
-          getLatestBodyWeight(),
-        ]);
+        try {
+          const [saved, bodySettings, latestWeight] = await Promise.all([
+            getAppSetting("nutrition_profile"),
+            getBodySettings(),
+            getLatestBodyWeight(),
+          ]);
 
-        if (!active) return;
+          if (!active) return;
 
-        const wu = bodySettings.weight_unit;
-        const hu = bodySettings.measurement_unit;
-        setWeightUnit(wu);
-        setHeightUnit(hu);
+          const wu = bodySettings.weight_unit;
+          const hu = bodySettings.measurement_unit;
+          setWeightUnit(wu);
+          setHeightUnit(hu);
 
-        if (saved) {
-          const profile: NutritionProfile = JSON.parse(saved);
-          setAge(String(profile.age));
-          setWeight(String(profile.weight));
-          setHeight(String(profile.height));
-          setSex(profile.sex);
-          setActivityLevel(profile.activityLevel);
-          setGoal(profile.goal);
-        } else if (latestWeight) {
-          setWeight(String(latestWeight.weight));
+          if (saved) {
+            const profile: NutritionProfile = JSON.parse(saved);
+            setAge(String(profile.age));
+            setWeight(String(profile.weight));
+            setHeight(String(profile.height));
+            setSex(profile.sex);
+            setActivityLevel(profile.activityLevel);
+            setGoal(profile.goal);
+          } else if (latestWeight) {
+            setWeight(String(latestWeight.weight));
+          }
+          setLoadError(null);
+        } catch {
+          if (!active) return;
+          setLoadError("Could not load your profile. Please try again.");
         }
       }
       load();
@@ -99,6 +119,7 @@ export default function ProfileScreen() {
   async function handleSave() {
     if (!validate()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const profile: NutritionProfile = {
         age: parseFloat(age),
@@ -117,6 +138,8 @@ export default function ProfileScreen() {
       await updateMacroTargets(result.calories, result.protein, result.carbs, result.fat);
 
       router.back();
+    } catch {
+      setSaveError("Could not save your profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -127,6 +150,28 @@ export default function ProfileScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.content}
     >
+      {loadError ? (
+        <Banner
+          visible
+          actions={[{ label: "Dismiss", onPress: () => setLoadError(null) }]}
+          icon="alert-circle-outline"
+          style={{ marginBottom: 12 }}
+        >
+          {loadError}
+        </Banner>
+      ) : null}
+
+      {saveError ? (
+        <Banner
+          visible
+          actions={[{ label: "Dismiss", onPress: () => setSaveError(null) }]}
+          icon="alert-circle-outline"
+          style={{ marginBottom: 12 }}
+        >
+          {saveError}
+        </Banner>
+      ) : null}
+
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
         <Card.Content>
           <Text
@@ -205,10 +250,7 @@ export default function ProfileScreen() {
           <SegmentedButtons
             value={sex}
             onValueChange={(v) => setSex(v as Sex)}
-            buttons={[
-              { value: "male", label: "Male", accessibilityLabel: "Male" },
-              { value: "female", label: "Female", accessibilityLabel: "Female" },
-            ]}
+            buttons={SEX_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
             style={styles.segmented}
           />
 
@@ -221,12 +263,7 @@ export default function ProfileScreen() {
           <SegmentedButtons
             value={activityLevel}
             onValueChange={(v) => setActivityLevel(v as ActivityLevel)}
-            buttons={ACTIVITY_LEVELS.map((level) => ({
-              value: level,
-              label: ACTIVITY_LABELS[level].split(" ")[0],
-              accessibilityLabel: ACTIVITY_LABELS[level],
-              style: styles.activityButton,
-            }))}
+            buttons={ACTIVITY_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string; style: Record<string, number> }>}
             style={styles.segmented}
           />
 
@@ -239,11 +276,7 @@ export default function ProfileScreen() {
           <SegmentedButtons
             value={goal}
             onValueChange={(v) => setGoal(v as Goal)}
-            buttons={(["cut", "maintain", "bulk"] as Goal[]).map((g) => ({
-              value: g,
-              label: GOAL_LABELS[g],
-              accessibilityLabel: GOAL_LABELS[g],
-            }))}
+            buttons={GOAL_BUTTONS as unknown as Array<{ value: string; label: string; accessibilityLabel: string }>}
             style={styles.segmented}
           />
 
@@ -271,7 +304,6 @@ const styles = StyleSheet.create({
   input: { marginBottom: 4 },
   fieldLabel: { marginTop: 16, marginBottom: 8, fontSize: 14 },
   segmented: { marginBottom: 8 },
-  activityButton: { minHeight: 48 },
   btn: { marginTop: 24 },
   btnContent: { paddingVertical: 8, minHeight: 48 },
   errorText: { fontSize: 14, marginBottom: 8 },
