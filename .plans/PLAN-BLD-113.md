@@ -35,21 +35,23 @@ Users who track workouts want to SEE their consistency pattern over months. GitH
 **Screen layout (top to bottom):**
 
 1. **Streak Summary Bar** (always visible)
-   - Current streak (weeks): 🔥 icon + count + "weeks" label
-   - Longest streak (weeks): 🏆 icon + count + "weeks" label  
-   - Total workouts: 💪 icon + count
+   - Current streak (weeks): `whatshot` Material Icon + count + "weeks" label + `accessibilityLabel="Current streak: N weeks"`
+   - Longest streak (weeks): `emoji-events` Material Icon + count + "weeks" label + `accessibilityLabel="Longest streak: N weeks"`
+   - Total workouts: `fitness-center` Material Icon + count + `accessibilityLabel="Total workouts: N"`
    - Horizontal row, evenly spaced, using `Card` surface
 
 2. **Heatmap Section** (collapsible, default expanded)
    - Header: "Last 16 Weeks" with expand/collapse toggle
    - 7 rows (Mon–Sun) × 16 columns (weeks), newest on right
-   - Each cell colored by session count that day:
-     - 0 sessions: `theme.colors.surfaceVariant` (very subtle)
-     - 1 session: `theme.colors.primaryContainer` (light primary)
-     - 2 sessions: `theme.colors.primary` at 70% opacity
-     - 3+ sessions: `theme.colors.primary` at 100%
+   - Each cell colored by session count that day (with dot count as secondary indicator):
+     - 0 sessions: `theme.colors.surfaceVariant` (no dot)
+     - 1 session: `theme.colors.primaryContainer` (1 dot)
+     - 2 sessions: `theme.colors.primary` at 70% opacity (2 dots)
+     - 3+ sessions: `theme.colors.primary` at 100% ("3+" text)
    - Day labels (M, T, W, T, F, S, S) on left column
-   - Tapping a cell navigates focus to that day in the monthly calendar below
+   - Tapping a cell navigates the monthly calendar to that cell's month (auto-navigating if needed) and highlights/filters to that day
+   - Each cell has `hitSlop` padding to reach 48dp touch target minimum
+   - Color legend row below grid: "Less ▫️ ● ●● ●●● More"
 
 3. **Monthly Calendar** (existing — enhanced)
    - Same month navigation as today (prev/next arrows)
@@ -105,7 +107,7 @@ components/WorkoutHeatmap.tsx
 - **Each cell wrapped in a `Pressable` with `hitSlop` to ensure 48dp minimum touch target** (per FitForge SKILL a11y requirement). Visual size stays compact; interactive area expands invisibly.
 - Gap between cells: 2px
 
-**Color scale:**
+**Color scale (with secondary visual indicator for colorblind accessibility):**
 ```typescript
 function heatmapColor(count: number, theme: MD3Theme): string {
   if (count === 0) return theme.colors.surfaceVariant;
@@ -114,6 +116,16 @@ function heatmapColor(count: number, theme: MD3Theme): string {
   return theme.colors.primary;
 }
 ```
+
+**Secondary visual channel:** Each cell displays a small dot count inside the cell to indicate session count (no dots for 0, 1 dot for 1 session, 2 dots for 2, "3+" text for 3+). This ensures color is NEVER the sole indicator — colorblind users can distinguish levels via dot count. Dots are rendered as tiny filled circles (3px diameter) centered in the cell.
+
+**Accessibility labels:** Every heatmap cell includes:
+- `accessibilityLabel="[Day name] [Date], [N] workout(s)"` (e.g., "Monday April 14, 2 workouts")  
+- `accessibilityRole="button"` (since cells are tappable)
+- Heatmap container: `accessibilityRole="grid"`
+- Streak summary items: `accessibilityLabel="Current streak: N weeks"`, etc.
+
+**Color legend:** Below the heatmap grid, render a legend row: `"Less"  ▫️ ● ●● ●●●  "More"` showing the scale with both colors and dot counts.
 
 #### Streak Calculation Enhancement
 
@@ -170,30 +182,39 @@ export async function getTotalSessionCount(): Promise<number> {
 
 ### Acceptance Criteria
 
-- [ ] Streak summary bar shows current streak, longest streak, and total workouts
-- [ ] Heatmap shows last 16 weeks of workout data with 4-level color scale
-- [ ] Heatmap cells are tappable — tapping scrolls to that day's month view and filters
+- [ ] Streak summary bar shows current streak, longest streak, and total workouts (with Material Icons, not emoji)
+- [ ] Heatmap shows last 16 weeks of workout data with 4-level color scale AND dot-count secondary indicator
+- [ ] Heatmap cells are tappable — tapping auto-navigates to the correct month and highlights that day
+- [ ] All heatmap cells have `accessibilityLabel` with day name, date, and workout count
+- [ ] Heatmap container has `accessibilityRole="grid"`
+- [ ] Each cell touch target meets 48dp minimum via `hitSlop`
+- [ ] Color legend row shown below heatmap
 - [ ] Heatmap respects theme (light/dark mode) — colors derive from theme tokens
 - [ ] Monthly calendar cells get subtle background tint on workout days (consistent with heatmap)
 - [ ] All existing history.tsx functionality preserved (search, month nav, session list)
 - [ ] Responsive: heatmap scales on tablet (larger cells, more spacing)
 - [ ] Empty state: heatmap shows all-grey grid with encouraging message
+- [ ] Loading state: skeleton/shimmer placeholder while heatmap data loads
 - [ ] Longest streak calculation is accurate (handles gaps correctly)
 - [ ] Screen loads fast — heatmap data fetched with single query
 - [ ] PR passes all existing tests with no regressions
-- [ ] New tests: streak summary rendering, heatmap color logic, date calculations
+- [ ] New tests: streak summary rendering, heatmap color logic, date calculations, accessibility labels
 
 ### Edge Cases
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| No workouts ever | Heatmap all grey, streaks = 0, total = 0, encouraging CTA |
-| First workout today | Heatmap shows 1 colored cell, streak = 1 week |
-| Multiple workouts same day | Cell uses darkest color level, count shown in tooltip/press |
+| No workouts ever | Heatmap all grey (no dots), streaks = 0, total = 0, encouraging CTA |
+| First workout today | Heatmap shows 1 colored cell with 1 dot, streak = 1 week |
+| Multiple workouts same day | Cell uses darkest color level, shows dot count (2 dots or "3+") |
 | Very old account (years) | Only last 16 weeks shown by default, heatmap doesn't load all history |
 | Timezone edge | Use local timezone for date bucketing (matching existing behavior) |
 | Screen resize (rotation) | Heatmap re-renders with recalculated cell sizes |
-| 3+ sessions in a day | Uses max color intensity (same as 3) |
+| 3+ sessions in a day | Uses max color intensity + "3+" text overlay |
+| Data loading | Skeleton/shimmer placeholder shown while DB query executes |
+| Cross-month cell tap | If tapped cell is in a different month than currently displayed, auto-navigate monthly calendar to that month first, then highlight/filter the day |
+| Screen reader active | VoiceOver/TalkBack reads each cell as "[Day] [Date], N workouts" and streak summary with counts |
+| Colorblind user | Dot count inside cells provides non-color distinction between workout levels |
 
 ### Out of Scope
 
