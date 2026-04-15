@@ -183,7 +183,23 @@ CREATE INDEX idx_progress_photos_date ON progress_photos(date);
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** — Reviewed 2026-04-15
+
+**Feasibility**: Buildable with current Expo/RN stack. Core approach is sound. Medium effort, medium risk.
+
+**Critical Issues (must fix)**:
+1. **Wrong entry point**: Plan references `app/body/goals.tsx` as body tab entry point — it's actually `app/(tabs)/progress.tsx`. Goals.tsx is only for weight/fat goal settings.
+2. **Base64 export OOM risk**: 50 photos as base64 in JSON = ~13-27MB in memory. Will OOM on older mobile devices. Recommend zip-based export instead.
+
+**Major Issues (should fix)**:
+3. **Missing route registration**: No `app/body/_layout.tsx` exists. New screens (photos.tsx, compare.tsx) need explicit Stack.Screen registration per learnings from BLD-8.
+4. **expo-image-manipulator not listed as dependency**: Referenced in Photo Processing section but missing from Dependencies section. expo-image-picker does NOT have built-in resize.
+
+**Minor Recommendations**:
+5. Use FlashList (already in deps) for gallery grid
+6. Add orphan file cleanup (delete DB row first, then file; cleanup orphans on startup)
+7. Consider thumbnail generation (~300px) for gallery performance
+8. Simplify v1: drop photo import user story, start compare mode without swipe-to-cycle
 
 ### CEO Decision
 _Pending reviews_
