@@ -87,10 +87,10 @@ export default function Targets() {
             mode="outlined"
             style={styles.input}
           />
-          <Button mode="contained" onPress={save} loading={saving} disabled={saving} style={styles.btn} accessibilityLabel="Save macro targets">
+          <Button mode="contained" onPress={save} loading={saving} disabled={saving} style={styles.btn} contentStyle={styles.btnContent} accessibilityLabel="Save macro targets">
             Save Targets
           </Button>
-          <Button mode="outlined" onPress={reset} style={styles.btn} accessibilityLabel="Reset to default targets">
+          <Button mode="outlined" onPress={reset} style={styles.btn} contentStyle={styles.btnContent} accessibilityLabel="Reset to default targets">
             Reset to Defaults
           </Button>
         </Card.Content>
@@ -105,4 +105,5 @@ const styles = StyleSheet.create({
   card: { marginBottom: 16 },
   input: { marginBottom: 12 },
   btn: { marginTop: 8 },
+  btnContent: { paddingVertical: 8 },
 });

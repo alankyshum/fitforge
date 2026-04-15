@@ -187,6 +187,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                 loading={saving}
                 disabled={saving || !valid}
                 style={styles.btn}
+                contentStyle={styles.btnContent}
                 accessibilityLabel="Log food"
               >
                 Log Food
@@ -436,6 +437,7 @@ export default function AddFood() {
                   loading={saving}
                   disabled={saving || !name.trim()}
                   style={styles.btn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel="Log food"
                 >
                   Log Food
@@ -474,6 +476,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   favChip: { marginBottom: 16 },
   btn: { marginTop: 8 },
+  btnContent: { paddingVertical: 8 },
   favCard: { marginBottom: 8, borderRadius: 8 },
   dbCard: { marginBottom: 8, borderRadius: 8 },
   detail: { marginTop: 12, paddingTop: 12, borderTopWidth: 1 },

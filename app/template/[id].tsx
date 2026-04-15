@@ -17,16 +17,19 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import {
+  addExerciseToTemplate,
   createExerciseLink,
   duplicateTemplate,
   getTemplateById,
+  getTemplateExerciseCount,
   removeExerciseFromTemplate,
   reorderTemplateExercises,
   unlinkExerciseGroup,
   unlinkSingleExercise,
 } from "../../lib/db";
-import type { TemplateExercise, WorkoutTemplate } from "../../lib/types";
+import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/types";
 import SwipeToDelete from "../../components/SwipeToDelete";
+import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 
 function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
   const count = exercises.filter((e) => e.link_id === linkId).length;
@@ -48,6 +51,7 @@ export default function EditTemplate() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [snackbar, setSnackbar] = useState("");
   const [undo, setUndo] = useState<(() => Promise<void>) | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const linkIds = useMemo(() => {
@@ -158,6 +162,14 @@ export default function EditTemplate() {
     await unlinkSingleExercise(teId, linkId);
     await load();
   }, [load]);
+
+  const handlePickExercise = useCallback(async (exercise: Exercise) => {
+    if (!id) return;
+    setPickerOpen(false);
+    const count = await getTemplateExerciseCount(id);
+    await addExerciseToTemplate(id, exercise.id, count);
+    await load();
+  }, [id, load]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => {
@@ -435,6 +447,7 @@ export default function EditTemplate() {
             icon="content-copy"
             onPress={handleDuplicate}
             style={styles.doneBtn}
+            contentStyle={styles.btnContent}
             accessibilityLabel="Duplicate to edit"
           >
             Duplicate to Edit
@@ -447,6 +460,7 @@ export default function EditTemplate() {
                 icon="link-variant"
                 onPress={() => startSelection()}
                 style={styles.addBtn}
+                contentStyle={styles.btnContent}
                 accessibilityLabel="Create superset"
                 accessibilityRole="button"
               >
@@ -457,15 +471,14 @@ export default function EditTemplate() {
             <Button
               mode="outlined"
               icon="plus"
-              onPress={() =>
-                router.push(`/template/pick-exercise?templateId=${id}&editId=${id}`)
-              }
+              onPress={() => setPickerOpen(true)}
               style={styles.addBtn}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Add exercise to template"
             >
               Add Exercise
             </Button>
-            <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel="Done editing template">
+            <Button mode="contained" onPress={() => router.back()} style={styles.doneBtn} contentStyle={styles.btnContent} accessibilityLabel="Done editing template">
               Done
             </Button>
           </>
@@ -487,6 +500,11 @@ export default function EditTemplate() {
       >
         {snackbar}
       </Snackbar>
+      <ExercisePickerSheet
+        visible={pickerOpen}
+        onDismiss={() => setPickerOpen(false)}
+        onPick={handlePickExercise}
+      />
     </>
   );
 }
@@ -532,6 +550,9 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     marginTop: 16,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
   empty: {
     alignItems: "center",

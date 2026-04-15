@@ -15,13 +15,16 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import {
+  addExerciseToTemplate,
   createTemplate,
   getTemplateById,
+  getTemplateExerciseCount,
   removeExerciseFromTemplate,
   reorderTemplateExercises,
   updateTemplateName,
 } from "../../lib/db";
-import type { TemplateExercise, WorkoutTemplate } from "../../lib/types";
+import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/types";
+import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 
 export default function CreateTemplate() {
   const theme = useTheme();
@@ -33,6 +36,7 @@ export default function CreateTemplate() {
   const [template, setTemplate] = useState<WorkoutTemplate | null>(null);
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,6 +97,14 @@ export default function CreateTemplate() {
     await removeExerciseFromTemplate(eid);
     await load();
   }, [load]);
+
+  const handlePickExercise = useCallback(async (exercise: Exercise) => {
+    if (!template) return;
+    setPickerOpen(false);
+    const count = await getTemplateExerciseCount(template.id);
+    await addExerciseToTemplate(template.id, exercise.id, count);
+    await load();
+  }, [template, load]);
 
   const move = useCallback(async (index: number, dir: -1 | 1) => {
     if (!template) return;
@@ -195,12 +207,9 @@ export default function CreateTemplate() {
             <Button
               mode="outlined"
               icon="plus"
-              onPress={() =>
-                router.push(
-                  `/template/pick-exercise?templateId=${template.id}`
-                )
-              }
+              onPress={() => setPickerOpen(true)}
               style={styles.addBtn}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Add exercise to template"
             >
               Add Exercise
@@ -213,11 +222,17 @@ export default function CreateTemplate() {
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
+          contentStyle={styles.btnContent}
           accessibilityLabel={template ? "Done editing template" : "Create template"}
         >
           {template ? "Done" : "Create Template"}
         </Button>
       </View>
+      <ExercisePickerSheet
+        visible={pickerOpen}
+        onDismiss={() => setPickerOpen(false)}
+        onPick={handlePickExercise}
+      />
     </>
   );
 }
@@ -255,6 +270,9 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 16,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
   empty: {
     alignItems: "center",

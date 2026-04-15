@@ -25,7 +25,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { activateKeepAwakeAsync } from "expo-keep-awake";
 import { play as playAudio, setEnabled as setAudioEnabled } from "../../lib/audio";
@@ -70,6 +70,7 @@ import { formatTime } from "../../lib/format";
 import { useLayout } from "../../lib/layout";
 import { confirmAction } from "../../lib/confirm";
 import WeightPicker from "../../components/WeightPicker";
+import ExercisePickerSheet from "../../components/ExercisePickerSheet";
 
 type SetWithMeta = WorkoutSet & {
   exercise_name?: string;
@@ -684,6 +685,15 @@ export default function ActiveSession() {
     })();
   }, [id, templateId, load]);
 
+  // Reload exercises when returning from exercise picker
+  useFocusEffect(
+    useCallback(() => {
+      if (initialized.current && id) {
+        load();
+      }
+    }, [id, load])
+  );
+
   // Timer
   useEffect(() => {
     if (!session) return;
@@ -883,9 +893,20 @@ export default function ActiveSession() {
     }
   }, [groups]);
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const handleAddExercise = () => {
-    router.push(`/template/pick-exercise?sessionId=${id}`);
+    setPickerOpen(true);
   };
+
+  const handlePickExercise = useCallback(async (exercise: { id: string }) => {
+    if (!id) return;
+    setPickerOpen(false);
+    for (let i = 1; i <= 3; i++) {
+      await addSet(id, exercise.id, i);
+    }
+    await load();
+  }, [id, load]);
 
   const handleRPE = useCallback(async (set: SetWithMeta, val: number) => {
     const next = set.rpe === val ? null : val;
@@ -1127,6 +1148,7 @@ export default function ActiveSession() {
               icon="plus"
               onPress={handleAddExercise}
               style={styles.addExercise}
+              contentStyle={styles.actionContent}
               accessibilityLabel="Add exercise to workout"
             >
               Add Exercise
@@ -1135,7 +1157,7 @@ export default function ActiveSession() {
               mode="contained"
               onPress={finish}
               style={styles.finishBtn}
-              contentStyle={styles.finishContent}
+              contentStyle={styles.actionContent}
               accessibilityLabel="Finish workout"
             >
               Finish Workout
@@ -1145,6 +1167,7 @@ export default function ActiveSession() {
               onPress={cancel}
               textColor={theme.colors.error}
               style={styles.cancelBtn}
+              contentStyle={styles.actionContent}
               accessibilityLabel="Cancel workout"
             >
               Cancel Workout
@@ -1161,6 +1184,11 @@ export default function ActiveSession() {
       >
         {snackbar}
       </Snackbar>
+      <ExercisePickerSheet
+        visible={pickerOpen}
+        onDismiss={() => setPickerOpen(false)}
+        onPick={handlePickExercise}
+      />
     </>
   );
 }
@@ -1248,7 +1276,7 @@ const styles = StyleSheet.create({
   finishBtn: {
     marginTop: 24,
   },
-  finishContent: {
+  actionContent: {
     paddingVertical: 8,
   },
   cancelBtn: {

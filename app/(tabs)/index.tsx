@@ -497,6 +497,7 @@ export default function Workouts() {
                   mode="outlined"
                   onPress={() => router.push("/template/create")}
                   style={styles.emptyBtn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel="Create your first template"
                 >
                   Create Template
@@ -658,6 +659,7 @@ export default function Workouts() {
                   mode="outlined"
                   onPress={() => router.push("/program/create")}
                   style={styles.emptyBtn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel="Create your first program"
                 >
                   Create Program
@@ -940,6 +942,9 @@ const styles = StyleSheet.create({
   },
   emptyBtn: {
     marginTop: 8,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
   starterHeader: {
     marginTop: 16,

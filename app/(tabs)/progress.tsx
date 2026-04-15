@@ -500,6 +500,7 @@ export default function Progress() {
           <Button
             mode="outlined"
             onPress={() => router.push("/body/goals")}
+            contentStyle={styles.btnContent}
             accessibilityLabel="Set body goals"
           >
             Set Goals
@@ -601,6 +602,7 @@ export default function Progress() {
             mode="outlined"
             onPress={() => router.push("/body/measurements")}
             style={{ marginTop: 8 }}
+            contentStyle={styles.btnContent}
             accessibilityLabel="Log body measurements"
           >
             {measurements ? "Log Measurements" : "Add First Measurement"}
@@ -723,6 +725,7 @@ export default function Progress() {
               mode="outlined"
               onPress={() => setModal(false)}
               style={{ flex: 1, marginRight: 8 }}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Cancel weight log"
             >
               Cancel
@@ -733,6 +736,7 @@ export default function Progress() {
               loading={saving}
               disabled={saving || !logWeight}
               style={{ flex: 1 }}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Save weight entry"
             >
               Save
@@ -851,5 +855,8 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: "row",
     marginTop: 8,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
 });

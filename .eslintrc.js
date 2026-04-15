@@ -36,6 +36,18 @@ module.exports = {
         message:
           "Use theme.colors.* via useTheme() or import from constants/theme.ts instead of hardcoded hex colors.",
       },
+      {
+        selector:
+          'JSXOpeningElement[name.name="Button"]:has(JSXAttribute[name.name="mode"][value.value="contained"]):not(:has(JSXAttribute[name.name="compact"])):not(:has(JSXAttribute[name.name="contentStyle"]))',
+        message:
+          'Non-compact contained Button must have contentStyle (e.g. {{ paddingVertical: 8 }}) for consistent sizing.',
+      },
+      {
+        selector:
+          'JSXOpeningElement[name.name="Button"]:has(JSXAttribute[name.name="mode"][value.value="outlined"]):not(:has(JSXAttribute[name.name="compact"])):not(:has(JSXAttribute[name.name="contentStyle"]))',
+        message:
+          'Non-compact outlined Button must have contentStyle (e.g. {{ paddingVertical: 8 }}) for consistent sizing.',
+      },
     ],
   },
   overrides: [

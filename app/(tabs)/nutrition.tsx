@@ -305,6 +305,7 @@ export default function Nutrition() {
             onPress={inlineSave}
             loading={saving}
             disabled={saving || !name.trim()}
+            contentStyle={styles.btnContent}
             accessibilityLabel="Log food"
           >
             Log Food
@@ -424,4 +425,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   favChip: { marginBottom: 16 },
   favCard: { marginBottom: 8, borderRadius: 8 },
+  btnContent: { paddingVertical: 8 },
 });

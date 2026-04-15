@@ -182,6 +182,7 @@ export default function Measurements() {
               mode="outlined"
               onPress={() => router.back()}
               style={{ flex: 1, marginRight: 8 }}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Cancel measurement log"
             >
               Cancel
@@ -192,6 +193,7 @@ export default function Measurements() {
               loading={saving}
               disabled={saving}
               style={{ flex: 1 }}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Save measurements"
             >
               Save
@@ -226,5 +228,8 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: "row",
     marginTop: 8,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
 });

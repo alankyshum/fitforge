@@ -221,6 +221,7 @@ export default function CreateProgram() {
                 router.push(`/program/pick-template?programId=${program.id}`)
               }
               style={styles.addBtn}
+              contentStyle={styles.btnContent}
               accessibilityLabel="Add workout day from template"
             >
               Add Day
@@ -233,6 +234,7 @@ export default function CreateProgram() {
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
+          contentStyle={styles.btnContent}
           accessibilityLabel={program ? "Done editing program" : "Create program"}
         >
           {program ? "Done" : "Create Program"}
@@ -275,6 +277,9 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 16,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
   empty: {
     alignItems: "center",

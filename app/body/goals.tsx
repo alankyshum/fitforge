@@ -81,6 +81,7 @@ export default function Goals() {
           mode="outlined"
           onPress={() => router.back()}
           style={{ flex: 1, marginRight: 8 }}
+          contentStyle={styles.btnContent}
           accessibilityLabel="Cancel goal editing"
         >
           Cancel
@@ -91,6 +92,7 @@ export default function Goals() {
           loading={saving}
           disabled={saving}
           style={{ flex: 1 }}
+          contentStyle={styles.btnContent}
           accessibilityLabel="Save body goals"
         >
           Save
@@ -114,5 +116,8 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: "row",
     marginTop: 8,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
 });

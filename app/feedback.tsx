@@ -23,7 +23,6 @@ import { recent as recentInteractions } from "../lib/interactions";
 import type { ErrorEntry, Interaction, ReportType } from "../lib/types";
 
 const MAX_TITLE = 150;
-const COOLDOWN_MS = 5000;
 
 const TYPE_OPTIONS = [
   { value: "bug", label: "Bug Report" },
@@ -69,39 +68,12 @@ export default function FeedbackScreen() {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [cooldown > 0]);
+  }, [cooldown]);
 
   const valid = title.trim().length > 0 &&
     (type === "crash" || desc.trim().length > 0);
 
   const startCooldown = useCallback(() => setCooldown(5), []);
-
-  const handleGitHub = useCallback(async () => {
-    if (!valid) return;
-    const state = await NetInfo.fetch();
-    if (!state.isConnected) {
-      Alert.alert(
-        "No Internet",
-        "You appear to be offline. Would you like to share the report instead?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Share Report", onPress: () => handleShare() },
-        ]
-      );
-      return;
-    }
-    const url = generateGitHubURL({
-      type,
-      title: title.trim(),
-      description: desc.trim(),
-      errors,
-      interactions,
-      includeDiag: diag,
-    });
-    await Linking.openURL(url);
-    startCooldown();
-    setSnack("Report opened in browser");
-  }, [valid, type, title, desc, errors, interactions, diag]);
 
   const handleShare = useCallback(async () => {
     if (!valid) return;
@@ -139,7 +111,34 @@ export default function FeedbackScreen() {
     } catch {
       setSnack("Unable to share");
     }
-  }, [valid, type, title, desc, errors, interactions, diag]);
+  }, [valid, type, title, desc, errors, interactions, diag, startCooldown]);
+
+  const handleGitHub = useCallback(async () => {
+    if (!valid) return;
+    const state = await NetInfo.fetch();
+    if (!state.isConnected) {
+      Alert.alert(
+        "No Internet",
+        "You appear to be offline. Would you like to share the report instead?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Share Report", onPress: () => handleShare() },
+        ]
+      );
+      return;
+    }
+    const url = generateGitHubURL({
+      type,
+      title: title.trim(),
+      description: desc.trim(),
+      errors,
+      interactions,
+      includeDiag: diag,
+    });
+    await Linking.openURL(url);
+    startCooldown();
+    setSnack("Report opened in browser");
+  }, [valid, type, title, desc, errors, interactions, diag, handleShare, startCooldown]);
 
   const diagText = (() => {
     if (interactions.length === 0 && errors.length === 0) return "No diagnostic data recorded";
@@ -273,6 +272,7 @@ export default function FeedbackScreen() {
         onPress={handleGitHub}
         disabled={!valid || cooldown > 0}
         style={styles.btn}
+        contentStyle={styles.btnContent}
         accessibilityLabel="Open report on GitHub"
       >
         {cooldown > 0 ? `Open on GitHub (${cooldown}s)` : "Open on GitHub"}
@@ -284,6 +284,7 @@ export default function FeedbackScreen() {
         onPress={handleShare}
         disabled={!valid || cooldown > 0}
         style={styles.btn}
+        contentStyle={styles.btnContent}
         accessibilityLabel="Share report"
       >
         {cooldown > 0 ? `Share Report (${cooldown}s)` : "Share Report"}
@@ -324,5 +325,8 @@ const styles = StyleSheet.create({
   btn: {
     marginBottom: 8,
     minHeight: 48,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
 });

@@ -265,6 +265,7 @@ export default function ProgramDetail() {
                   onPress={toggle}
                   disabled={loading}
                   style={styles.actionBtn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
                 >
                   {program.is_active ? "Deactivate" : "Set Active"}
@@ -274,6 +275,7 @@ export default function ProgramDetail() {
                   icon="content-copy"
                   onPress={handleDuplicate}
                   style={styles.actionBtn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel="Duplicate to edit"
                 >
                   Duplicate to Edit
@@ -286,6 +288,7 @@ export default function ProgramDetail() {
                   onPress={toggle}
                   disabled={loading}
                   style={styles.actionBtn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
                 >
                   {program.is_active ? "Deactivate" : "Set Active"}
@@ -294,6 +297,7 @@ export default function ProgramDetail() {
                   mode="outlined"
                   onPress={() => router.push(`/program/create?programId=${program.id}`)}
                   style={styles.actionBtn}
+                  contentStyle={styles.btnContent}
                   accessibilityLabel="Edit program"
                 >
                   Edit
@@ -603,6 +607,9 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
+  },
+  btnContent: {
+    paddingVertical: 8,
   },
   sectionHeader: {
     flexDirection: "row",
