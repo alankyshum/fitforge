@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Linking, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
-import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme } from "react-native-paper";
+import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme, Divider } from "react-native-paper";
 import { useLayout } from "../../lib/layout";
 import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
 import { File, Paths } from "expo-file-system";
@@ -569,6 +569,26 @@ export default function Settings() {
               Measurements
             </Button>
           </View>
+
+          <Divider style={{ marginVertical: 16 }} />
+
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurface, marginBottom: 8 }}>
+            CSV Import
+          </Text>
+
+          <Button
+            mode="outlined"
+            icon="file-import-outline"
+            onPress={() => router.push("/settings/import-strong")}
+            contentStyle={styles.exportBtnContent}
+            accessibilityLabel="Import workout data from Strong CSV export"
+          >
+            Import from Strong
+          </Button>
+
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 8 }}>
+            Import workout history from the Strong app using a CSV export file.
+          </Text>
         </Card.Content>
       </Card>
 
