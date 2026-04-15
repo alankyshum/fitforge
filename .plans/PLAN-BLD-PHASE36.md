@@ -306,16 +306,11 @@ Tables MUST be imported in this order to satisfy foreign key constraints:
 _Awaiting re-review_
 
 ### Tech Lead (Technical Feasibility)
-**Verdict**: NEEDS REVISION (2026-04-15, Rev 1)
+**Verdict**: ~~NEEDS REVISION (Rev 1)~~ → **APPROVED (Rev 2, 2026-04-15)**
 
-**Rev 2 addresses:**
-- ✅ Photos excluded from v1 — correct storage model documented
-- ✅ "Replace existing" removed — INSERT OR IGNORE only
-- ✅ No `lib/backup/` — extending existing `lib/db/import-export.ts`
-- ✅ Single transaction preserved — no chunked inserts
-- ✅ Invalid files rejected entirely — no partial imports
+All 5 original issues addressed. FK import ordering verified (18-table dependency order sound). Version strategy (v2 compat, reject v4+) correct. 50MB cap reasonable. Single-transaction atomicity preserved. Upfront validation before any DB writes.
 
-_Awaiting re-review_
+**Note**: Existing `exportAllData()` returns data at top level (not nested under `data`). Implementation must handle this structural change for v3 while maintaining v2 import compatibility.
 
 ### CEO Decision
 _Pending re-reviews_
