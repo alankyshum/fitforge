@@ -2,9 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from "
 import {
   AccessibilityInfo,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
@@ -16,8 +19,6 @@ import Reanimated, {
 } from "react-native-reanimated";
 import {
   Button,
-  Checkbox,
-  Chip,
   Divider,
   IconButton,
   Snackbar,
@@ -25,6 +26,7 @@ import {
   TextInput,
   useTheme,
 } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { activateKeepAwakeAsync } from "expo-keep-awake";
@@ -61,11 +63,12 @@ import {
   advanceProgram,
 } from "../../lib/programs";
 import type { WorkoutSession, WorkoutSet, TrainingMode, Exercise } from "../../lib/types";
-import { TRAINING_MODE_LABELS } from "../../lib/types";
+import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { rpeColor, rpeText } from "../../lib/rpe";
+import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
+import { MuscleMap } from "../../components/MuscleMap";
 import { suggest, type Suggestion } from "../../lib/rm";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
-import SwipeToDelete from "../../components/SwipeToDelete";
 import { formatTime } from "../../lib/format";
 import { useLayout } from "../../lib/layout";
 import { confirmAction } from "../../lib/confirm";
@@ -97,7 +100,6 @@ type SetRowProps = {
   set: SetWithMeta;
   step: number;
   unit: "kg" | "lb";
-  maxWeight: number | undefined;
   notesOpen: boolean;
   notesDraft: string | undefined;
   halfStep: { setId: string; base: number } | null;
@@ -114,21 +116,17 @@ type SetRowProps = {
 };
 
 const SetRow = memo(function SetRow({
-  set, step, unit, maxWeight, notesOpen, notesDraft, halfStep,
+  set, step, unit, notesOpen, notesDraft, halfStep,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes,
 }: SetRowProps) {
   const theme = useTheme();
 
-  const isPR = set.completed && set.weight != null && set.weight > 0 &&
-    maxWeight !== undefined && set.weight > maxWeight;
-
   const onWeightChange = useCallback((v: number) => onUpdate(set.id, "weight", String(v)), [set.id, onUpdate]);
-  const onRepsChange = useCallback((v: string) => onUpdate(set.id, "reps", v), [set.id, onUpdate]);
+  const onRepsChange = useCallback((v: number) => onUpdate(set.id, "reps", String(v)), [set.id, onUpdate]);
 
   return (
     <View>
-      <SwipeToDelete onDelete={() => onDelete(set.id)}>
         <View
           style={[
             styles.setRow,
@@ -142,7 +140,7 @@ const SetRow = memo(function SetRow({
           <Text variant="bodySmall" style={[styles.colPrev, { color: theme.colors.onSurfaceVariant }]}>
             {set.previous}
           </Text>
-          <View style={styles.weightCol}>
+          <View style={styles.pickerCol}>
             <WeightPicker
               value={set.weight}
               step={step}
@@ -151,49 +149,51 @@ const SetRow = memo(function SetRow({
               accessibilityLabel={`Set ${set.set_number} weight`}
             />
           </View>
-          <TextInput
-            mode="outlined"
-            dense
-            keyboardType="numeric"
-            style={styles.colInput}
-            value={set.reps != null ? String(set.reps) : ""}
-            onChangeText={onRepsChange}
-            placeholder="-"
-            accessibilityLabel={`Set ${set.set_number} reps`}
-          />
-          <View style={styles.colCheck} accessible accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`} accessibilityRole="checkbox" accessibilityState={{ checked: set.completed }}>
-            <Checkbox
-              status={set.completed ? "checked" : "unchecked"}
-              onPress={() => onCheck(set)}
+          <View style={styles.pickerCol}>
+            <WeightPicker
+              value={set.reps}
+              step={1}
+              onValueChange={onRepsChange}
+              accessibilityLabel={`Set ${set.set_number} reps`}
+              max={999}
             />
           </View>
-          {isPR && (
-            <Chip
-              compact
-              icon="trophy"
-              style={{ backgroundColor: theme.colors.tertiaryContainer }}
-              textStyle={styles.prChipText}
-              accessibilityLabel="New personal record"
-              accessibilityRole="text"
-            >
-              PR
-            </Chip>
-          )}
-          {set.completed && set.training_mode && set.training_mode !== "weight" && (
-            <View style={[styles.modeBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
-              <Text style={{ color: theme.colors.onSecondaryContainer, fontSize: 12, fontWeight: "700" }}>
-                {TRAINING_MODE_LABELS[set.training_mode]?.short ?? set.training_mode}
-              </Text>
-            </View>
-          )}
-          <IconButton
-            icon={set.notes ? "note-text" : "note-text-outline"}
-            size={18}
+          <Pressable
+            onPress={() => onCheck(set)}
+            style={[
+              styles.circleCheck,
+              { borderColor: set.completed ? theme.colors.primary : theme.colors.onSurfaceVariant },
+              set.completed && { backgroundColor: theme.colors.primary },
+            ]}
+            accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: set.completed }}
+          >
+            {set.completed && (
+              <MaterialCommunityIcons name="check" size={16} color={theme.colors.onPrimary} />
+            )}
+          </Pressable>
+          <Pressable
             onPress={() => onToggleNotes(set.id)}
+            style={styles.actionBtn}
             accessibilityLabel="Set notes"
-          />
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons
+              name={set.notes ? "note-text" : "note-text-outline"}
+              size={18}
+              color={theme.colors.onSurfaceVariant}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => onDelete(set.id)}
+            style={styles.actionBtn}
+            accessibilityLabel={`Delete set ${set.set_number}`}
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
+          </Pressable>
         </View>
-      </SwipeToDelete>
 
       {set.completed && (
         <View style={styles.rpeRow} accessibilityLabel="Rate of perceived exertion" accessibilityRole="radiogroup">
@@ -296,7 +296,6 @@ type GroupCardProps = {
   group: ExerciseGroup;
   step: number;
   unit: "kg" | "lb";
-  maxes: Record<string, number>;
   suggestions: Record<string, Suggestion | null>;
   modes: Record<string, TrainingMode>;
   tempoDraft: Record<string, string>;
@@ -320,16 +319,19 @@ type GroupCardProps = {
   onNotes: (setId: string, text: string) => void;
   onNotesDraftChange: (setId: string, text: string) => void;
   onToggleNotes: (setId: string) => void;
+  onShowDetail: (exerciseId: string) => void;
 };
 
 const ExerciseGroupCard = memo(function ExerciseGroupCard({
-  group, step, unit, maxes, suggestions, modes, tempoDraft,
+  group, step, unit, suggestions, modes, tempoDraft,
   notesOpenMap, notesDraftMap, halfStep, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
   onTempoChange, onTempoBlur, onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes,
+  onShowDetail,
 }: GroupCardProps) {
   const theme = useTheme();
+  const layout = useLayout();
 
   const linked = group.link_id ? groups.filter((g) => g.link_id === group.link_id) : [];
   const linkIdx = group.link_id ? linked.findIndex((g) => g.exercise_id === group.exercise_id) : -1;
@@ -342,6 +344,132 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
   const suggestion = suggestions[group.exercise_id];
+
+  const suggestionChip = suggestion && (() => {
+    const s = suggestion;
+    const isIncrease = s.type === "increase" || s.type === "rep_increase";
+    const label = s.type === "rep_increase"
+      ? `${s.reps} reps ▲`
+      : s.type === "increase"
+        ? `${s.weight} ▲`
+        : `${s.weight} =`;
+    const hint = s.type === "rep_increase"
+      ? `Suggested reps: ${s.reps}, ${s.reason}`
+      : s.type === "increase"
+        ? `Suggested weight: ${s.weight}, increase by ${step}`
+        : `Suggested weight: ${s.weight}, maintain`;
+    return (
+      <Pressable
+        onPress={() => {
+          if (s.type === "rep_increase") {
+            for (const set of group.sets) {
+              if (!set.completed && (set.reps == null || set.reps === 0)) {
+                onUpdate(set.id, "reps", String(s.reps));
+              }
+            }
+          } else {
+            for (const set of group.sets) {
+              if (!set.completed && (set.weight == null || set.weight === 0)) {
+                onUpdate(set.id, "weight", String(s.weight));
+              }
+            }
+          }
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }}
+        style={[
+          styles.suggestionChip,
+          { backgroundColor: isIncrease ? theme.colors.primaryContainer : theme.colors.surfaceVariant },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={hint}
+        accessibilityHint={s.type === "rep_increase" ? "Double tap to fill suggested reps" : "Double tap to fill suggested weight"}
+      >
+        <Text
+          variant="labelSmall"
+          style={{
+            color: isIncrease ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant,
+            fontWeight: "600",
+          }}
+        >
+          Suggested: {label}
+        </Text>
+      </Pressable>
+    );
+  })();
+
+  const exerciseInfo = (
+    <>
+      <View style={styles.groupHeader}>
+        <Text variant="titleMedium" style={[styles.groupTitle, { color: theme.colors.primary }]}>
+          {group.name}
+        </Text>
+        <Button
+          mode="text"
+          compact
+          icon="information-outline"
+          onPress={() => onShowDetail(group.exercise_id)}
+          accessibilityLabel={`View ${group.name} details`}
+        >
+          Details
+        </Button>
+        {group.is_voltra && group.training_modes.length > 1 && (
+          <TrainingModeSelector
+            modes={group.training_modes}
+            selected={modes[group.exercise_id] ?? group.training_modes[0]}
+            exercise={group.name}
+            tempo={tempoDraft[group.exercise_id] ?? ""}
+            onSelect={(m) => onModeChange(group.exercise_id, m)}
+            onTempoChange={(v) => onTempoChange(group.exercise_id, v)}
+            onTempoBlur={() => onTempoBlur(group.exercise_id, tempoDraft[group.exercise_id] ?? "")}
+            compact
+          />
+        )}
+      </View>
+    </>
+  );
+
+  const setTable = (
+    <>
+      <View style={styles.headerRow}>
+        <Text variant="labelSmall" style={[styles.colSet, { color: theme.colors.onSurfaceVariant }]}>SET</Text>
+        <Text variant="labelSmall" style={[styles.colPrev, { color: theme.colors.onSurfaceVariant }]}>PREV</Text>
+        <Text variant="labelSmall" style={[styles.colLabel, { color: theme.colors.onSurfaceVariant }]}>{unit === "lb" ? "LB" : "KG"}</Text>
+        <Text variant="labelSmall" style={[styles.colLabel, { color: theme.colors.onSurfaceVariant }]}>REPS</Text>
+        <View style={styles.colTrailing} />
+      </View>
+      {group.sets.map((set) => (
+        <SetRow
+          key={set.id}
+          set={set}
+          step={step}
+          unit={unit}
+            notesOpen={!!notesOpenMap[set.id]}
+          notesDraft={notesDraftMap[set.id]}
+          halfStep={halfStep}
+          onUpdate={onUpdate}
+          onCheck={onCheck}
+          onDelete={onDelete}
+          onRPE={onRPE}
+          onHalfStep={onHalfStep}
+          onHalfStepClear={onHalfStepClear}
+          onHalfStepOpen={onHalfStepOpen}
+          onNotes={onNotes}
+          onNotesDraftChange={onNotesDraftChange}
+          onToggleNotes={onToggleNotes}
+        />
+      ))}
+      <Button
+        mode="text"
+        compact
+        icon="plus"
+        onPress={() => onAddSet(group.exercise_id)}
+        style={styles.addSetBtn}
+        accessibilityLabel={`Add set to ${group.name}`}
+      >
+        Add Set
+      </Button>
+    </>
+  );
 
   return (
     <View style={styles.group}>
@@ -361,121 +489,154 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
       )}
 
       <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
-        <View style={styles.groupHeader}>
-          <Text variant="titleMedium" style={[styles.groupTitle, { color: theme.colors.primary }]}>
-            {group.name}
-          </Text>
-          {group.is_voltra && group.training_modes.length > 1 && (
-            <TrainingModeSelector
-              modes={group.training_modes}
-              selected={modes[group.exercise_id] ?? group.training_modes[0]}
-              exercise={group.name}
-              tempo={tempoDraft[group.exercise_id] ?? ""}
-              onSelect={(m) => onModeChange(group.exercise_id, m)}
-              onTempoChange={(v) => onTempoChange(group.exercise_id, v)}
-              onTempoBlur={() => onTempoBlur(group.exercise_id, tempoDraft[group.exercise_id] ?? "")}
-            />
-          )}
-        </View>
-
-        <View style={styles.headerRow}>
-          <Text variant="labelSmall" style={[styles.colSet, { color: theme.colors.onSurfaceVariant }]}>SET</Text>
-          <Text variant="labelSmall" style={[styles.colPrev, { color: theme.colors.onSurfaceVariant }]}>PREV</Text>
-          <Text variant="labelSmall" style={[styles.colLabel, { color: theme.colors.onSurfaceVariant }]}>{unit === "lb" ? "LB" : "KG"}</Text>
-          <Text variant="labelSmall" style={[styles.colLabel, { color: theme.colors.onSurfaceVariant }]}>REPS</Text>
-          <View style={styles.colCheck} />
-        </View>
-
-        {suggestion && (() => {
-          const s = suggestion;
-          const isIncrease = s.type === "increase" || s.type === "rep_increase";
-          const label = s.type === "rep_increase"
-            ? `${s.reps} reps ▲`
-            : s.type === "increase"
-              ? `${s.weight} ▲`
-              : `${s.weight} =`;
-          const hint = s.type === "rep_increase"
-            ? `Suggested reps: ${s.reps}, ${s.reason}`
-            : s.type === "increase"
-              ? `Suggested weight: ${s.weight}, increase by ${step}`
-              : `Suggested weight: ${s.weight}, maintain`;
-          return (
-            <Pressable
-              onPress={() => {
-                if (s.type === "rep_increase") {
-                  for (const set of group.sets) {
-                    if (!set.completed && (set.reps == null || set.reps === 0)) {
-                      onUpdate(set.id, "reps", String(s.reps));
-                    }
-                  }
-                } else {
-                  for (const set of group.sets) {
-                    if (!set.completed && (set.weight == null || set.weight === 0)) {
-                      onUpdate(set.id, "weight", String(s.weight));
-                    }
-                  }
-                }
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={[
-                styles.suggestionChip,
-                { backgroundColor: isIncrease ? theme.colors.primaryContainer : theme.colors.surfaceVariant },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={hint}
-              accessibilityHint={s.type === "rep_increase" ? "Double tap to fill suggested reps" : "Double tap to fill suggested weight"}
-            >
-              <Text
-                variant="labelSmall"
-                style={{
-                  color: isIncrease ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant,
-                  fontWeight: "600",
-                }}
-              >
-                Suggested: {label}
-              </Text>
-            </Pressable>
-          );
-        })()}
-
-        {group.sets.map((set) => (
-          <SetRow
-            key={set.id}
-            set={set}
-            step={step}
-            unit={unit}
-            maxWeight={maxes[set.exercise_id]}
-            notesOpen={!!notesOpenMap[set.id]}
-            notesDraft={notesDraftMap[set.id]}
-            halfStep={halfStep}
-            onUpdate={onUpdate}
-            onCheck={onCheck}
-            onDelete={onDelete}
-            onRPE={onRPE}
-            onHalfStep={onHalfStep}
-            onHalfStepClear={onHalfStepClear}
-            onHalfStepOpen={onHalfStepOpen}
-            onNotes={onNotes}
-            onNotesDraftChange={onNotesDraftChange}
-            onToggleNotes={onToggleNotes}
-          />
-        ))}
-
-        <Button
-          mode="text"
-          compact
-          icon="plus"
-          onPress={() => onAddSet(group.exercise_id)}
-          style={styles.addSetBtn}
-          accessibilityLabel={`Add set to ${group.name}`}
-        >
-          Add Set
-        </Button>
+        {exerciseInfo}
+        {layout.atLeastMedium ? (
+          <View style={styles.groupWideRow}>
+            {suggestionChip && (
+              <View style={styles.groupInfoCol}>
+                {suggestionChip}
+              </View>
+            )}
+            <View style={suggestionChip ? styles.groupSetsCol : { flex: 1 }}>
+              {setTable}
+            </View>
+          </View>
+        ) : (
+          <>
+            {suggestionChip}
+            {setTable}
+          </>
+        )}
       </View>
       <Divider style={styles.divider} />
     </View>
   );
 });
+
+function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
+  const theme = useTheme();
+  const layout = useLayout();
+  const { width: screenWidth } = useWindowDimensions();
+
+  const steps = exercise.instructions
+    ?.split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean) ?? [];
+
+  const musclesAndMeta = (
+    <>
+      <View style={styles.detailChips}>
+        <View style={[styles.detailBadge, { backgroundColor: theme.colors.primaryContainer }]}>
+          <Text style={[styles.detailBadgeText, { color: theme.colors.onPrimaryContainer }]}>
+            {CATEGORY_LABELS[exercise.category]}
+          </Text>
+        </View>
+        <View style={[styles.detailBadge, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }]}>
+          <Text style={[styles.detailBadgeText, { color: difficultyText(exercise.difficulty), fontWeight: "600" }]}>
+            {exercise.difficulty}
+          </Text>
+        </View>
+        <View style={[styles.detailBadge, { backgroundColor: theme.colors.surfaceVariant }]}>
+          <Text style={[styles.detailBadgeText, { color: theme.colors.onSurfaceVariant }]}>
+            {exercise.equipment}
+          </Text>
+        </View>
+      </View>
+      {exercise.mount_position && (
+        <View style={styles.detailSection}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Mount Position
+          </Text>
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 2 }}>
+            {exercise.mount_position}
+          </Text>
+        </View>
+      )}
+      {exercise.attachment && (
+        <View style={styles.detailSection}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Attachment
+          </Text>
+          <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 2 }}>
+            {ATTACHMENT_LABELS[exercise.attachment]}
+          </Text>
+        </View>
+      )}
+      {exercise.primary_muscles.length > 0 && (
+        <View style={styles.detailSection}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Primary Muscles
+          </Text>
+          <View style={styles.detailChips}>
+            {exercise.primary_muscles.map((m) => (
+              <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
+                <Text style={[styles.detailBadgeText, { color: theme.colors.onSecondaryContainer }]}>{m}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+      {exercise.secondary_muscles.length > 0 && (
+        <View style={styles.detailSection}>
+          <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+            Secondary Muscles
+          </Text>
+          <View style={styles.detailChips}>
+            {exercise.secondary_muscles.map((m) => (
+              <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.tertiaryContainer }]}>
+                <Text style={[styles.detailBadgeText, { color: theme.colors.onTertiaryContainer }]}>{m}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </>
+  );
+
+  const instructions = steps.length > 0 ? (
+    <View style={styles.detailSection}>
+      <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+        Instructions
+      </Text>
+      {steps.map((step, i) => (
+        <Text key={i} variant="bodyMedium" style={{ color: theme.colors.onSurface, marginTop: 6, lineHeight: 22 }}>
+          {step}
+        </Text>
+      ))}
+    </View>
+  ) : null;
+
+  const mapWidth = layout.atLeastMedium
+    ? Math.min(screenWidth - 64, 600)
+    : screenWidth - 48;
+
+  return (
+    <ScrollView style={styles.detailBody} contentContainerStyle={{ paddingBottom: 32 }}>
+      {layout.atLeastMedium ? (
+        <>
+          <View style={styles.detailRow}>
+            <View style={styles.detailColLeft}>
+              {musclesAndMeta}
+            </View>
+            <View style={styles.detailColRight}>
+              {instructions}
+            </View>
+          </View>
+          <MuscleMap
+            primary={exercise.primary_muscles}
+            secondary={exercise.secondary_muscles}
+            width={mapWidth}
+          />
+        </>
+      ) : (
+        <>
+          {musclesAndMeta}
+          {instructions}
+        </>
+      )}
+    </ScrollView>
+  );
+}
 
 export default function ActiveSession() {
   useEffect(() => {
@@ -530,6 +691,7 @@ export default function ActiveSession() {
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
   const [modes, setModes] = useState<Record<string, TrainingMode>>({});
   const [tempoDraft, setTempoDraft] = useState<Record<string, string>>({});
+  const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -899,6 +1061,11 @@ export default function ActiveSession() {
     setPickerOpen(true);
   };
 
+  const handleShowDetail = useCallback(async (exerciseId: string) => {
+    const ex = await getExerciseById(exerciseId);
+    setDetailExercise(ex);
+  }, []);
+
   const handlePickExercise = useCallback(async (exercise: { id: string }) => {
     if (!id) return;
     setPickerOpen(false);
@@ -1077,7 +1244,6 @@ export default function ActiveSession() {
             group={group}
             step={step}
             unit={unit}
-            maxes={maxes}
             suggestions={suggestions}
             modes={modes}
             tempoDraft={tempoDraft}
@@ -1101,6 +1267,7 @@ export default function ActiveSession() {
             onNotes={handleNotes}
             onNotesDraftChange={handleNotesDraftChange}
             onToggleNotes={toggleNotes}
+            onShowDetail={handleShowDetail}
           />
         )}
         keyExtractor={(item) => item.exercise_id}
@@ -1189,6 +1356,35 @@ export default function ActiveSession() {
         onDismiss={() => setPickerOpen(false)}
         onPick={handlePickExercise}
       />
+      <Modal
+        visible={!!detailExercise}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailExercise(null)}
+        accessibilityViewIsModal
+      >
+        <View style={styles.detailOverlay}>
+          <Pressable style={styles.detailDismiss} onPress={() => setDetailExercise(null)} accessibilityRole="button" accessibilityLabel="Close details" />
+          <View style={[styles.detailSheet, { backgroundColor: theme.colors.surface }]}>
+            {detailExercise && (
+              <>
+                <View style={styles.detailHeader}>
+                  <Text variant="titleLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+                    {detailExercise.name}
+                  </Text>
+                  <IconButton
+                    icon="close"
+                    size={24}
+                    onPress={() => setDetailExercise(null)}
+                    accessibilityLabel="Close exercise details"
+                  />
+                </View>
+                <ExerciseDetailDrawerContent exercise={detailExercise} />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -1205,6 +1401,17 @@ const styles = StyleSheet.create({
   group: {
     marginBottom: 8,
   },
+  groupWideRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  groupInfoCol: {
+    flex: 2,
+    minWidth: 160,
+  },
+  groupSetsCol: {
+    flex: 3,
+  },
   groupHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1214,6 +1421,7 @@ const styles = StyleSheet.create({
   },
   groupTitle: {
     fontWeight: "700",
+    flex: 1,
   },
   headerRow: {
     flexDirection: "row",
@@ -1237,21 +1445,37 @@ const styles = StyleSheet.create({
     width: 64,
     textAlign: "center",
   },
-  colInput: {
+  pickerCol: {
     flex: 1,
-    marginHorizontal: 4,
-    height: 36,
-    fontSize: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   colLabel: {
     flex: 1,
-    marginHorizontal: 4,
     textAlign: "center",
     fontSize: 11,
   },
   colCheck: {
-    width: 40,
+    width: 32,
     alignItems: "center",
+  },
+  colTrailing: {
+    width: 96,
+  },
+  circleCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   prChipText: {
     fontSize: 12,
@@ -1304,6 +1528,7 @@ const styles = StyleSheet.create({
   },
   rpeRow: {
     flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 6,
     paddingHorizontal: 4,
     paddingVertical: 6,
@@ -1355,12 +1580,6 @@ const styles = StyleSheet.create({
   notesInput: {
     fontSize: 13,
   },
-  weightCol: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 2,
-  },
   suggestionChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -1370,5 +1589,63 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     minHeight: 48,
     justifyContent: "center",
+  },
+  detailOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  detailDismiss: {
+    flex: 1,
+  },
+  detailSheet: {
+    maxHeight: "60%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  detailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  detailBody: {
+    paddingHorizontal: 16,
+  },
+  detailChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  detailBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  detailBadgeText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  detailRow: {
+    flexDirection: "row",
+    gap: 24,
+    marginBottom: 16,
+  },
+  detailColLeft: {
+    flex: 1,
+  },
+  detailColRight: {
+    flex: 1,
+  },
+  detailSection: {
+    marginBottom: 16,
   },
 });

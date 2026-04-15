@@ -149,7 +149,7 @@ export default function Exercises() {
   const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : CATEGORY_LABELS[f]);
 
   const list = (
-    <View style={layout.atLeastMedium ? { flex: 5 } : { flex: 1 }}>
+    <View style={layout.atLeastMedium ? { flex: 2 } : { flex: 1 }}>
       <Searchbar
         placeholder="Search exercises..."
         value={query}
@@ -197,7 +197,7 @@ export default function Exercises() {
         data={filtered}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        numColumns={layout.atLeastMedium ? 2 : 1}
+        numColumns={1}
         ListEmptyComponent={empty}
       />
       <FAB
@@ -248,16 +248,16 @@ export default function Exercises() {
                   </Chip>
                 )}
                 <View style={styles.row}>
-                  <Chip compact style={{ backgroundColor: theme.colors.primaryContainer }}>
-                    {CATEGORY_LABELS[detail.category]}
-                  </Chip>
-                  <Chip
-                    compact
-                    style={{ backgroundColor: DIFFICULTY_COLORS[detail.difficulty], marginLeft: 8 }}
-                    textStyle={{ color: difficultyText(detail.difficulty), fontWeight: "600" }}
-                  >
-                    {detail.difficulty}
-                  </Chip>
+                  <View style={[styles.detailBadge, { backgroundColor: theme.colors.primaryContainer }]}>
+                    <Text style={[styles.detailBadgeText, { color: theme.colors.onPrimaryContainer }]}>
+                      {CATEGORY_LABELS[detail.category]}
+                    </Text>
+                  </View>
+                  <View style={[styles.detailBadge, { backgroundColor: DIFFICULTY_COLORS[detail.difficulty] }]}>
+                    <Text style={[styles.detailBadgeText, { color: difficultyText(detail.difficulty), fontWeight: "600" }]}>
+                      {detail.difficulty}
+                    </Text>
+                  </View>
                 </View>
                 {detail.mount_position && (
                   <>
@@ -294,9 +294,11 @@ export default function Exercises() {
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
                       {detail.training_modes.map((m) => (
-                        <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
-                          {m.replace(/_/g, " ")}
-                        </Chip>
+                        <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
+                          <Text style={[styles.detailBadgeText, { color: theme.colors.onSecondaryContainer }]}>
+                            {m.replace(/_/g, " ")}
+                          </Text>
+                        </View>
                       ))}
                     </View>
                   </View>
@@ -313,9 +315,9 @@ export default function Exercises() {
                     </Text>
                     <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
                       {detail.primary_muscles.map((m) => (
-                        <Chip key={m} compact style={{ backgroundColor: theme.colors.secondaryContainer }}>
-                          {m}
-                        </Chip>
+                        <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.secondaryContainer }]}>
+                          <Text style={[styles.detailBadgeText, { color: theme.colors.onSecondaryContainer }]}>{m}</Text>
+                        </View>
                       ))}
                     </View>
                   </View>
@@ -326,9 +328,9 @@ export default function Exercises() {
                       </Text>
                       <View style={[styles.row, { marginTop: 6, flexWrap: "wrap", gap: 6 }]}>
                         {detail.secondary_muscles.map((m) => (
-                          <Chip key={m} compact style={{ backgroundColor: theme.colors.tertiaryContainer }}>
-                            {m}
-                          </Chip>
+                          <View key={m} style={[styles.detailBadge, { backgroundColor: theme.colors.tertiaryContainer }]}>
+                            <Text style={[styles.detailBadgeText, { color: theme.colors.onTertiaryContainer }]}>{m}</Text>
+                          </View>
                         ))}
                       </View>
                     </View>
@@ -460,8 +462,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 16,
   },
+  detailBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  detailBadgeText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
   detailPane: {
-    flex: 5,
+    flex: 3,
     borderLeftWidth: StyleSheet.hairlineWidth,
   },
   detailContent: {

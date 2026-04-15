@@ -6,31 +6,30 @@ import * as Haptics from "expo-haptics";
 type Props = {
   value: number | null;
   step: number;
-  unit: "kg" | "lb";
+  unit?: "kg" | "lb" | string;
   onValueChange: (val: number) => void;
   accessibilityLabel?: string;
+  min?: number;
+  max?: number;
 };
 
-const MIN = 0;
-const MAX = 500;
-
-function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: Props) {
+function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel, min = 0, max = 500 }: Props) {
   const theme = useTheme();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const increment = useCallback(() => {
-    const next = Math.min(MAX, Math.round(((value ?? 0) + step) * 10) / 10);
+    const next = Math.min(max, Math.round(((value ?? 0) + step) * 10) / 10);
     onValueChange(next);
     Haptics.selectionAsync();
-  }, [value, step, onValueChange]);
+  }, [value, step, max, onValueChange]);
 
   const decrement = useCallback(() => {
-    const next = Math.max(MIN, Math.round(((value ?? 0) - step) * 10) / 10);
+    const next = Math.max(min, Math.round(((value ?? 0) - step) * 10) / 10);
     onValueChange(next);
     Haptics.selectionAsync();
-  }, [value, step, onValueChange]);
+  }, [value, step, min, onValueChange]);
 
   const startRepeat = useCallback((fn: () => void) => {
     if (repeatRef.current) clearInterval(repeatRef.current);
@@ -52,10 +51,10 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: 
   const endEdit = useCallback(() => {
     setEditing(false);
     const num = parseFloat(draft);
-    if (!isNaN(num) && num >= MIN && num <= MAX) {
+    if (!isNaN(num) && num >= min && num <= max) {
       onValueChange(num);
     }
-  }, [draft, onValueChange]);
+  }, [draft, min, max, onValueChange]);
 
   const display = value != null ? String(value) : "—";
 
@@ -90,9 +89,11 @@ function WeightPicker({ value, step, unit, onValueChange, accessibilityLabel }: 
           <Text style={[styles.valueText, { color: theme.colors.onSurface }]}>
             {display}
           </Text>
-          <Text style={[styles.unitText, { color: theme.colors.onSurfaceVariant }]}>
-            {unit}
-          </Text>
+          {unit ? (
+            <Text style={[styles.unitText, { color: theme.colors.onSurfaceVariant }]}>
+              {unit}
+            </Text>
+          ) : null}
         </Pressable>
       )}
 

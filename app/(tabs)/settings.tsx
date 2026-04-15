@@ -332,48 +332,50 @@ export default function Settings() {
             <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
               Weight
             </Text>
-            <SegmentedButtons
-              value={weightUnit}
-              onValueChange={async (val) => {
-                const u = val as "kg" | "lb";
-                setWeightUnit(u);
-                try {
-                  await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
-                } catch {
-                  setSnack("Could not save unit");
-                }
-              }}
-              buttons={[
-                { value: "kg", label: "kg" },
-                { value: "lb", label: "lb" },
-              ]}
-              density="medium"
-              style={{ width: 120 }}
-            />
+            <View style={styles.unitToggle}>
+              <SegmentedButtons
+                value={weightUnit}
+                onValueChange={async (val) => {
+                  const u = val as "kg" | "lb";
+                  setWeightUnit(u);
+                  try {
+                    await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
+                  } catch {
+                    setSnack("Could not save unit");
+                  }
+                }}
+                buttons={[
+                  { value: "kg", label: "kg" },
+                  { value: "lb", label: "lb" },
+                ]}
+                density="medium"
+              />
+            </View>
           </View>
 
           <View style={[styles.row, { marginTop: 12 }]}>
             <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
               Measurements
             </Text>
-            <SegmentedButtons
-              value={measureUnit}
-              onValueChange={async (val) => {
-                const m = val as "cm" | "in";
-                setMeasureUnit(m);
-                try {
-                  await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
-                } catch {
-                  setSnack("Could not save unit");
-                }
+            <View style={styles.unitToggle}>
+              <SegmentedButtons
+                value={measureUnit}
+                onValueChange={async (val) => {
+                  const m = val as "cm" | "in";
+                  setMeasureUnit(m);
+                  try {
+                    await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
+                  } catch {
+                    setSnack("Could not save unit");
+                  }
               }}
-              buttons={[
-                { value: "cm", label: "cm" },
-                { value: "in", label: "in" },
-              ]}
-              density="medium"
-              style={{ width: 120 }}
-            />
+                buttons={[
+                  { value: "cm", label: "cm" },
+                  { value: "in", label: "in" },
+                ]}
+                density="medium"
+              />
+            </View>
           </View>
         </Card.Content>
       </Card>
@@ -715,6 +717,7 @@ const styles = StyleSheet.create({
   },
   flowCard: {
     ...flowCardStyle,
+    maxWidth: undefined,
   },
   wideCard: {
     minWidth: 340,
@@ -728,6 +731,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+  },
+  unitToggle: {
+    width: 140,
+    flexShrink: 0,
   },
   buttonFlow: {
     flexDirection: "row",

@@ -17,9 +17,10 @@ type Props = {
   onSelect: (mode: TrainingMode) => void;
   onTempoChange: (tempo: string) => void;
   onTempoBlur: () => void;
+  compact?: boolean;
 };
 
-function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange, onTempoBlur }: Props) {
+function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTempoChange, onTempoBlur, compact: isCompact }: Props) {
   const theme = useTheme();
   const [tooltip, setTooltip] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,9 +45,9 @@ function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTe
   }, [onSelect]);
 
   return (
-    <View style={styles.container}>
+    <View style={isCompact ? styles.containerCompact : styles.container}>
       <View
-        style={styles.row}
+        style={isCompact ? styles.rowCompact : styles.row}
         accessibilityRole="radiogroup"
         accessibilityLabel={`Training mode selector for ${exercise}`}
       >
@@ -59,7 +60,7 @@ function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTe
               onPress={() => handleSelect(mode)}
               onLongPress={() => showTooltip(mode)}
               style={[
-                styles.chip,
+                isCompact ? styles.chipCompact : styles.chip,
                 { borderColor: theme.colors.primary },
                 active && { backgroundColor: theme.colors.primary },
               ]}
@@ -68,7 +69,7 @@ function TrainingModeSelector({ modes, selected, exercise, tempo, onSelect, onTe
               accessibilityLabel={`${info.label} training mode`}
             >
               <Text style={[
-                styles.label,
+                isCompact ? styles.labelCompact : styles.label,
                 { color: active ? theme.colors.onPrimary : theme.colors.primary },
               ]}>
                 {info.label}
@@ -118,12 +119,20 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 8,
   },
+  containerCompact: {
+    marginBottom: 0,
+  },
   row: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
     paddingHorizontal: 4,
     paddingVertical: 4,
+  },
+  rowCompact: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
   },
   chip: {
     borderWidth: 1.5,
@@ -135,8 +144,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  chipCompact: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minHeight: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   label: {
     fontSize: 12,
+    fontWeight: "600",
+  },
+  labelCompact: {
+    fontSize: 11,
     fontWeight: "600",
   },
   tooltip: {
