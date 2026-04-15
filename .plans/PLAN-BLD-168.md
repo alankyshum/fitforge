@@ -128,7 +128,22 @@ Add a "Body Profile" card to the Settings screen that displays a summary of the 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — 2026-04-15
+
+Core concept approved — surfacing profile in Settings is the right UX decision. Six items must be addressed:
+
+1. **Clarify Modal vs Bottom Sheet**: Plan says "bottom-sheet drawer" with "swipe-dismiss" but specifies basic `Modal`. These are different. Pick plain Modal (consistent with progress.tsx) and remove swipe-dismiss claim.
+2. **Add dismiss protection**: Show "Discard changes?" dialog when dirty form is dismissed via overlay tap. Users WILL lose work otherwise.
+3. **Add `accessibilityViewIsModal`**: Explicitly require on the Modal (existing pattern in progress.tsx).
+4. **Add loading state**: Specify what the profile card shows while `app_settings` is being read.
+5. **Add error state**: Specify what the profile card shows if data fetch fails.
+6. **Add error boundary note**: ProfileForm in modal should be wrapped so a crash doesn't take down Settings.
+
+Additional notes:
+- Activity Level SegmentedButtons (5 options) may be cramped at modal width on small phones. Test and consider alternative layout.
+- Settings.tsx is 773 lines — extract profile card + modal into `components/SettingsProfileCard.tsx`.
+- Summary card items need combined `accessibilityLabel` per label-value pair for screen readers.
+- All summary grid font sizes must be >=12px per SKILL [C].
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
