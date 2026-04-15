@@ -90,7 +90,7 @@ export async function cancelAll(): Promise<void> {
 }
 
 export async function handleResponse(
-  response: { notification: { request: { content: { data: unknown } } } },
+  response: { notification: { request: { content: { data?: unknown } } } },
   navigate: (path: string, params?: Record<string, string>) => void,
   showSnackbar: (msg: string) => void
 ): Promise<void> {
@@ -130,7 +130,7 @@ export function setupHandler(): void {
 }
 
 export function addNotificationResponseReceivedListener(
-  listener: (response: { notification: { request: { content: { data: unknown } } } }) => void
+  listener: (response: { notification: { request: { content: { data?: unknown } } } }) => void
 ): { remove: () => void } | null {
   const mod = getModule();
   if (!mod) return null;
