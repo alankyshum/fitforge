@@ -76,6 +76,8 @@ export {
   getSessionRepPRs,
   getSessionComparison,
   getSessionWeightIncreases,
+  getSessionCountsByDay,
+  getTotalSessionCount,
 } from "./sessions";
 export type { ExerciseSession, ExerciseRecords } from "./sessions";
 

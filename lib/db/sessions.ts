@@ -1027,3 +1027,28 @@ export async function getSessionWeightIncreases(
 
   return result;
 }
+
+// ---- Heatmap Queries ----
+
+export async function getSessionCountsByDay(
+  startTs: number,
+  endTs: number
+): Promise<{ date: string; count: number }[]> {
+  return query<{ date: string; count: number }>(
+    `SELECT date(started_at / 1000, 'unixepoch', 'localtime') AS date,
+            COUNT(*) AS count
+     FROM workout_sessions
+     WHERE completed_at IS NOT NULL
+       AND started_at >= ? AND started_at < ?
+     GROUP BY date
+     ORDER BY date ASC`,
+    [startTs, endTs]
+  );
+}
+
+export async function getTotalSessionCount(): Promise<number> {
+  const row = await queryOne<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM workout_sessions WHERE completed_at IS NOT NULL"
+  );
+  return row?.count ?? 0;
+}
