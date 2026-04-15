@@ -41,3 +41,11 @@
 **Learning**: When `actions/upload-pages-artifact@v3` specifies a `path` (e.g., `fdroid`), that directory's *contents* become the site root — the directory name itself is NOT part of the deployed URL. So `fdroid/repo/index.html` on disk deploys to `<base-url>/repo/index.html`, not `<base-url>/fdroid/repo/index.html`.
 **Action**: When configuring GitHub Pages via Actions, match all URL references (config files, READMEs, API endpoints) to the *deployed* path structure, not the filesystem path. Test by checking the actual Pages URL after first deployment before hardcoding references.
 **Tags**: github-actions, github-pages, upload-pages-artifact, deployment, url-path, f-droid, ci-cd
+
+### accessibilityRole="button" on Non-Interactive Elements Misleads Screen Readers
+**Source**: BLD-137 — Achievement & Milestone System
+**Date**: 2026-04-15
+**Context**: Achievement badge cards in the grid screen used `accessibilityRole="button"` for styling consistency, but the cards had no `onPress` handler. Screen readers announced each badge as a tappable button, but nothing happened on activation.
+**Learning**: `accessibilityRole="button"` tells assistive technology that the element is interactive. Assigning it to non-interactive elements creates a confusing experience — users hear "button" but tapping does nothing. Use `accessibilityRole="summary"` or `"text"` for display-only content, and only use `"button"` when the element has a corresponding `onPress`/`onLongPress` handler.
+**Action**: Before assigning `accessibilityRole="button"` to any component, verify it has an `onPress` handler. For informational cards, badges, and display-only elements, use `accessibilityRole="summary"` or omit the role entirely. Add this check to code review checklists for accessibility compliance.
+**Tags**: accessibility, accessibilityrole, screen-reader, a11y, button, react-native, cards, voiceover, talkback

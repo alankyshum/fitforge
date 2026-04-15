@@ -329,3 +329,11 @@
 **Learning**: A deterministic 4-pass cascade provides reliable entity matching with clear confidence levels: (1) exact case-insensitive match, (2) normalize + strip parentheticals (e.g., "Bench Press (Barbell)" → "bench press"), (3) substring containment, (4) alias table lookup. Each pass returns a confidence level (exact/high/medium/low) so the UI can flag uncertain matches for user review. Deterministic passes avoid the ambiguity of distance-based fuzzy matching.
 **Action**: For any data import feature that maps external entity names to internal entities, implement a cascading matcher with decreasing confidence. Start with exact match, then progressively relax (normalize, substring, alias table). Return confidence levels so the import UI can highlight uncertain matches. Maintain an alias table for common abbreviations (e.g., "BB" → "Barbell", "DB" → "Dumbbell").
 **Tags**: data-import, entity-matching, csv, strong, exercise, fuzzy-matching, cascading-matcher, import-wizard
+
+### Retroactive Feature Evaluation with Silent-Earn UX
+**Source**: BLD-137 — Achievement & Milestone System
+**Date**: 2026-04-15
+**Context**: FitForge shipped an achievement system to users who already had workout history. Naively evaluating achievements on first launch would trigger dozens of "Achievement Unlocked!" notifications at once — a terrible UX.
+**Learning**: When launching a feature that retroactively analyzes historical data (achievements, streaks, milestones, badges), the first evaluation must distinguish between "earned now" and "already earned." Evaluate silently on first open, mark all qualifying items as already-earned, and show a single summary banner ("We found N achievements from your history") instead of individual unlock notifications.
+**Action**: For any feature that evaluates historical user data on first launch: (1) run the evaluation silently without triggering per-item animations/haptics/notifications, (2) persist results with the current timestamp, (3) show a single aggregated banner ("We found N items"), (4) only trigger individual unlock UX for items earned in future sessions.
+**Tags**: retroactive, achievements, gamification, ux, first-launch, migration, silent-evaluation, banner
