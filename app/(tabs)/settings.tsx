@@ -532,7 +532,7 @@ export default function Settings() {
               loading={loading}
               disabled={loading}
               contentStyle={styles.exportBtnContent}
-              accessibilityLabel="Export all data as JSON backup"
+              accessibilityLabel="Export all data as JSON"
               accessibilityRole="button"
             >
               Export All Data
@@ -545,7 +545,7 @@ export default function Settings() {
               loading={loading}
               disabled={loading}
               contentStyle={styles.exportBtnContent}
-              accessibilityLabel="Import FitForge backup"
+              accessibilityLabel="Import data"
               accessibilityRole="button"
             >
               Import FitForge Backup
