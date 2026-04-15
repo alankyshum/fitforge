@@ -362,6 +362,7 @@ function HistoryScreen() {
               style={styles.heatmapHeader}
               accessibilityRole="button"
               accessibilityLabel={`Last 16 Weeks, ${heatmapExpanded ? "collapse" : "expand"}`}
+              accessibilityState={{ expanded: heatmapExpanded }}
             >
               <Text variant="titleSmall" style={{ color: theme.colors.onBackground }}>
                 Last 16 Weeks
