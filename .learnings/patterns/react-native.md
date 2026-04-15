@@ -305,3 +305,19 @@
 **Learning**: A deterministic multi-pass matching strategy produces predictable, fully testable results for cross-app data import. The effective pass order is: (1) exact case-insensitive match, (2) normalize + extract parentheticals and rearrange (e.g., "Bench Press (Barbell)" → try "Barbell Bench Press"), (3) substring containment (either direction), (4) hardcoded alias lookup table for common abbreviations. Each pass has a clear confidence level (exact/possible/none) enabling grouped UX.
 **Action**: When building data import from another app, implement matching as ordered passes with decreasing confidence rather than a single fuzzy algorithm. Classify results by confidence level and present grouped in the UI (auto-mapped / needs confirmation / will create new). This pattern scales to new import sources by adding source-specific normalization passes without changing the core architecture.
 **Tags**: import, data-migration, name-matching, deterministic, csv, exercise, cross-app, architecture
+
+### Directory Route Grouping for Multi-Screen Feature Areas
+**Source**: BLD-123 — Progress Photos — Visual Body Transformation Tracking
+**Date**: 2026-04-15
+**Context**: Adding Progress Photos required 4 new screens (gallery, compare, goals, measurements) under the `body/` route. Initially, each screen was registered individually in the root `_layout.tsx` with separate `Stack.Screen` entries, cluttering the root layout.
+**Learning**: When a feature area grows to 3+ screens sharing a common route prefix, create a directory layout (`app/<area>/_layout.tsx`) with its own Stack navigator. Register the entire group as a single headerless entry in the root layout (`name="<area>"`, `headerShown: false`). This keeps the root layout clean, co-locates feature navigation config, and enables feature-specific header theming.
+**Action**: When adding a new screen to a route group that already has 2+ siblings, create `app/<area>/_layout.tsx` with a Stack navigator registering all screens. Replace individual root-level `Stack.Screen` entries with a single group entry. Move header configuration (title, style, tintColor) into the directory layout.
+**Tags**: expo-router, navigation, directory-routes, layout, architecture, stack-navigator
+
+### Filesystem + SQLite Hybrid for User Media Management
+**Source**: BLD-123 — Progress Photos — Visual Body Transformation Tracking
+**Date**: 2026-04-15
+**Context**: Progress photos needed persistent storage with gallery performance, soft-delete with undo, and eventual permanent cleanup. Storing photos as blobs in SQLite would degrade query performance; storing metadata on filesystem would lose queryability.
+**Learning**: Store large binary assets (photos, audio, documents) on the filesystem in a dedicated app-sandbox directory, with all metadata in SQLite. This hybrid gives fast gallery queries (SQLite) with efficient storage (filesystem). Critical implementation details: (1) generate thumbnails at capture time for gallery performance, (2) soft-delete via `deleted_at` column with time-based permanent cleanup (30 days), (3) delete files AFTER DB row removal to prevent orphan DB records pointing to missing files, (4) run orphan file cleanup on app startup to catch files not tracked in DB.
+**Action**: For any feature handling user-generated media: create a dedicated `documentDirectory` subdirectory, store metadata in SQLite with file_path references, generate thumbnails at capture, implement soft-delete + timed permanent cleanup, and add startup routines for both expired-soft-delete cleanup and orphan file cleanup. Always delete the DB row first, then the file.
+**Tags**: media, photos, filesystem, sqlite, soft-delete, cleanup, thumbnails, storage, architecture
