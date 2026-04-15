@@ -2,6 +2,11 @@
 
 **Free, open-source workout & macro tracker.** A lightweight, responsive alternative to commercial fitness apps — no subscriptions, no ads, no paywalls.
 
+[<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/fitforge/repo)
+
+> **Custom F-Droid repo** — open the link above on your Android device to add the repo, or add it manually in F-Droid:\
+> `https://alankyshum.github.io/fitforge/repo`
+
 ## Features
 
 - 🏋️ **Workout Tracking** — Log and track your workouts
