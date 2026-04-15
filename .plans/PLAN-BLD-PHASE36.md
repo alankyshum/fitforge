@@ -3,7 +3,7 @@
 **Issue**: BLD-162
 **Author**: CEO
 **Date**: 2026-04-15
-**Status**: DRAFT
+**Status**: DRAFT → IN_REVIEW (Rev 2)
 
 ## Problem Statement
 
@@ -13,6 +13,16 @@ FitForge's README promises "Data Portable — Full import/export (coming soon)" 
 - Transfer data between devices without a cloud account
 
 For an open-source, privacy-first fitness app, data ownership is a **core value proposition**. Users who invest time logging workouts, nutrition, and body measurements need confidence their data isn't trapped. This is table-stakes for user trust.
+
+### Existing Code
+
+`lib/db/import-export.ts` already contains working `exportAllData()` and `importData()` functions covering 11 tables:
+- exercises, workout_templates, template_exercises, workout_sessions, workout_sets
+- food_entries, daily_log, macro_targets, body_weight, body_measurements, body_settings
+
+The export uses `version: 2` format. The settings screen already has JSON export/import buttons and Strong CSV import.
+
+**This plan extends the existing code to cover 8 additional tables**, adds an import preview screen, and improves the UX. It does NOT create a parallel module.
 
 ## User Stories
 
@@ -26,7 +36,7 @@ For an open-source, privacy-first fitness app, data ownership is a **core value 
 
 ### Overview
 
-Add a full JSON-based export/import system accessible from Settings. Export serializes all user data tables into a single timestamped JSON file shared via `expo-sharing`. Import reads the file, shows a preview summary, and inserts data with a merge strategy (skip duplicates by ID).
+Extend the existing `lib/db/import-export.ts` to cover all user data tables (adding programs, program_days, program_log, app_settings, weekly_schedule, program_schedule, achievements_earned). Add an import preview screen. Exclude progress photos from v1 (filesystem-based, requires separate binary/zip approach — see Out of Scope). Bump export version to 3.
 
 ### UX Design
 
@@ -35,14 +45,15 @@ Add a full JSON-based export/import system accessible from Settings. Export seri
 Add a new "Data Management" section in Settings (below "Feedback & Reports"):
 - **"Export All Data"** button (primary) — generates JSON, shares via system share sheet
 - **"Import FitForge Backup"** button (outlined) — opens document picker for `.json` files
-- **"Import from Strong"** link (existing, relocated into this section)
+- **"Import from Strong"** link (existing, relocated into this section — keep also in original location with a note pointing to new location for one release cycle)
 
 #### Export Flow
 1. User taps "Export All Data"
-2. Brief loading indicator (snackbar: "Preparing export...")
-3. System share sheet opens with file: `fitforge-backup-2026-04-15.json`
-4. User chooses destination (Files, AirDrop, email, cloud drive)
-5. Success snackbar: "Data exported successfully"
+2. **Confirmation modal**: "Your backup will be approximately X MB. This may take a moment. Continue?" (estimate based on row counts)
+3. Progress indicator during export: "Exporting data... (3/7 tables)"
+4. System share sheet opens with file: `fitforge-backup-YYYY-MM-DD.json`
+5. User chooses destination (Files, AirDrop, email, cloud drive)
+6. Success snackbar: "Data exported successfully"
 
 #### Import Flow
 1. User taps "Import FitForge Backup"
@@ -50,26 +61,34 @@ Add a new "Data Management" section in Settings (below "Feedback & Reports"):
 3. **Preview screen** (`app/settings/import-backup.tsx`) shows:
    - Export date and app version from the backup
    - Summary table: "Workouts: 45, Exercises: 120, Food entries: 300, ..."
-   - Conflict strategy selector: "Skip existing" (default) / "Replace existing"
-   - Warning: "Replace existing will overwrite any records with matching IDs"
+   - Note: "Existing records with the same ID will be skipped"
 4. User taps "Import" → progress indicator → completion summary
 5. Success: "Imported 45 workouts, 120 exercises, 300 food entries. 12 skipped (already existed)."
 6. Navigate back to Settings
 
 #### Error States
 - Corrupt/invalid JSON → Alert: "This file doesn't appear to be a valid FitForge backup."
-- Wrong file format → Alert: "Please select a FitForge backup file (.json)"
+- Wrong file format / missing required fields → Alert: "Please select a valid FitForge backup file (.json)"
 - Version mismatch (future backup loaded on old app) → Alert: "This backup was created with a newer version of FitForge. Please update the app first."
 - Empty backup → Alert: "This backup file contains no data."
+- File too large (> 50MB) → Alert: "This backup file is too large to process safely."
+
+#### Accessibility Requirements
+- All buttons: `accessibilityLabel` + `accessibilityRole="button"` (min 48x48dp touch target)
+- Import preview summary table: accessible to screen readers with clear row labels
+- Progress indicators: `accessibilityLiveRegion="polite"` for dynamic updates
+- Confirmation modal: proper focus management, accessible dismiss
+- Error alerts: use accessible Alert API (already handled by React Native Alert)
+- Color contrast: all new text meets WCAG 2.1 AA (4.5:1 ratio)
 
 ### Technical Approach
 
-#### Export Format
+#### Export Format (Version 3)
 
 ```json
 {
-  "version": 1,
-  "app_version": "1.0.0",
+  "version": 3,
+  "app_version": "1.x.x",
   "exported_at": "2026-04-15T20:00:00.000Z",
   "data": {
     "exercises": [...],
@@ -89,7 +108,6 @@ Add a new "Data Management" section in Settings (below "Feedback & Reports"):
     "app_settings": [...],
     "weekly_schedule": [...],
     "program_schedule": [...],
-    "progress_photos": [...],
     "achievements_earned": [...]
   },
   "counts": {
@@ -100,156 +118,204 @@ Add a new "Data Management" section in Settings (below "Feedback & Reports"):
 }
 ```
 
+**Version history:**
+- v2: existing export (11 tables)
+- v3: this plan (18 tables, adds programs/schedule/settings/achievements)
+
+**Backward compatibility:** Import MUST handle v2 backups (missing tables treated as empty arrays). Import rejects v4+ (future versions from newer app).
+
 **Excluded tables** (not user data):
-- `error_log` — diagnostic data, not valuable for backup
+- `error_log` — diagnostic data
 - `interaction_log` — ephemeral diagnostic data
+- `progress_photos` — filesystem-based, excluded from v1 (see Out of Scope)
 
 #### Architecture
 
-**New files:**
-- `lib/backup/export.ts` — Reads all tables, builds JSON, writes temp file
-- `lib/backup/import.ts` — Validates JSON, parses, inserts with conflict handling
-- `lib/backup/types.ts` — Backup format types, version validation
-- `app/settings/import-backup.tsx` — Import preview & confirmation screen
-
 **Modified files:**
-- `app/(tabs)/settings.tsx` — Add "Data Management" section, move Strong import link
+- `lib/db/import-export.ts` — Extend `exportAllData()` to add 7 missing tables + metadata wrapper. Extend `importData()` to handle new tables with FK-ordered insertion. Add types for v3 format.
+- `app/(tabs)/settings.tsx` — Add "Data Management" section, add export confirmation modal, add progress indicator
+- `app/settings/import-backup.tsx` — **New file**: Import preview & confirmation screen
 - `app/_layout.tsx` — Add Stack.Screen for import-backup route
+- `lib/types.ts` — Add backup format types if needed (or co-locate in import-export.ts)
+
+**No new modules or directories.** All export/import logic stays in `lib/db/import-export.ts`.
+
+#### Import Order (FK-dependency safe)
+
+Tables MUST be imported in this order to satisfy foreign key constraints:
+
+1. `exercises` (no FK dependencies)
+2. `workout_templates` (no FK dependencies)
+3. `programs` (no FK dependencies)
+4. `food_entries` (no FK dependencies)
+5. `macro_targets` (no FK dependencies)
+6. `body_weight` (no FK dependencies)
+7. `body_measurements` (no FK dependencies)
+8. `body_settings` (no FK dependencies)
+9. `app_settings` (no FK dependencies)
+10. `achievements_earned` (no FK dependencies)
+11. `template_exercises` (FK → workout_templates, exercises)
+12. `workout_sessions` (FK → workout_templates, nullable)
+13. `program_days` (FK → programs, workout_templates)
+14. `workout_sets` (FK → workout_sessions, exercises)
+15. `daily_log` (FK → food_entries)
+16. `program_log` (FK → programs)
+17. `weekly_schedule` (FK → workout_templates)
+18. `program_schedule` (FK → programs, workout_templates)
 
 #### Conflict Resolution Strategy
 
-**"Skip existing" (default):**
-- `INSERT OR IGNORE` — if a record with the same primary key exists, skip it
+**v1: "Skip existing" only (`INSERT OR IGNORE`)**
+- If a record with the same primary key exists, skip it silently
 - Safe for incremental backups — won't overwrite newer data
+- Count skipped records in summary
 
-**"Replace existing":**
-- `INSERT OR REPLACE` — overwrites existing records with backup data
-- Warning displayed: this will overwrite local changes
-- Wrapped in a transaction — all-or-nothing
+**"Replace existing" is OUT OF SCOPE for v1** — `INSERT OR REPLACE` triggers SQLite CASCADE deletes on child rows with FK constraints (e.g., replacing a workout_session would CASCADE-delete all its workout_sets). This is too risky for a data integrity feature. A safe "merge/update" strategy requires careful per-table UPDATE logic, which can be added in a future version.
 
-#### Progress Photos Handling
+#### Transaction Strategy
 
-Progress photos are stored as base64 in the `progress_photos` table. These can be large.
-- **Export**: Include photo data in JSON (base64 encoded). Warn user if file will be large.
-- **Import**: Restore photos from backup data.
-- **Size estimation**: Before export, calculate approximate file size. If > 50MB, show warning: "Your backup includes photos and will be approximately X MB."
+**Single transaction wrapping ALL inserts.** The existing `importData()` already uses `database.withTransactionAsync()` for the entire import — this is correct and must be preserved. SQLite handles thousands of inserts within one transaction efficiently.
+
+- **Success**: all data imported atomically
+- **Failure at any point**: entire import rolls back, no partial data, user notified
+- **No chunked transactions** — chunking breaks atomicity and creates inconsistent state on failure
+
+#### Validation
+
+**Validate entire file upfront before any inserts:**
+1. Parse JSON (reject if malformed)
+2. Check `version` field exists and is ≤ 3 (reject future versions)
+3. Check `data` object exists
+4. For each table key in `data`, validate it's an array
+5. Validate non-negative values for numeric fields (calories, weight, reps, etc.)
+6. If ANY validation fails → reject the entire file with a clear error message
+
+**No partial imports.** A file with some valid and some invalid tables is rejected entirely — partial imports create inconsistent state (e.g., sets without their parent sessions).
 
 #### Performance Considerations
 
-- Export runs on background thread (not blocking UI)
-- Import wraps each table in a transaction for atomicity
-- Large datasets (1000+ sessions): chunked inserts (100 rows per transaction batch)
-- Progress callback for import UI (update progress bar per table)
+- Export: `SELECT *` from all tables runs on background thread. For typical user data (< 1000 rows per table), this completes in < 1 second. Progress callback updates UI per table.
+- Import: Single transaction with `INSERT OR IGNORE` for each row. Progress callback per table.
+- JSON.parse: For data-only exports (no photos), typical file size is 1-5MB — well within mobile memory limits.
+- **Maximum supported file size: 50MB** — reject larger files with a clear error before parsing.
 
 ### Scope
 
 **In Scope:**
-- Full JSON export of all user data tables
-- Full JSON import with preview and conflict resolution
-- Export via system share sheet (expo-sharing)
-- Import via document picker (expo-document-picker)
-- Version field for future-proofing
-- Progress photos included in backup
-- Progress indicator during import
-- Import preview showing record counts before confirmation
-- Relocate Strong import into "Data Management" section
+- Extend `exportAllData()` in `lib/db/import-export.ts` to add 7 missing tables
+- Extend `importData()` to handle all 18 tables in FK-dependency order
+- Bump version to 3, maintain backward compatibility with v2
+- Add counts metadata to export
+- Add export confirmation modal with estimated file size
+- Add export progress indicator
+- Add import preview screen (`app/settings/import-backup.tsx`)
+- Add import progress indicator with per-table updates
+- Add import completion summary (imported/skipped counts)
+- "Data Management" section in Settings grouping export/import buttons
+- Keep Strong import in original location AND in new section (migration period)
+- Upfront validation of entire import file before any inserts
+- Non-negative validation for imported numeric fields
+- Accessibility labels and roles for all new UI elements
 
 **Out of Scope:**
+- Progress photos in export/import — photos are stored as filesystem paths (`file_path TEXT`), not in the database. Exporting them requires reading files from disk, base64-encoding (adding ~33% size), and could produce 300-500MB+ JSON for users with many photos. This will be handled in a future ticket using a zip archive format.
+- "Replace existing" conflict strategy — too risky with FK CASCADE constraints in v1
 - Cloud backup / auto-sync
 - Incremental/differential backups
-- CSV export (JSON only for v1)
-- Cross-app format (e.g., exporting to Apple Health format)
+- CSV export
+- Cross-app format (Apple Health, etc.)
 - Scheduled/automatic backups
 - Backup encryption
 - Selective export (all-or-nothing for v1)
-- Photo compression/optimization during export
 
 ### Acceptance Criteria
 
 - [ ] Settings shows "Data Management" section with "Export All Data" and "Import FitForge Backup" buttons
-- [ ] Export produces valid JSON file with all user data tables
+- [ ] Export confirmation modal shows estimated file size before proceeding
+- [ ] Export progress indicator shows table-level progress
+- [ ] Export produces valid JSON with version 3 and all 18 user data tables
 - [ ] Export file opens in system share sheet via expo-sharing
-- [ ] Export filename includes date: `fitforge-backup-YYYY-MM-DD.json`
+- [ ] Export filename: `fitforge-backup-YYYY-MM-DD.json`
 - [ ] Import opens document picker filtered to .json files
-- [ ] Import preview shows record counts per table before confirmation
-- [ ] Import with "Skip existing" does not overwrite existing records
-- [ ] Import with "Replace existing" overwrites existing records (with warning)
-- [ ] Import is wrapped in transactions — failure rolls back completely
+- [ ] Import rejects files > 50MB with clear error
+- [ ] Import preview screen shows record counts per table before confirmation
+- [ ] Import handles v2 backups (missing tables treated as empty)
+- [ ] Import rejects v4+ backups with "update app" message
+- [ ] Import uses `INSERT OR IGNORE` — existing records are NOT overwritten
+- [ ] Import respects FK dependency order (exercises before template_exercises, etc.)
+- [ ] Import wrapped in single transaction — failure rolls back completely
+- [ ] Import validates non-negative values for numeric fields
 - [ ] Invalid/corrupt JSON shows clear error message
-- [ ] Version mismatch shows update prompt
 - [ ] Empty backup shows informative message
-- [ ] Progress indicator shown during import
-- [ ] Completion summary shows counts of imported and skipped records
-- [ ] Progress photos are included in export and restored on import
-- [ ] Strong CSV import link relocated to "Data Management" section
+- [ ] Import progress indicator shows per-table updates
+- [ ] Completion summary shows imported and skipped counts
+- [ ] Strong CSV import accessible in both original and new location
+- [ ] All new UI elements have `accessibilityLabel` and `accessibilityRole`
+- [ ] All touch targets ≥ 48x48dp
 - [ ] `npx tsc --noEmit` passes
 - [ ] All existing tests pass
-- [ ] New tests cover: export format validation, import parsing, conflict resolution, version checking
+- [ ] New tests cover: v3 export format validation, import with FK ordering, v2 backward compatibility, file size validation, non-negative numeric validation
 
 ### Edge Cases
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Empty database (no data) | Export produces valid JSON with empty arrays. Shows "No data to export" info. |
-| Very large database (1000+ sessions) | Chunked processing, progress indicator, no UI freeze |
-| Large photos in backup | Size warning before export. Import handles large base64 strings. |
-| Backup from newer app version | Clear error: "Update app first" |
-| Backup from older format version | Migration logic (for future — v1 only has version 1) |
-| Duplicate IDs on import (skip mode) | Silently skip, count in summary |
-| Duplicate IDs on import (replace mode) | Overwrite, count in summary |
+| Empty database (no data) | Export produces valid JSON with empty arrays. Shows "No data to export" info before share sheet. |
+| Large database (1000+ sessions) | Progress indicator, no UI freeze. Export < 5MB typical. |
+| Backup from newer app version (v4+) | Alert: "This backup was created with a newer version of FitForge. Please update the app first." |
+| v2 backup (missing new tables) | Import succeeds. Missing tables treated as empty arrays. Summary notes "7 tables not present in backup." |
+| Duplicate IDs on import | `INSERT OR IGNORE` — silently skip, count in summary as "skipped" |
 | Import interrupted (app killed) | Transaction rollback — no partial data |
-| Corrupt JSON file | Alert with clear error message |
+| Corrupt JSON file | Alert: "This file doesn't appear to be a valid FitForge backup." |
 | Non-FitForge JSON file | Validation rejects — missing version/data fields |
-| File with some valid and some invalid tables | Import valid tables, report errors for invalid ones |
-| No exercises in backup but sets reference them | Skip orphaned sets, report in summary |
-| Export with 0 progress photos | No size warning, normal export |
+| Negative calorie/weight values in backup | Reject entire file: "Backup contains invalid data (negative values)." |
+| File > 50MB | Reject before parsing: "This backup file is too large to process safely." |
+| Orphaned sets (session_id not in backup) | `INSERT OR IGNORE` will attempt insert. If FK constraint fails, the single transaction rolls back. Upfront validation should warn. |
+| Device storage full during export | Expo file system error caught → Alert: "Not enough storage space to create backup." |
+| Import while workout is active | Allowed — import adds data via INSERT OR IGNORE; active session uses its own in-memory state and won't be affected. |
+| Concurrent export taps | Disable export button during export (loading state) to prevent double-tap. |
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Large file size from photos | Medium | Low | Size estimation + user warning before export |
-| Memory pressure from large JSON | Low | Medium | Stream processing for very large files (future) |
-| Schema drift between versions | Low | High | Version field in export format + validation |
-| Transaction timeout on large import | Low | Medium | Chunked inserts (100 rows per batch) |
+| Schema drift between versions | Low | High | Version field + validation. Reject future versions. |
+| Import fails mid-transaction | Low | Low | Single transaction rolls back atomically — no data corruption. |
+| Large file size (data-only, no photos) | Low | Low | Typical data-only export < 5MB. 50MB cap enforced. |
+| FK constraint violation on import | Medium | Medium | Strict import ordering. Upfront validation. Single transaction rollback on failure. |
+| JSON.parse memory pressure | Low | Medium | 50MB file size cap. Data-only exports typically 1-5MB. |
 
 ## Review Feedback
-<!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION (2026-04-15)
+**Verdict**: NEEDS REVISION (2026-04-15, Rev 1)
 
-**Critical issues (5):**
-1. **C-1**: Factual error — progress photos use `file_path` (filesystem), NOT base64 in DB. Export/import approach for photos is invalid as written.
-2. **C-2**: Existing `lib/db/import-export.ts` with `exportAllData()` and `importData()` is unacknowledged. Plan should upgrade existing code, not build from scratch in `lib/backup/`.
-3. **C-3**: Version conflict — existing export uses `version: 2`, plan proposes starting at `version: 1`.
-4. **C-4**: Import order not specified — FK dependencies mean tables must be imported in specific order (exercises → templates → template_exercises → sessions → sets, etc.).
-5. **C-5**: `INSERT OR REPLACE` in "Replace existing" mode can trigger CASCADE deletes on child rows. Use UPDATE or remove Replace from v1.
+**Rev 2 addresses:**
+- ✅ C-1: Fixed — photos correctly identified as filesystem paths, excluded from v1
+- ✅ C-2: Fixed — plan now extends existing `lib/db/import-export.ts`, no new `lib/backup/` module
+- ✅ C-3: Fixed — version bumped to 3 (existing code uses v2)
+- ✅ C-4: Fixed — explicit FK-ordered import sequence specified (18 tables)
+- ✅ C-5: Fixed — "Replace existing" removed from v1 scope entirely
+- ✅ M-1: Fixed — photos excluded from v1, risk table updated
+- ✅ M-2: Fixed — confirmation modal added before export
+- ✅ M-3: Fixed — export progress indicator added
+- ✅ M-4: Fixed — atomic single transaction, no partial imports, reject invalid files entirely
+- ✅ M-5: Fixed — accessibility specifications added for all new UI elements
+- ✅ M-6: Fixed — Strong import kept in both locations during migration period
 
-**Major issues (6):**
-- M-1: Photo file size risk is HIGH impact (100 photos = 300-400MB JSON), not LOW.
-- M-2: No confirmation step before export (large files).
-- M-3: No export progress indicator.
-- M-4: Atomic transactions contradict "import valid tables, report errors for invalid ones."
-- M-5: Missing accessibility specifications for all new UI elements.
-- M-6: Relocating Strong import is a breaking UX change.
-
-**Required**: Fix all Critical items and M-1, M-4, M-5 before re-submitting.
+_Awaiting re-review_
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION**
+**Verdict**: NEEDS REVISION (2026-04-15, Rev 1)
 
-**Feasibility**: Fully buildable — extends existing `lib/db/import-export.ts` (11 of 18 tables already covered). All dependencies installed.
+**Rev 2 addresses:**
+- ✅ Photos excluded from v1 — correct storage model documented
+- ✅ "Replace existing" removed — INSERT OR IGNORE only
+- ✅ No `lib/backup/` — extending existing `lib/db/import-export.ts`
+- ✅ Single transaction preserved — no chunked inserts
+- ✅ Invalid files rejected entirely — no partial imports
 
-**Critical Issues**:
-1. **Photos are file paths, not base64** — `progress_photos` stores `file_path TEXT`, not base64 data. Including photos in JSON would produce 500MB+ files. Exclude photos from v1; handle separately with zip format.
-2. **Remove 'Replace existing' mode** — `INSERT OR REPLACE` triggers DELETE cascades and risks data loss. Ship v1 with `INSERT OR IGNORE` only.
-3. **Don't create `lib/backup/`** — extend existing `lib/db/import-export.ts` instead of creating a parallel module.
-4. **Keep single transaction** — chunked transactions break atomicity. SQLite handles thousands of inserts in one transaction.
-5. **Reject invalid files entirely** — don't partially import valid tables from an invalid file (creates inconsistent state).
-
-**Architecture**: Compatible with existing patterns. Minor extension of existing code.
-**Effort**: Medium | **Risk**: Medium (photo handling is main risk, mitigated by excluding from v1)
+_Awaiting re-review_
 
 ### CEO Decision
-_Pending reviews_
+_Pending re-reviews_
