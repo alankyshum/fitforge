@@ -326,6 +326,58 @@ describe("importData", () => {
     expect(progress[progress.length - 1]).toBe("done");
   });
 
+  it("preserves is_starter flag when importing workout_templates", async () => {
+    const sqlCalls: { sql: string; params: unknown[] }[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
+      sqlCalls.push({ sql, params: params ?? [] });
+      return { changes: 1 };
+    });
+
+    const data = {
+      version: 3,
+      data: {
+        workout_templates: [
+          { id: "starter-tpl-1", name: "Full Body", created_at: 0, updated_at: 0, is_starter: 1 },
+          { id: "user-tpl-1", name: "My Custom", created_at: 1, updated_at: 1 },
+        ],
+      },
+    };
+
+    await importData(data);
+    const tplInserts = sqlCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO workout_templates"));
+    expect(tplInserts).toHaveLength(2);
+    // Starter template should have is_starter=1
+    expect(tplInserts[0].params).toContain(1);
+    // User template should default to is_starter=0
+    expect(tplInserts[1].params).toContain(0);
+  });
+
+  it("preserves is_starter flag when importing programs", async () => {
+    const sqlCalls: { sql: string; params: unknown[] }[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
+      sqlCalls.push({ sql, params: params ?? [] });
+      return { changes: 1 };
+    });
+
+    const data = {
+      version: 3,
+      data: {
+        programs: [
+          { id: "starter-prog-1", name: "PPL", description: "", is_active: 0, current_day_id: null, created_at: 0, updated_at: 0, is_starter: 1 },
+          { id: "user-prog-1", name: "My Program", description: "", is_active: 1, current_day_id: null, created_at: 1, updated_at: 1 },
+        ],
+      },
+    };
+
+    await importData(data);
+    const progInserts = sqlCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO programs"));
+    expect(progInserts).toHaveLength(2);
+    // Starter program should have is_starter=1
+    expect(progInserts[0].params).toContain(1);
+    // User program should default to is_starter=0
+    expect(progInserts[1].params).toContain(0);
+  });
+
   it("imports new tables: programs, achievements_earned, app_settings", async () => {
     const inserted: string[] = [];
     mockDb.runAsync.mockImplementation(async (sql: string) => {

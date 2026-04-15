@@ -567,6 +567,20 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
       "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('onboarding_complete', '1')"
     );
   }
+
+  // Always repair is_starter flags — handles cases where import or
+  // migration left starters with is_starter=0
+  const starterTplIds = STARTER_TEMPLATES.map((t) => t.id);
+  const tplPlaceholders = starterTplIds.map(() => "?").join(",");
+  await database.runAsync(
+    `UPDATE workout_templates SET is_starter = 1 WHERE id IN (${tplPlaceholders}) AND is_starter = 0`,
+    starterTplIds
+  );
+  await database.runAsync(
+    "UPDATE programs SET is_starter = 1 WHERE id = ? AND is_starter = 0",
+    [STARTER_PROGRAM.id]
+  );
+
   if (row && Number(row.value) >= STARTER_VERSION) return;
 
   await database.withTransactionAsync(async () => {
