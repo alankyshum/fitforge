@@ -383,10 +383,13 @@ export async function searchSessions(
 }
 
 export async function getAllCompletedSessionWeeks(): Promise<number[]> {
+  const twoYearsAgo = Date.now() - 2 * 365 * 24 * 60 * 60 * 1000;
   const rows = await query<{ started_at: number }>(
     `SELECT started_at FROM workout_sessions
      WHERE completed_at IS NOT NULL
-     ORDER BY started_at DESC`
+       AND started_at >= ?
+     ORDER BY started_at DESC`,
+    [twoYearsAgo]
   );
   return rows.map((r) => r.started_at);
 }

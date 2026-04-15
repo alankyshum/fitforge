@@ -109,7 +109,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
     if (count === 0) return null;
     if (count >= 3) {
       return (
-        <Text style={[styles.cellText, { fontSize: Math.max(7, size * 0.4), color: theme.colors.onPrimary }]}>
+        <Text style={[styles.cellText, { fontSize: Math.max(12, size * 0.5), color: theme.colors.onPrimary }]}>
           3+
         </Text>
       );
@@ -125,8 +125,11 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress }: Heatmap
     );
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const gridRole = "grid" as any;
+
   return (
-    <View accessibilityRole="summary" accessibilityLabel="Workout heatmap grid" style={styles.container}>
+    <View accessibilityRole={gridRole} accessibilityLabel="Workout heatmap grid" style={styles.container}>
       {grid.map((row, rowIdx) => (
         <View key={rowIdx} style={styles.row}>
           <Text
@@ -213,7 +216,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dayLabel: {
-    fontSize: 10,
+    fontSize: 12,
     textAlign: "center",
   },
   cell: {

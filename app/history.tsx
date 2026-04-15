@@ -76,6 +76,7 @@ function HistoryScreen() {
   const [longestStreak, setLongestStreak] = useState(0);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [heatmapLoading, setHeatmapLoading] = useState(true);
+  const [heatmapError, setHeatmapError] = useState(false);
   const [heatmapExpanded, setHeatmapExpanded] = useState(true);
 
   useEffect(() => {
@@ -95,6 +96,7 @@ function HistoryScreen() {
 
   const loadHeatmap = useCallback(async () => {
     setHeatmapLoading(true);
+    setHeatmapError(false);
     try {
       const today = new Date();
       const endTs = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime();
@@ -114,6 +116,8 @@ function HistoryScreen() {
       setCurrentStreak(computeStreak(allWeeks));
       setLongestStreak(computeLongestStreak(allWeeks));
       setTotalWorkouts(total);
+    } catch {
+      setHeatmapError(true);
     } finally {
       setHeatmapLoading(false);
     }
@@ -372,6 +376,12 @@ function HistoryScreen() {
               heatmapLoading ? (
                 <View style={styles.heatmapLoading}>
                   <ActivityIndicator size="small" color={theme.colors.primary} />
+                </View>
+              ) : heatmapError ? (
+                <View style={styles.heatmapLoading}>
+                  <Text variant="bodySmall" style={{ color: theme.colors.error }}>
+                    Unable to load heatmap data. Pull down to retry.
+                  </Text>
                 </View>
               ) : (
                 <WorkoutHeatmap
