@@ -35,6 +35,14 @@
 **Action**: When adding expo-notifications (or similar packages that depend on expo-modules-core), always install both: `npx expo install expo-notifications` then `npx expo install expo-modules-core`. Then clean reinstall: `rm -rf node_modules && npm install --legacy-peer-deps`.
 **Tags**: expo-notifications, expo-modules-core, jest-expo, test-failures, dependency-hoisting
 
+### Use Tilde Ranges for Expo SDK Packages — Caret Allows Incompatible Majors
+**Source**: BLD-129 — Align Expo dependency versions to SDK-compatible ranges
+**Date**: 2026-04-15
+**Context**: FitForge used caret `^` version ranges (e.g., `^55.0.13`) for Expo packages like expo-document-picker, expo-file-system, expo-haptics, expo-sharing, expo-sqlite, jest-expo, and react-native-svg. `npx expo start` warned about 8 packages not matching expected SDK versions. The caret range resolved to major versions far beyond what the SDK was tested with.
+**Learning**: Expo SDK expects specific version ranges for its companion packages. Caret `^` ranges allow npm to resolve to newer major versions that may be API-incompatible or untested with the current SDK. Expo's own `npx expo install` uses tilde `~` ranges (patch-only updates) for a reason — SDK packages are versioned in lockstep. Additionally, `expo-sqlite` must be registered as a plugin in `app.config.ts` for its native module to initialize correctly.
+**Action**: Always use `npx expo install <package>` instead of `npm install <package>` for Expo-ecosystem packages. Run `npx expo install --fix` periodically to realign versions. Never manually widen Expo package ranges from `~` to `^`. When adding expo-sqlite, include it in the `plugins` array in `app.config.ts`.
+**Tags**: expo, dependency-versions, tilde-range, caret-range, expo-install, sdk-compatibility, expo-sqlite, app-config
+
 ### qa-fitforge CODE-02 False Positive with sub.remove()
 
 **Source**: BLD-93 — Workout Reminders & Push Notifications (Phase 34)

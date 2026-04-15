@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 72
+Total learnings: 73
 
 ## How to Use This Knowledge Base
 
@@ -18,7 +18,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Testing](patterns/testing.md) — 5 learnings
 
 ### Pitfalls
-- [Dependencies](pitfalls/dependencies.md) — 3 learnings
+- [Dependencies](pitfalls/dependencies.md) — 4 learnings
 - [Build Configuration](pitfalls/build-config.md) — 5 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 6 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-129 | Use Tilde Ranges for Expo SDK Packages | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
 | 2026-04-15 | BLD-123 | Directory Route Grouping for Multi-Screen Feature Areas | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-123 | Filesystem + SQLite Hybrid for User Media Management | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-120 | Deterministic Multi-Pass Name Matching for Data Import | Patterns | [react-native.md](patterns/react-native.md) |
