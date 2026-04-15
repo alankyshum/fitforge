@@ -345,6 +345,15 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="settings/import-strong"
+              options={{
+                headerShown: true,
+                title: "Import from Strong",
+                headerStyle,
+                headerTintColor,
+              }}
+            />
+            <Stack.Screen
               name="tools/index"
               options={{
                 headerShown: true,
