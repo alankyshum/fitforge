@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-15
-Total learnings: 76
+Total learnings: 77
 
 ## How to Use This Knowledge Base
 
@@ -26,7 +26,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Process
 - [Quality Pipeline](process/quality-pipeline.md) — 4 learnings
-- [PR Workflow](process/pr-workflow.md) — 1 learning
+- [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
 - [Architecture](decisions/architecture.md) — 1 learning
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-15 | BLD-44/52/53/57 | Rebase on Main Before PR When Parallel Branches Are In Flight | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-04-15 | BLD-137 | Retroactive Feature Evaluation with Silent-Earn UX | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-15 | BLD-137 | accessibilityRole="button" on Non-Interactive Elements | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-15 | BLD-120 | Cascading Multi-Pass Entity Matching for Data Import | Patterns | [react-native.md](patterns/react-native.md) |
