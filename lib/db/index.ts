@@ -125,8 +125,6 @@ export {
   setAppSetting,
   isOnboardingComplete,
   getSchedule,
-  setScheduleDay,
-  clearSchedule,
   getTodaySchedule,
   isTodayCompleted,
   getWeekAdherence,

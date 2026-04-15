@@ -1,4 +1,5 @@
 import type { Program, ProgramDay } from "./types";
+import type { ScheduleEntry } from "./db/settings";
 import { uuid } from "./uuid";
 import { getDatabase } from "./db/helpers";
 
@@ -379,4 +380,60 @@ export async function getNextWorkout(): Promise<{
     program: active,
     day: { ...row, template_name: row.template_name ?? undefined },
   };
+}
+
+// --------------- Program Schedule ---------------
+
+export async function getProgramSchedule(
+  programId: string
+): Promise<ScheduleEntry[]> {
+  const database = await getDatabase();
+  return database.getAllAsync<ScheduleEntry>(
+    `SELECT ps.program_id AS id, ps.day_of_week, ps.template_id,
+            wt.name AS template_name,
+            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ps.template_id) AS exercise_count,
+            0 AS created_at
+     FROM program_schedule ps
+     JOIN workout_templates wt ON wt.id = ps.template_id
+     WHERE ps.program_id = ?
+     ORDER BY ps.day_of_week ASC`,
+    [programId]
+  );
+}
+
+export async function setProgramScheduleDay(
+  programId: string,
+  day: number,
+  templateId: string | null
+): Promise<void> {
+  const database = await getDatabase();
+  if (templateId === null) {
+    await database.runAsync(
+      "DELETE FROM program_schedule WHERE program_id = ? AND day_of_week = ?",
+      [programId, day]
+    );
+  } else {
+    await database.runAsync(
+      `INSERT OR REPLACE INTO program_schedule (program_id, day_of_week, template_id)
+       VALUES (?, ?, ?)`,
+      [programId, day, templateId]
+    );
+  }
+}
+
+export async function clearProgramSchedule(programId: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync(
+    "DELETE FROM program_schedule WHERE program_id = ?",
+    [programId]
+  );
+}
+
+export async function getProgramScheduleCount(programId: string): Promise<number> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM program_schedule WHERE program_id = ?",
+    [programId]
+  );
+  return row?.count ?? 0;
 }

@@ -66,7 +66,7 @@ const STORAGE_KEYS: Record<Mode, string> = {
   amrap: "timer_amrap_config",
 }
 
-export default function TimerScreen() {
+export function TimerContent() {
   const theme = useTheme()
   const reduced = useReducedMotion()
   const [mode, setMode] = useState<Mode>("tabata")
@@ -336,11 +336,9 @@ export default function TimerScreen() {
   const phaseIcon = state.phase === "work" ? "play" : state.phase === "rest" ? "pause" : undefined
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: true, title: "Interval Timer" }} />
-      <Animated.View style={[styles.container, bgStyle]}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {/* Mode selector */}
+    <Animated.View style={[styles.container, bgStyle]}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {/* Mode selector */}
           {!active && (
             <SegmentedButtons
               value={mode}
@@ -540,8 +538,7 @@ export default function TimerScreen() {
               </Pressable>
             )}
           </View>
-        </ScrollView>
-      </Animated.View>
+      </ScrollView>
       <Snackbar
         visible={!!error}
         onDismiss={() => setError("")}
@@ -550,6 +547,15 @@ export default function TimerScreen() {
       >
         {error}
       </Snackbar>
+    </Animated.View>
+  )
+}
+
+export default function TimerScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: true, title: "Interval Timer" }} />
+      <TimerContent />
     </>
   )
 }

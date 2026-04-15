@@ -124,7 +124,7 @@ export async function deleteTemplate(id: string): Promise<void> {
   );
   if (tpl?.is_starter === 1) return;
   await database.withTransactionAsync(async () => {
-    await database.runAsync("DELETE FROM weekly_schedule WHERE template_id = ?", [id]);
+    await database.runAsync("DELETE FROM program_schedule WHERE template_id = ?", [id]);
     await database.runAsync("DELETE FROM template_exercises WHERE template_id = ?", [id]);
     await database.runAsync("UPDATE program_days SET template_id = NULL WHERE template_id = ?", [id]);
     await database.runAsync("DELETE FROM workout_templates WHERE id = ? AND is_starter = 0", [id]);

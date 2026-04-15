@@ -1,4 +1,3 @@
-import { uuid } from "../uuid";
 import { query, queryOne, execute, getDatabase } from "./helpers";
 
 // ---- App Settings ----
@@ -23,7 +22,7 @@ export async function isOnboardingComplete(): Promise<boolean> {
   return val === "1";
 }
 
-// ---- Weekly Schedule ----
+// ---- Schedule (backed by program_schedule on active program) ----
 
 export type ScheduleEntry = {
   id: string;
@@ -36,42 +35,27 @@ export type ScheduleEntry = {
 
 export async function getSchedule(): Promise<ScheduleEntry[]> {
   return query<ScheduleEntry>(
-    `SELECT ws.id, ws.day_of_week, ws.template_id, ws.created_at,
+    `SELECT ps.program_id AS id, ps.day_of_week, ps.template_id, 0 AS created_at,
             wt.name AS template_name,
-            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ws.template_id) AS exercise_count
-     FROM weekly_schedule ws
-     JOIN workout_templates wt ON wt.id = ws.template_id
-     ORDER BY ws.day_of_week ASC`
+            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ps.template_id) AS exercise_count
+     FROM program_schedule ps
+     JOIN workout_templates wt ON wt.id = ps.template_id
+     JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL
+     ORDER BY ps.day_of_week ASC`
   );
-}
-
-export async function setScheduleDay(day: number, templateId: string | null): Promise<void> {
-  if (templateId === null) {
-    await execute("DELETE FROM weekly_schedule WHERE day_of_week = ?", [day]);
-    return;
-  }
-  const id = uuid();
-  await execute(
-    `INSERT OR REPLACE INTO weekly_schedule (id, day_of_week, template_id, created_at)
-     VALUES (?, ?, ?, ?)`,
-    [id, day, templateId, Date.now()]
-  );
-}
-
-export async function clearSchedule(): Promise<void> {
-  await execute("DELETE FROM weekly_schedule");
 }
 
 export async function getTodaySchedule(): Promise<ScheduleEntry | null> {
   const now = new Date();
   const day = (now.getDay() + 6) % 7;
   const row = await queryOne<ScheduleEntry>(
-    `SELECT ws.id, ws.day_of_week, ws.template_id, ws.created_at,
+    `SELECT ps.program_id AS id, ps.day_of_week, ps.template_id, 0 AS created_at,
             wt.name AS template_name,
-            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ws.template_id) AS exercise_count
-     FROM weekly_schedule ws
-     JOIN workout_templates wt ON wt.id = ws.template_id
-     WHERE ws.day_of_week = ?`,
+            (SELECT COUNT(*) FROM template_exercises te WHERE te.template_id = ps.template_id) AS exercise_count
+     FROM program_schedule ps
+     JOIN workout_templates wt ON wt.id = ps.template_id
+     JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL
+     WHERE ps.day_of_week = ?`,
     [day]
   );
   return row ?? null;
@@ -97,7 +81,8 @@ export async function getWeekAdherence(): Promise<{ day: number; scheduled: bool
   const monStart = monday.getTime();
 
   const schedule = await query<{ day_of_week: number }>(
-    "SELECT day_of_week FROM weekly_schedule"
+    `SELECT ps.day_of_week FROM program_schedule ps
+     JOIN programs p ON p.id = ps.program_id AND p.is_active = 1 AND p.deleted_at IS NULL`
   );
   const scheduled = new Set(schedule.map((s) => s.day_of_week));
 

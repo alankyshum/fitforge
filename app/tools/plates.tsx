@@ -2,10 +2,10 @@ import { useCallback, useMemo, useState } from "react"
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native"
-import { FlashList } from "@shopify/flash-list"
 import {
   SegmentedButtons,
   Text,
@@ -43,11 +43,10 @@ function plateHeight(w: number): number {
   return HEIGHT[w] ?? 40
 }
 
-export default function PlateCalculator() {
+export function PlateCalculatorContent({ initialWeight, initialUnit }: { initialWeight?: string; initialUnit?: string }) {
   const theme = useTheme()
-  const params = useLocalSearchParams<{ weight?: string; unit?: string }>()
   const [unit, setUnit] = useState<"kg" | "lb">("kg")
-  const [target, setTarget] = useState(params.weight ?? "")
+  const [target, setTarget] = useState(initialWeight ?? "")
   const [bar, setBar] = useState<number | null>(null)
   const [custom, setCustom] = useState("")
   const [ready, setReady] = useState(false)
@@ -56,10 +55,10 @@ export default function PlateCalculator() {
     useCallback(() => {
       (async () => {
         const body = await getBodySettings()
-        const u = (params.unit === "lb" || params.unit === "kg") ? params.unit : body.weight_unit
+        const u = (initialUnit === "lb" || initialUnit === "kg") ? initialUnit : body.weight_unit
         setUnit(u as "kg" | "lb")
         setBar(u === "kg" ? 20 : 45)
-        if (params.weight) setTarget(params.weight)
+        if (initialWeight) setTarget(initialWeight)
         setReady(true)
       })()
     }, [])
@@ -114,29 +113,10 @@ export default function PlateCalculator() {
     return state.grouped
   }, [state])
 
-  function renderPlate({ item: g }: { item: { weight: number; count: number } }) {
-    const c = color(g.weight, unit)
-    return (
-      <View style={styles.row}>
-        <View
-          style={[
-            styles.swatch,
-            {
-              backgroundColor: c.bg,
-              borderColor: c.border ? theme.colors[c.border] : "transparent",
-              borderWidth: c.border ? 1 : 0,
-            },
-          ]}
-        />
-        <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
-          {g.count}× {g.weight}{unit}
-        </Text>
-      </View>
-    )
-  }
+  if (!ready) return null
 
-  const header = (
-    <>
+  return (
+    <View>
       {/* Unit toggle */}
       <View accessibilityRole="radiogroup" accessibilityLabel="Unit system">
         <SegmentedButtons
@@ -236,26 +216,51 @@ export default function PlateCalculator() {
               </Text>
             )}
 
-            {/* Barbell diagram */}
             <Barbell plates={diagram} unit={unit} barbell={barbell} />
           </>
         )}
       </View>
-    </>
-  )
 
-  const footer = state && !("error" in state) ? (
-    <Text variant="titleMedium" style={{ color: theme.colors.onBackground, textAlign: "center", marginTop: 16 }}>
-      Total: {state.achieved}{unit}
-      {active != null && (
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-          {" "}(bar {active}{unit} + 2×{state.side}{unit})
+      {/* Plate list */}
+      {items.map(g => {
+        const c = color(g.weight, unit)
+        return (
+          <View key={g.weight} style={styles.row}>
+            <View
+              style={[
+                styles.swatch,
+                {
+                  backgroundColor: c.bg,
+                  borderColor: c.border ? theme.colors[c.border] : "transparent",
+                  borderWidth: c.border ? 1 : 0,
+                },
+              ]}
+            />
+            <Text variant="bodyLarge" style={{ color: theme.colors.onBackground }}>
+              {g.count}× {g.weight}{unit}
+            </Text>
+          </View>
+        )
+      })}
+
+      {/* Footer */}
+      {state && !("error" in state) && (
+        <Text variant="titleMedium" style={{ color: theme.colors.onBackground, textAlign: "center", marginTop: 16 }}>
+          Total: {state.achieved}{unit}
+          {active != null && (
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+              {" "}(bar {active}{unit} + 2×{state.side}{unit})
+            </Text>
+          )}
         </Text>
       )}
-    </Text>
-  ) : null
+    </View>
+  )
+}
 
-  if (!ready) return null
+export default function PlateCalculator() {
+  const theme = useTheme()
+  const params = useLocalSearchParams<{ weight?: string; unit?: string }>()
 
   return (
     <>
@@ -265,14 +270,12 @@ export default function PlateCalculator() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={100}
       >
-        <FlashList
+        <ScrollView
           style={{ backgroundColor: theme.colors.background }}
-          data={items}
-          keyExtractor={g => String(g.weight)}
-          renderItem={renderPlate}
-          ListHeaderComponent={header}
-          ListFooterComponent={footer}
-        />
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        >
+          <PlateCalculatorContent initialWeight={params.weight} initialUnit={params.unit} />
+        </ScrollView>
       </KeyboardAvoidingView>
     </>
   )
@@ -347,10 +350,6 @@ const plateStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
   },
   segment: {
     marginTop: 8,

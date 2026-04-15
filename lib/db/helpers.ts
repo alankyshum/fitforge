@@ -9,6 +9,14 @@ import {
 
 const DB_NAME = "fitforge.db";
 
+let migSeq = 0;
+function migrationUUID(): string {
+  migSeq++;
+  const ts = Date.now().toString(36);
+  const rnd = Math.random().toString(36).slice(2, 10);
+  return `mig-${ts}-${rnd}-${migSeq}`;
+}
+
 let db: SQLite.SQLiteDatabase | null = null;
 let init: Promise<SQLite.SQLiteDatabase> | null = null;
 let memoryFallback = false;
@@ -389,6 +397,67 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
       UNIQUE(day_of_week)
     )`
   );
+
+  await database.execAsync(
+    `CREATE TABLE IF NOT EXISTS program_schedule (
+      program_id TEXT NOT NULL,
+      day_of_week INTEGER NOT NULL,
+      template_id TEXT NOT NULL,
+      UNIQUE(program_id, day_of_week),
+      FOREIGN KEY (program_id) REFERENCES programs(id),
+      FOREIGN KEY (template_id) REFERENCES workout_templates(id)
+    )`
+  );
+
+  // Migrate weekly_schedule → program_schedule on active program
+  const hasMigrated = await database.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_settings WHERE key = 'schedule_migrated'"
+  );
+  if (!hasMigrated) {
+    const oldSched = await database.getAllAsync<{ day_of_week: number; template_id: string }>(
+      "SELECT day_of_week, template_id FROM weekly_schedule"
+    );
+    if (oldSched.length > 0) {
+      let targetProgramId: string | null = null;
+      const activeProg = await database.getFirstAsync<{ id: string }>(
+        "SELECT id FROM programs WHERE is_active = 1 AND deleted_at IS NULL LIMIT 1"
+      );
+      if (activeProg) {
+        targetProgramId = activeProg.id;
+      } else {
+        const pid = migrationUUID();
+        const now = Date.now();
+        await database.runAsync(
+          "INSERT INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at) VALUES (?, ?, ?, 1, NULL, ?, ?)",
+          [pid, "My Weekly Routine", "", now, now]
+        );
+        const uniqueTemplates = [...new Set(oldSched.map((s) => s.template_id))];
+        for (let i = 0; i < uniqueTemplates.length; i++) {
+          const dayId = migrationUUID();
+          await database.runAsync(
+            "INSERT INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, '')",
+            [dayId, pid, uniqueTemplates[i], i]
+          );
+          if (i === 0) {
+            await database.runAsync(
+              "UPDATE programs SET current_day_id = ? WHERE id = ?",
+              [dayId, pid]
+            );
+          }
+        }
+        targetProgramId = pid;
+      }
+      for (const s of oldSched) {
+        await database.runAsync(
+          "INSERT OR IGNORE INTO program_schedule (program_id, day_of_week, template_id) VALUES (?, ?, ?)",
+          [targetProgramId, s.day_of_week, s.template_id]
+        );
+      }
+    }
+    await database.runAsync(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('schedule_migrated', '1')"
+    );
+  }
 
   await database.execAsync(
     `CREATE TABLE IF NOT EXISTS interaction_log (

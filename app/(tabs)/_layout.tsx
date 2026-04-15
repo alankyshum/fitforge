@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { IconButton, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useLayout } from "../../lib/layout";
@@ -60,26 +60,15 @@ export default function TabLayout() {
             <MaterialCommunityIcons name="arm-flex" size={size} color={color} />
           ),
           headerRight: () => (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <IconButton
-                icon="weight"
-                size={24}
-                onPress={() => router.push("/tools/plates")}
-                accessibilityLabel="Open plate calculator"
-                accessibilityRole="button"
-                iconColor={theme.colors.onSurface}
-                style={{ minWidth: 48, minHeight: 48 }}
-              />
-              <IconButton
-                icon="arm-flex"
-                size={24}
-                onPress={() => router.push("/tools/rm")}
-                accessibilityLabel="Open 1RM calculator"
-                accessibilityRole="button"
-                iconColor={theme.colors.onSurface}
-                style={{ minWidth: 48, minHeight: 48 }}
-              />
-            </View>
+            <IconButton
+              icon="wrench"
+              size={24}
+              onPress={() => router.push("/tools")}
+              accessibilityLabel="Workout tools"
+              accessibilityRole="button"
+              iconColor={theme.colors.onSurface}
+              style={{ minWidth: 48, minHeight: 48 }}
+            />
           ),
         }}
       />

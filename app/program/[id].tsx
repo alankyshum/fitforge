@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
+  Modal,
   StyleSheet,
   View,
 } from "react-native";
@@ -11,8 +12,10 @@ import {
   Chip,
   IconButton,
   Text,
+  TouchableRipple,
   useTheme,
 } from "react-native-paper";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import {
@@ -20,14 +23,20 @@ import {
   getProgramDays,
   getProgramCycleCount,
   getProgramHistory,
+  getProgramSchedule,
+  setProgramScheduleDay,
+  clearProgramSchedule,
   activateProgram,
   deactivateProgram,
   softDeleteProgram,
   removeProgramDay,
   reorderProgramDays,
 } from "../../lib/programs";
-import { duplicateProgram } from "../../lib/db";
-import type { Program, ProgramDay } from "../../lib/types";
+import { duplicateProgram, getTemplates, getAppSetting } from "../../lib/db";
+import { scheduleReminders } from "../../lib/notifications";
+import { DAYS } from "../../lib/format";
+import type { Program, ProgramDay, WorkoutTemplate } from "../../lib/types";
+import type { ScheduleEntry } from "../../lib/db/settings";
 
 export default function ProgramDetail() {
   const theme = useTheme();
@@ -37,22 +46,29 @@ export default function ProgramDetail() {
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [cycle, setCycle] = useState(0);
   const [history, setHistory] = useState<{ session_id: string; day_label: string; template_name: string | null; completed_at: number }[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [picker, setPicker] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
-      const [prog, d, c, h] = await Promise.all([
+      const [prog, d, c, h, sched, tpls] = await Promise.all([
         getProgramById(id),
         getProgramDays(id),
         getProgramCycleCount(id),
         getProgramHistory(id, 10),
+        getProgramSchedule(id),
+        getTemplates(),
       ]);
       setProgram(prog);
       setDays(d);
       setCycle(c);
       setHistory(h);
+      setSchedule(sched);
+      setTemplates(tpls);
     } finally {
       setLoading(false);
     }
@@ -146,6 +162,57 @@ export default function ProgramDetail() {
     const newId = await duplicateProgram(program.id);
     router.replace(`/program/${newId}`);
   };
+
+  const rescheduleNotifications = async () => {
+    try {
+      const enabled = await getAppSetting("reminders_enabled");
+      if (enabled !== "true") return;
+      const raw = await getAppSetting("reminder_time");
+      const [h, m] = (raw ?? "08:00").split(":").map(Number);
+      await scheduleReminders({ hour: h, minute: m });
+    } catch {
+      // non-critical
+    }
+  };
+
+  const assignDay = async (day: number, tpl: WorkoutTemplate | null) => {
+    setPicker(null);
+    if (!program) return;
+    try {
+      await setProgramScheduleDay(program.id, day, tpl?.id ?? null);
+      const sched = await getProgramSchedule(program.id);
+      setSchedule(sched);
+      if (program.is_active) await rescheduleNotifications();
+    } catch {
+      Alert.alert("Error", "Couldn't update schedule.");
+    }
+  };
+
+  const confirmClearSchedule = () => {
+    if (!program) return;
+    Alert.alert(
+      "Clear Schedule",
+      "Clear the weekly schedule for this program?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearProgramSchedule(program.id);
+              setSchedule([]);
+              if (program.is_active) await rescheduleNotifications();
+            } catch {
+              Alert.alert("Error", "Couldn't clear schedule.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const schedEntry = (day: number) => schedule.find((s) => s.day_of_week === day);
 
   return (
     <>
@@ -327,7 +394,152 @@ export default function ProgramDetail() {
           </View>
         }
         ListFooterComponent={
-          history.length > 0 ? (
+          <>
+            {/* Weekly Schedule */}
+            <View style={styles.scheduleSection}>
+              <View style={styles.sectionHeader}>
+                <Text variant="titleMedium" style={{ color: theme.colors.onBackground }}>
+                  Weekly Schedule
+                </Text>
+                {schedule.length > 0 && !starter && (
+                  <Button
+                    mode="text"
+                    compact
+                    textColor={theme.colors.error}
+                    onPress={confirmClearSchedule}
+                    accessibilityLabel="Clear weekly schedule"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </View>
+
+              {templates.length === 0 ? (
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                  Create a template first to set a schedule.
+                </Text>
+              ) : (
+                <>
+                  {DAYS.map((label, i) => {
+                    const e = schedEntry(i);
+                    return (
+                      <TouchableRipple
+                        key={i}
+                        onPress={starter ? undefined : () => setPicker(i)}
+                        disabled={starter}
+                        style={[
+                          styles.daySlot,
+                          { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${label}: ${e ? e.template_name : "Rest day"}`}
+                      >
+                        <View style={styles.dayRow}>
+                          <Text variant="titleSmall" style={[styles.dayLabel, { color: theme.colors.onSurface }]}>
+                            {label}
+                          </Text>
+                          <View style={styles.dayInfo}>
+                            {e ? (
+                              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }} numberOfLines={1}>
+                                {e.template_name}
+                              </Text>
+                            ) : (
+                              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                                Rest
+                              </Text>
+                            )}
+                          </View>
+                          {!starter && (
+                            <MaterialCommunityIcons
+                              name="chevron-right"
+                              size={20}
+                              color={theme.colors.onSurfaceVariant}
+                            />
+                          )}
+                        </View>
+                      </TouchableRipple>
+                    );
+                  })}
+                </>
+              )}
+            </View>
+
+            {/* Template picker modal for schedule */}
+            <Modal
+              visible={picker !== null}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setPicker(null)}
+              accessibilityViewIsModal
+            >
+              <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+                <Card style={[styles.picker, { backgroundColor: theme.colors.surface }]}>
+                  <Card.Content>
+                    <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
+                      {picker !== null ? DAYS[picker] : ""} — Pick Template
+                    </Text>
+
+                    <FlashList
+                      data={
+                        picker !== null && schedEntry(picker)
+                          ? [{ id: "__remove__", name: "Remove (Rest Day)" } as WorkoutTemplate, ...templates]
+                          : templates
+                      }
+                      keyExtractor={(item) => item.id}
+                      estimatedItemSize={48}
+                      style={{ maxHeight: 300 }}
+                      renderItem={({ item }) => {
+                        if (item.id === "__remove__") {
+                          return (
+                            <TouchableRipple
+                              onPress={() => assignDay(picker!, null)}
+                              style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                              accessibilityRole="button"
+                              accessibilityLabel="Remove template, set as rest day"
+                            >
+                              <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
+                                Remove (Rest Day)
+                              </Text>
+                            </TouchableRipple>
+                          );
+                        }
+                        return (
+                          <TouchableRipple
+                            onPress={() => picker !== null && assignDay(picker, item)}
+                            style={[styles.pickItem, { borderBottomColor: theme.colors.outlineVariant }]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Select template: ${item.name}`}
+                          >
+                            <Text
+                              variant="bodyMedium"
+                              style={{
+                                color: picker !== null && schedEntry(picker)?.template_id === item.id
+                                  ? theme.colors.primary
+                                  : theme.colors.onSurface,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {item.name}
+                            </Text>
+                          </TouchableRipple>
+                        );
+                      }}
+                    />
+
+                    <Button
+                      mode="text"
+                      onPress={() => setPicker(null)}
+                      style={{ marginTop: 8 }}
+                      accessibilityLabel="Cancel template selection"
+                    >
+                      Cancel
+                    </Button>
+                  </Card.Content>
+                </Card>
+              </View>
+            </Modal>
+
+            {history.length > 0 && (
             <View style={styles.history}>
               <Text variant="titleMedium" style={[styles.historyTitle, { color: theme.colors.onBackground }]}>
                 History
@@ -351,7 +563,8 @@ export default function ProgramDetail() {
                 </Card>
               ))}
             </View>
-          ) : null
+            )}
+          </>
         }
       />
     </>

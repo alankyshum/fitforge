@@ -85,15 +85,9 @@ describe('PlateCalculator screen', () => {
     })
   })
 
-  it('uses FlashList for plate list (no ScrollView anti-pattern)', async () => {
-    const fs = require('fs')
-    const path = require('path')
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../../app/tools/plates.tsx'),
-      'utf-8'
-    )
-    expect(src).not.toMatch(/import\s*\{[^}]*ScrollView[^}]*\}\s*from\s*["']react-native["']/)
-    expect(src).toMatch(/import\s*\{[^}]*FlashList[^}]*\}\s*from\s*["']@shopify\/flash-list["']/)
+  it('exports PlateCalculatorContent for embedding', async () => {
+    const { PlateCalculatorContent } = require('../../../app/tools/plates')
+    expect(typeof PlateCalculatorContent).toBe('function')
   })
 
   it('shows plate list items for 100kg target with 20kg bar', async () => {

@@ -330,10 +330,10 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="schedule/index"
+              name="tools/index"
               options={{
                 headerShown: true,
-                title: "Weekly Schedule",
+                title: "Workout Tools",
                 headerStyle,
                 headerTintColor,
               }}

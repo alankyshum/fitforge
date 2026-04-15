@@ -213,6 +213,12 @@ Then recreate the tag.
 Verify the tag was pushed: `git ls-remote --tags origin | grep vX.Y.Z`
 Verify the workflow trigger: the `on: push: tags: - 'v*'` pattern must match.
 
+### EAS project not configured
+The EAS project ID must exist in `app.config.ts` under `extra.eas.projectId`.
+If missing, run `eas init --force` locally and add the ID manually since
+the config is dynamic (TypeScript). The project ID is:
+`f15d9aef-342e-4a5d-9007-4f98eff3ba23`
+
 ### F-Droid client not showing update
 - Pull-to-refresh in F-Droid
 - Check repo URL is exactly: `https://alankyshum.github.io/fitforge/fdroid/repo`
