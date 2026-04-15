@@ -104,6 +104,7 @@ export default function Targets() {
             keyboardType="numeric"
             mode="outlined"
             style={styles.input}
+            accessibilityLabel="Calories"
           />
           <TextInput
             label="Protein (g)"
@@ -112,6 +113,7 @@ export default function Targets() {
             keyboardType="numeric"
             mode="outlined"
             style={styles.input}
+            accessibilityLabel="Protein"
           />
           <TextInput
             label="Carbs (g)"
@@ -120,6 +122,7 @@ export default function Targets() {
             keyboardType="numeric"
             mode="outlined"
             style={styles.input}
+            accessibilityLabel="Carbs"
           />
           <TextInput
             label="Fat (g)"
@@ -128,6 +131,7 @@ export default function Targets() {
             keyboardType="numeric"
             mode="outlined"
             style={styles.input}
+            accessibilityLabel="Fat"
           />
           <Button mode="contained" onPress={save} loading={saving} disabled={saving} style={styles.btn} contentStyle={styles.btnContent} accessibilityLabel="Save macro targets">
             Save Targets
