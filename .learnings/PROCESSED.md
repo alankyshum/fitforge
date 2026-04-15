@@ -126,3 +126,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-98 | PROCESSED | 2026-04-15 |
 | BLD-99 | PROCESSED | 2026-04-15 |
 | BLD-165 | NO_LEARNINGS | 2026-04-15 |
+| BLD-166 | NO_LEARNINGS | 2026-04-15 |
