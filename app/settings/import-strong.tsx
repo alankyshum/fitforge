@@ -357,11 +357,15 @@ function StepReviewMapping({
 
   const initialMatches = useMemo(() => {
     const raw = matchAllExercises(exerciseNames, exercises);
-    return raw.map((m) => ({
-      ...m,
-      userConfirmed: m.confidence === "exact",
-      userOverrideExercise: null,
-    }));
+    const result: MatchState[] = [];
+    for (const m of raw) {
+      result.push({
+        ...m,
+        userConfirmed: m.confidence === "exact",
+        userOverrideExercise: null,
+      });
+    }
+    return result;
   }, [exerciseNames, exercises]);
 
   const [matches, setMatches] = useState<MatchState[]>(initialMatches);
@@ -378,11 +382,15 @@ function StepReviewMapping({
 
   const handleConfirm = useCallback(
     (strongName: string) => {
-      setMatches((prev) =>
-        prev.map((m) =>
-          m.strongName === strongName ? { ...m, userConfirmed: true } : m
-        )
-      );
+      setMatches((prev) => {
+        const next: MatchState[] = [];
+        for (const m of prev) {
+          next.push(
+            m.strongName === strongName ? { ...m, userConfirmed: true } : m
+          );
+        }
+        return next;
+      });
     },
     []
   );
