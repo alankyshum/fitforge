@@ -1,6 +1,6 @@
 import type { WorkoutSession, WorkoutSet, TrainingMode, MuscleGroup } from "../types";
 import { uuid } from "../uuid";
-import { query, queryOne, execute } from "./helpers";
+import { query, queryOne, execute, withTransaction } from "./helpers";
 
 type SetRow = {
   id: string;
@@ -153,6 +153,69 @@ export async function addSet(
     training_mode: trainingMode ?? null,
     tempo: tempo ?? null,
   };
+}
+
+export async function addSetsBatch(
+  sets: {
+    sessionId: string;
+    exerciseId: string;
+    setNumber: number;
+    linkId?: string | null;
+    round?: number | null;
+    trainingMode?: TrainingMode | null;
+    tempo?: string | null;
+  }[]
+): Promise<WorkoutSet[]> {
+  const results: WorkoutSet[] = sets.map((s) => ({
+    id: uuid(),
+    session_id: s.sessionId,
+    exercise_id: s.exerciseId,
+    set_number: s.setNumber,
+    weight: null,
+    reps: null,
+    completed: false,
+    completed_at: null,
+    rpe: null,
+    notes: "",
+    link_id: s.linkId ?? null,
+    round: s.round ?? null,
+    training_mode: s.trainingMode ?? null,
+    tempo: s.tempo ?? null,
+  }));
+  await withTransaction(async (db) => {
+    const stmt = await db.prepareAsync(
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, training_mode, tempo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    try {
+      for (const r of results) {
+        await stmt.executeAsync([
+          r.id, r.session_id, r.exercise_id, r.set_number,
+          r.link_id, r.round, r.training_mode, r.tempo,
+        ]);
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  });
+  return results;
+}
+
+export async function updateSetsBatch(
+  updates: { id: string; weight: number | null; reps: number | null }[]
+): Promise<void> {
+  if (updates.length === 0) return;
+  await withTransaction(async (db) => {
+    const stmt = await db.prepareAsync(
+      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?"
+    );
+    try {
+      for (const u of updates) {
+        await stmt.executeAsync([u.weight, u.reps, u.id]);
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  });
 }
 
 export async function updateSet(

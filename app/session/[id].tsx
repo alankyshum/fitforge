@@ -31,6 +31,7 @@ import { activateKeepAwakeAsync } from "expo-keep-awake";
 import { play as playAudio, setEnabled as setAudioEnabled } from "../../lib/audio";
 import {
   addSet,
+  addSetsBatch,
   cancelSession,
   deleteSet,
   completeSession,
@@ -46,6 +47,7 @@ import {
   getRestSecondsForLink,
   uncompleteSet,
   updateSet,
+  updateSetsBatch,
   updateSetRPE,
   updateSetNotes,
   updateSetTrainingMode,
@@ -176,11 +178,21 @@ export default function ActiveSession() {
     setStep(derived);
     setUnit(body.weight_unit);
 
-    // Build previous data
-    const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
-    for (const eid of exerciseIds) {
-      prevCache[eid] = await getPreviousSets(eid, id);
+
+    // Parallel fetch: previous sets, exercise metadata, and suggestions data
+    const [prevResults, exerciseResults, recentResults] = await Promise.all([
+      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))),
+      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getExerciseById(eid) }))),
+      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getRecentExerciseSets(eid, 2) }))),
+    ]);
+
+    const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
+    for (const { eid, data } of prevResults) prevCache[eid] = data;
+
+    const exerciseMeta: Record<string, Exercise> = {};
+    for (const { eid, data } of exerciseResults) {
+      if (data) exerciseMeta[eid] = data;
     }
 
     // Fetch historical maxes for PR detection (only when exercise list changes)
@@ -193,11 +205,6 @@ export default function ActiveSession() {
 
     // Group by exercise
     const map = new Map<string, ExerciseGroup>();
-    const exerciseMeta: Record<string, Exercise> = {};
-    for (const eid of exerciseIds) {
-      const ex = await getExerciseById(eid);
-      if (ex) exerciseMeta[eid] = ex;
-    }
     for (const s of sets) {
       if (!map.has(s.exercise_id)) {
         const ex = exerciseMeta[s.exercise_id];
@@ -224,22 +231,20 @@ export default function ActiveSession() {
     }
     setGroups([...map.values()]);
 
-    // Compute progressive overload suggestions (uses derived step from body settings)
-    const entries = await Promise.all(
-      exerciseIds.map(async (eid): Promise<[string, Suggestion | null]> => {
-        try {
-          const recent = await getRecentExerciseSets(eid, 2);
-          if (recent.length === 0) return [eid, null];
-          const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
-          if (timeBased) return [eid, null];
-          const ex = await getExerciseById(eid);
-          const bw = ex ? ex.equipment === "bodyweight" : false;
-          return [eid, suggest(recent, derived, bw)];
-        } catch {
-          return [eid, null];
-        }
-      }),
-    );
+    // Compute progressive overload suggestions using already-fetched data
+    const entries: [string, Suggestion | null][] = exerciseIds.map((eid) => {
+      try {
+        const recent = recentResults.find((r) => r.eid === eid)?.data ?? [];
+        if (recent.length === 0) return [eid, null];
+        const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
+        if (timeBased) return [eid, null];
+        const ex = exerciseMeta[eid];
+        const bw = ex ? ex.equipment === "bodyweight" : false;
+        return [eid, suggest(recent, derived, bw)];
+      } catch {
+        return [eid, null];
+      }
+    });
     const sugg: Record<string, Suggestion | null> = Object.fromEntries(entries);
     setSuggestions(sugg);
   }, [id, router]);
@@ -259,31 +264,36 @@ export default function ActiveSession() {
       if (templateId) {
         const tpl = await getTemplateById(templateId);
         if (tpl?.exercises) {
+          const setsToInsert: Parameters<typeof addSetsBatch>[0] = [];
           for (const te of tpl.exercises) {
-            if (te.link_id) {
-              for (let i = 1; i <= te.target_sets; i++) {
-                await addSet(id, te.exercise_id, i, te.link_id, i);
-              }
-            } else {
-              for (let i = 1; i <= te.target_sets; i++) {
-                await addSet(id, te.exercise_id, i);
-              }
+            for (let i = 1; i <= te.target_sets; i++) {
+              setsToInsert.push({
+                sessionId: id,
+                exerciseId: te.exercise_id,
+                setNumber: i,
+                linkId: te.link_id ?? null,
+                round: te.link_id ? i : null,
+              });
             }
           }
+          await addSetsBatch(setsToInsert);
 
-          // Auto-fill weight from previous session
           const created = await getSessionSets(id);
           const exerciseIds = [...new Set(created.map((s) => s.exercise_id))];
           const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
-          for (const eid of exerciseIds) {
-            prevCache[eid] = await getPreviousSets(eid, id);
-          }
+          const prevResults = await Promise.all(
+            exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))
+          );
+          for (const { eid, data } of prevResults) prevCache[eid] = data;
+
+          const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
           for (const s of created) {
             const prev = prevCache[s.exercise_id]?.find((p) => p.set_number === s.set_number);
             if (prev && prev.weight != null) {
-              await updateSet(s.id, prev.weight, null);
+              setsToUpdate.push({ id: s.id, weight: prev.weight, reps: null });
             }
           }
+          await updateSetsBatch(setsToUpdate);
         }
       }
       await load();
@@ -303,6 +313,15 @@ export default function ActiveSession() {
     };
   }, [session]);
 
+  const updateGroupSet = useCallback((setId: string, patch: Partial<SetWithMeta>) => {
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sets: g.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
+      }))
+    );
+  }, []);
+
   const handleUpdate = async (
     setId: string,
     field: "weight" | "reps",
@@ -314,11 +333,13 @@ export default function ActiveSession() {
 
     const num = val === "" ? null : parseFloat(val);
     if (field === "weight") {
+      updateGroupSet(setId, { weight: num });
       await updateSet(setId, num, set.reps);
     } else {
-      await updateSet(setId, set.weight, num !== null ? Math.round(num) : null);
+      const rounded = num !== null ? Math.round(num) : null;
+      updateGroupSet(setId, { reps: rounded });
+      await updateSet(setId, set.weight, rounded);
     }
-    await load();
   };
 
   const startRest = useCallback(async (exerciseId: string) => {
@@ -398,24 +419,24 @@ export default function ActiveSession() {
 
   const handleCheck = async (set: SetWithMeta) => {
     if (set.completed) {
+      updateGroupSet(set.id, { completed: false, completed_at: null });
       await uncompleteSet(set.id);
     } else {
+      const now = Date.now();
+      updateGroupSet(set.id, { completed: true, completed_at: now });
       await completeSet(set.id);
 
       if (set.link_id) {
-        // Find linked group exercises
         const linked = groups.filter((g) => g.link_id === set.link_id);
         const idx = linked.findIndex((g) => g.exercise_id === set.exercise_id);
         const next = idx >= 0 && idx < linked.length - 1 ? linked[idx + 1] : null;
 
         if (next) {
-          // Mid-round: show "Next" hint, no rest timer
           setNextHint(`Next: ${next.name}`);
           AccessibilityInfo.announceForAccessibility(`Next: ${next.name}`);
           if (hintTimer.current) clearTimeout(hintTimer.current);
           hintTimer.current = setTimeout(() => setNextHint(null), 1500);
         } else {
-          // End of round: start rest timer with MAX(rest_seconds)
           setNextHint(null);
           const secs = await getRestSecondsForLink(id!, set.link_id);
           startRestWithDuration(secs);
@@ -424,7 +445,6 @@ export default function ActiveSession() {
         startRest(set.exercise_id);
       }
     }
-    await load();
   };
 
   const handleAddSet = async (exerciseId: string) => {
@@ -433,20 +453,32 @@ export default function ActiveSession() {
     const fallback = group?.is_voltra && group.training_modes.length > 1 ? group.training_modes[0] : null;
     const mode = modes[exerciseId] ?? fallback;
     const tp = mode === "eccentric_overload" ? (tempoDraft[exerciseId] || null) : null;
-    await addSet(id!, exerciseId, num, null, null, mode, tp);
-    await load();
+    const newSet = await addSet(id!, exerciseId, num, null, null, mode, tp);
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.exercise_id === exerciseId
+          ? { ...g, sets: [...g.sets, { ...newSet, previous: "-" }] }
+          : g
+      )
+    );
   };
 
   const handleModeChange = async (exerciseId: string, mode: TrainingMode) => {
     setModes((prev) => ({ ...prev, [exerciseId]: mode }));
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (!group) return;
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.exercise_id === exerciseId
+          ? { ...g, sets: g.sets.map((s) => (s.completed ? s : { ...s, training_mode: mode })) }
+          : g
+      )
+    );
     for (const set of group.sets) {
       if (!set.completed) {
         await updateSetTrainingMode(set.id, mode);
       }
     }
-    await load();
   };
 
   const handleTempoBlur = async (exerciseId: string, val: string) => {
@@ -467,22 +499,22 @@ export default function ActiveSession() {
 
   const handleRPE = async (set: SetWithMeta, val: number) => {
     const next = set.rpe === val ? null : val;
-    await updateSetRPE(set.id, next);
+    updateGroupSet(set.id, { rpe: next });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await load();
+    await updateSetRPE(set.id, next);
   };
 
   const handleHalfStep = async (setId: string, val: number) => {
-    await updateSetRPE(setId, val);
+    updateGroupSet(setId, { rpe: val });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setHalfStep(null);
-    await load();
+    await updateSetRPE(setId, val);
   };
 
   const handleNotes = async (setId: string, text: string) => {
-    await updateSetNotes(setId, text);
+    updateGroupSet(setId, { notes: text });
     setNotesDraft((prev) => { const next = { ...prev }; delete next[setId]; return next; });
-    await load();
+    await updateSetNotes(setId, text);
   };
 
   const toggleNotes = (setId: string) => {
@@ -785,7 +817,16 @@ export default function ActiveSession() {
 
             {group.sets.map((set) => (
               <View key={set.id}>
-              <SwipeToDelete onDelete={async () => { await deleteSet(set.id); await load(); }}>
+              <SwipeToDelete onDelete={async () => {
+                setGroups((prev) =>
+                  prev.map((g) => ({
+                    ...g,
+                    sets: g.sets.filter((s) => s.id !== set.id)
+                      .map((s, i) => ({ ...s, set_number: i + 1 })),
+                  })).filter((g) => g.sets.length > 0)
+                );
+                await deleteSet(set.id);
+              }}>
                 <View
                   style={[
                     styles.setRow,

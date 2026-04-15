@@ -276,6 +276,15 @@ async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id)"
   );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_workout_sets_session ON workout_sets(session_id)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_workout_sessions_completed ON workout_sessions(completed_at)"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_workout_sets_session_exercise ON workout_sets(session_id, exercise_id)"
+  );
 
   const teCols = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(template_exercises)"
