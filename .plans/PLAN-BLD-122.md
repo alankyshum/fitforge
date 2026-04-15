@@ -180,7 +180,26 @@ CREATE INDEX idx_progress_photos_date ON progress_photos(date);
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — Reviewed 2026-04-15
+
+**UX**: Feature concept is strong. 2-tap capture, pose categorization, and comparison are the right features. But critical gaps block approval.
+
+**Critical Issues (must fix)**:
+1. **Privacy controls missing**: Progress photos are extremely sensitive body images. Must specify: (a) optional PIN/biometric lock for photo section, (b) photos stored in app sandbox only, (c) first-use privacy notice ("Photos stored only on your device"). Without this, users won't trust the feature.
+2. **Navigation architecture wrong**: Plan says add Photos to `app/body/goals.tsx` — but that's a goal-setting form. Entry point should be in `app/(tabs)/progress.tsx` body segment. (Aligns with Tech Lead finding #1.)
+3. **Photo accessibility unspecified**: Plan says "Accessibility labels and roles" in scope but provides zero specifics. Must specify: accessibilityLabel per grid item (date + pose), VoiceOver flow for compare mode, accessibilityState for filter chips.
+4. **No delete recovery**: Photos are irreplaceable. Need soft-delete with 30-day TTL or undo snackbar (matching existing body weight delete pattern).
+5. **Compare mode interaction underspecified**: How does user enter/exit compare mode? What visual indicator? What if they tap same photo twice?
+
+**Major Issues (should fix)**:
+6. Export default should be metadata-only with explicit opt-in for photo data (base64 creates 20MB+ files).
+7. EXIF orientation handling not mentioned.
+8. Missing loading states for capture, resize, save operations.
+
+**Minor Recommendations**:
+9. Store `capture_date` (auto) and `display_date` (user-editable) separately.
+10. Add storage usage indicator in settings.
+11. Use FlashList for gallery grid (aligns with Tech Lead #5).
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** — Reviewed 2026-04-15
