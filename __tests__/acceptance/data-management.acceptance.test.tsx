@@ -125,7 +125,7 @@ describe('Data Management Acceptance', () => {
 
     const { findByLabelText } = renderScreen(<Settings />)
 
-    const btn = await findByLabelText('Export all data as JSON backup')
+    const btn = await findByLabelText('Export all data as JSON')
     fireEvent.press(btn)
 
     await waitFor(() => {
@@ -158,7 +158,7 @@ describe('Data Management Acceptance', () => {
 
     const { findByLabelText } = renderScreen(<Settings />)
 
-    const btn = await findByLabelText('Import FitForge backup')
+    const btn = await findByLabelText('Import data')
     fireEvent.press(btn)
 
     await waitFor(() => {

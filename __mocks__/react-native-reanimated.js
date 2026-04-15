@@ -50,6 +50,7 @@ module.exports = {
     inOut: noop,
   },
   interpolate: (v) => v,
+  interpolateColor: (_value, _inputRange, outputRange) => outputRange[0],
   Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
   runOnUI: (fn) => fn,
   runOnJS: (fn) => fn,

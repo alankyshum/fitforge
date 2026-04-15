@@ -304,7 +304,7 @@ describe('Settings Screen Acceptance', () => {
 
   it('Export All button is pressable and has accessible label', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Export all data as JSON backup')
+    const btn = await findByLabelText('Export all data as JSON')
     expect(btn).toBeTruthy()
     fireEvent.press(btn)
     // Pressing triggers the export — just verify it doesn't crash
@@ -312,7 +312,7 @@ describe('Settings Screen Acceptance', () => {
 
   it('Import button is pressable and has accessible label', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
-    const btn = await findByLabelText('Import FitForge backup')
+    const btn = await findByLabelText('Import data')
     expect(btn).toBeTruthy()
     fireEvent.press(btn)
   })
