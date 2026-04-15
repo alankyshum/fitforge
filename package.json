@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@gorhom/bottom-sheet": "^5.2.9",
     "@quidone/react-native-wheel-picker": "^1.6.4",
     "@react-native-community/netinfo": "^12.0.1",
     "@shopify/flash-list": "2.0.2",
