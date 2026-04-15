@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native"
 import {
-  SegmentedButtons,
+  Chip,
   Text,
   TextInput,
   useTheme,
@@ -18,8 +18,6 @@ import { getBodySettings } from "../../lib/db"
 import {
   solve,
   perSide,
-  kgToLb,
-  lbToKg,
   summarize,
   color,
   KG_PLATES,
@@ -43,7 +41,7 @@ function plateHeight(w: number): number {
   return HEIGHT[w] ?? 40
 }
 
-export function PlateCalculatorContent({ initialWeight, initialUnit }: { initialWeight?: string; initialUnit?: string }) {
+export function PlateCalculatorContent({ initialWeight }: { initialWeight?: string }) {
   const theme = useTheme()
   const [unit, setUnit] = useState<"kg" | "lb">("kg")
   const [target, setTarget] = useState(initialWeight ?? "")
@@ -55,13 +53,12 @@ export function PlateCalculatorContent({ initialWeight, initialUnit }: { initial
     useCallback(() => {
       (async () => {
         const body = await getBodySettings()
-        const u = (initialUnit === "lb" || initialUnit === "kg") ? initialUnit : body.weight_unit
-        setUnit(u as "kg" | "lb")
-        setBar(u === "kg" ? 20 : 45)
+        setUnit(body.weight_unit)
+        setBar(body.weight_unit === "kg" ? 20 : 45)
         if (initialWeight) setTarget(initialWeight)
         setReady(true)
       })()
-    }, [])
+    }, [initialWeight])
   )
 
   const presets = unit === "kg" ? KG_BARS : LB_BARS
@@ -83,18 +80,6 @@ export function PlateCalculatorContent({ initialWeight, initialUnit }: { initial
 
   const label = unit === "kg" ? "kilograms" : "pounds"
 
-  function switchUnit(u: string) {
-    const next = u as "kg" | "lb"
-    if (next === unit) return
-    if (valid) {
-      const converted = next === "lb" ? kgToLb(parsed) : lbToKg(parsed)
-      setTarget(String(converted))
-    }
-    setBar(next === "kg" ? 20 : 45)
-    setCustom("")
-    setUnit(next)
-  }
-
   function selectBar(val: number) {
     setBar(val)
     setCustom("")
@@ -113,110 +98,88 @@ export function PlateCalculatorContent({ initialWeight, initialUnit }: { initial
     return state.grouped
   }, [state])
 
+  const sortedPresets = useMemo(() => [...presets].sort((a, b) => a - b), [presets])
+
   if (!ready) return null
 
   return (
     <View>
-      {/* Unit toggle */}
-      <View accessibilityRole="radiogroup" accessibilityLabel="Unit system">
-        <SegmentedButtons
-          value={unit}
-          onValueChange={switchUnit}
-          buttons={[
-            { value: "kg", label: "kg", accessibilityLabel: "Kilograms" },
-            { value: "lb", label: "lb", accessibilityLabel: "Pounds" },
-          ]}
-          style={styles.segment}
-        />
-      </View>
-
-      {/* Target weight */}
-      <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
-        Target Weight
-      </Text>
-      <TextInput
-        mode="outlined"
-        keyboardType="numeric"
-        value={target}
-        onChangeText={setTarget}
-        placeholder="0"
-        right={<TextInput.Affix text={unit} />}
-        style={styles.input}
-        accessibilityLabel={"Target weight in " + label}
-      />
-
-      {/* Bar weight */}
-      <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
-        Bar Weight
-      </Text>
-      <View accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection" style={styles.bars}>
-        {presets.map(p => (
-          <View
+      {/* Target weight + bar selection */}
+      <View style={styles.inputRow}>
+        <View style={styles.targetWrap}>
+          <TextInput
+            mode="outlined"
+            keyboardType="numeric"
+            value={target}
+            onChangeText={setTarget}
+            placeholder="Weight"
+            dense
+            right={<TextInput.Affix text={unit} />}
+            accessibilityLabel={"Target weight in " + label}
+          />
+        </View>
+        <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+          Bar
+        </Text>
+        {sortedPresets.map(p => (
+          <Chip
             key={p}
+            selected={custom === "" && bar === p}
+            showSelectedOverlay
+            onPress={() => selectBar(p)}
+            compact
             accessibilityRole="radio"
             accessibilityState={{ selected: custom === "" && bar === p }}
-            style={{ minWidth: 48, minHeight: 48 }}
-          >
-            <SegmentedButtons
-              value={custom === "" && bar === p ? String(p) : ""}
-              onValueChange={() => selectBar(p)}
-              buttons={[{ value: String(p), label: p + unit }]}
-              density="medium"
-            />
-          </View>
+            accessibilityLabel={p + " " + label + " bar"}
+          >{p}</Chip>
         ))}
-        <TextInput
-          mode="outlined"
-          keyboardType="numeric"
-          value={custom}
-          onChangeText={v => { setCustom(v); setBar(null) }}
-          placeholder="Custom"
-          dense
-          style={[styles.custom, { minHeight: 48 }]}
-          right={<TextInput.Affix text={unit} />}
-          accessibilityLabel={"Custom bar weight in " + label}
-        />
+        <View style={styles.customBarWrap}>
+          <TextInput
+            mode="outlined"
+            keyboardType="numeric"
+            value={custom}
+            onChangeText={v => { setCustom(v); setBar(null) }}
+            placeholder="Bar"
+            dense
+            accessibilityLabel={"Custom bar weight in " + label}
+          />
+        </View>
       </View>
 
-      {/* Results */}
-      <View accessibilityLiveRegion="polite" style={styles.results}>
-        {!valid && target === "" && (
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>
-            Enter a target weight
-          </Text>
-        )}
+      {/* Barbell always visible */}
+      <Barbell plates={diagram} unit={unit} barbell={barbell || "Empty barbell"} />
 
+      {/* Results */}
+      <View accessibilityLiveRegion="polite">
         {!valid && target !== "" && (
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginTop: 16 }}>
+          <Text variant="bodySmall" style={{ color: theme.colors.error, textAlign: "center" }}>
             Enter a valid weight
           </Text>
         )}
 
         {valid && state && "error" in state && state.error === "low" && (
-          <Text variant="bodyMedium" style={{ color: theme.colors.error, textAlign: "center", marginTop: 16 }}>
+          <Text variant="bodySmall" style={{ color: theme.colors.error, textAlign: "center" }}>
             Weight must exceed bar weight
           </Text>
         )}
 
         {valid && state && "error" in state && state.error === "empty" && (
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
             Target equals bar weight — no plates needed
           </Text>
         )}
 
         {state && !("error" in state) && (
           <>
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 12 }}>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
               ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
             </Text>
 
             {state.rounded && (
-              <Text variant="bodySmall" style={{ color: theme.colors.tertiary, textAlign: "center", marginTop: 4 }}>
+              <Text variant="bodySmall" style={{ color: theme.colors.tertiary, textAlign: "center", marginTop: 2 }}>
                 Rounded to {state.achieved}{unit} (nearest achievable)
               </Text>
             )}
-
-            <Barbell plates={diagram} unit={unit} barbell={barbell} />
           </>
         )}
       </View>
@@ -260,7 +223,7 @@ export function PlateCalculatorContent({ initialWeight, initialUnit }: { initial
 
 export default function PlateCalculator() {
   const theme = useTheme()
-  const params = useLocalSearchParams<{ weight?: string; unit?: string }>()
+  const params = useLocalSearchParams<{ weight?: string }>()
 
   return (
     <>
@@ -274,7 +237,7 @@ export default function PlateCalculator() {
           style={{ backgroundColor: theme.colors.background }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         >
-          <PlateCalculatorContent initialWeight={params.weight} initialUnit={params.unit} />
+          <PlateCalculatorContent initialWeight={params.weight} />
         </ScrollView>
       </KeyboardAvoidingView>
     </>
@@ -327,9 +290,9 @@ const plateStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
-    marginBottom: 12,
-    minHeight: 100,
+    marginTop: 12,
+    marginBottom: 8,
+    minHeight: 80,
   },
   side: {
     flexDirection: "row",
@@ -351,25 +314,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  segment: {
-    marginTop: 8,
-  },
-  input: {
-    fontSize: 18,
-  },
-  bars: {
+  inputRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
     alignItems: "center",
+    gap: 6,
   },
-  custom: {
-    flex: 1,
-    minWidth: 100,
-    fontSize: 14,
+  targetWrap: {
+    width: 120,
   },
-  results: {
-    marginTop: 8,
+  customBarWrap: {
+    width: 72,
   },
   row: {
     flexDirection: "row",

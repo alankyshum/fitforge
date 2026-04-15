@@ -7,73 +7,29 @@ import AxeBuilder from "@axe-core/playwright";
 const KNOWN_LIBRARY_RULES = ["role-img-alt", "nested-interactive"];
 
 /**
- * Complete onboarding so navigation to main app screens works.
+ * Skip onboarding by setting a window flag before page load.
+ * The app's root layout checks `window.__SKIP_ONBOARDING__` on web
+ * and bypasses the onboarding check when it's set.
  *
- * On web with in-memory SQLite, onboarding state doesn't persist across
- * full page reloads. This completes the 3-step onboarding flow:
- * Welcome → Get Started → Setup (pick level) → Continue → Recommend → skip
+ * Must be called once per page context (typically in test.beforeEach).
  */
 export async function skipOnboarding(page: Page) {
+  await page.addInitScript(() => {
+    (window as Record<string, unknown>).__SKIP_ONBOARDING__ = true;
+  });
   await page.goto("/");
-
-  const getStarted = page.getByRole("button", { name: /get started/i });
-  if (await getStarted.isVisible({ timeout: 5_000 }).catch(() => false)) {
-    await completeOnboardingFlow(page);
-  }
-}
-
-async function completeOnboardingFlow(page: Page) {
-  const getStarted = page.getByRole("button", { name: /get started/i });
-  if (await getStarted.isVisible({ timeout: 1_000 }).catch(() => false)) {
-    await getStarted.click();
-    await page.waitForTimeout(500);
-  }
-
-  const beginner = page.getByText("Beginner");
-  if (await beginner.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await beginner.click();
-    await page.waitForTimeout(300);
-  }
-  const cont = page.getByRole("button", { name: /continue/i });
-  if (await cont.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await cont.click();
-    await page.waitForTimeout(1_000);
-  }
-
-  const explore = page.getByRole("button", { name: /explore/i });
-  if (await explore.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    await explore.click();
-    await page
-      .waitForURL(/^\/$|\/exercises|\/\(tabs\)/, { timeout: 5_000 })
-      .catch(() => {});
-  }
+  await page.waitForTimeout(500);
 }
 
 /**
- * Navigate to a route within the app. On web with in-memory SQLite,
- * each page.goto() loses DB state, so we must re-complete onboarding
- * on every navigation.
+ * Navigate to a route. The __SKIP_ONBOARDING__ init script persists
+ * across navigations within the same page context, so each goto()
+ * automatically bypasses onboarding.
  */
 export async function navigateTo(page: Page, path: string) {
   if (path === "/" || path === "") return;
-
   await page.goto(path);
-  await page.waitForTimeout(500);
-
-  // The onboarding gate may have redirected us — complete it
-  const getStarted = page.getByRole("button", { name: /get started/i });
-  if (await getStarted.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await completeOnboardingFlow(page);
-    // We're now at / — need to navigate to the target via the SPA
-    // Use page.evaluate to push the route via history API + trigger a re-render
-    if (path !== "/" && path !== "") {
-      await page.evaluate((p) => {
-        window.history.pushState({}, "", p);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      }, path);
-      await page.waitForTimeout(1_000);
-    }
-  }
+  await page.waitForTimeout(800);
 }
 
 /**

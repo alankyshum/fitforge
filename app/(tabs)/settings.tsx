@@ -413,15 +413,9 @@ export default function Settings() {
           )}
 
           {!reminders && scheduleCount === 0 && (
-            <Button
-              mode="text"
-              onPress={() => router.push("/schedule")}
-              compact
-              style={{ alignSelf: "flex-start" }}
-              accessibilityLabel="Set up your weekly schedule"
-            >
-              Set up weekly schedule
-            </Button>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+              Set a weekly schedule on your active program to enable reminders.
+            </Text>
           )}
 
           {permDenied && !reminders && (

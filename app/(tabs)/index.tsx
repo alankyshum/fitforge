@@ -435,30 +435,8 @@ export default function Workouts() {
         </View>
       )}
 
-      {/* Schedule + Quick Start */}
+      {/* Quick Start */}
       <View style={styles.actionRow}>
-        {!adherence.some((a) => a.scheduled) && (
-          <Button
-            mode="text"
-            icon="calendar-plus"
-            compact
-            onPress={() => router.push("/schedule")}
-            accessibilityLabel="Set weekly schedule"
-          >
-            Set Schedule
-          </Button>
-        )}
-        {adherence.some((a) => a.scheduled) && (
-          <Button
-            mode="text"
-            icon="pencil"
-            compact
-            onPress={() => router.push("/schedule")}
-            accessibilityLabel="Edit weekly schedule"
-          >
-            Edit Schedule
-          </Button>
-        )}
         <Button
           mode="contained"
           icon="flash"

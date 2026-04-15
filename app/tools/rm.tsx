@@ -57,41 +57,33 @@ export function RMCalculatorContent() {
 
   return (
     <View>
-      <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginBottom: 8 }}>
-        Weight
-      </Text>
-      <TextInput
-        mode="outlined"
-        keyboardType="numeric"
-        value={weight}
-        onChangeText={setWeight}
-        placeholder="0"
-        right={<TextInput.Affix text={unit} />}
-        style={styles.input}
-        accessibilityLabel={`Weight in ${label}`}
-      />
-
-      <Text variant="titleMedium" style={{ color: theme.colors.onBackground, marginTop: 16, marginBottom: 8 }}>
-        Reps
-      </Text>
-      <TextInput
-        mode="outlined"
-        keyboardType="numeric"
-        value={reps}
-        onChangeText={setReps}
-        placeholder="0"
-        style={styles.input}
-        accessibilityLabel="Number of repetitions"
-      />
-
-      {valid && !results && (
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 16 }}>
-          Enter weight and reps to calculate
-        </Text>
-      )}
+      <View style={styles.inputRow}>
+        <View style={styles.weightWrap}>
+          <TextInput
+            mode="outlined"
+            keyboardType="numeric"
+            value={weight}
+            onChangeText={setWeight}
+            placeholder="Weight"
+            right={<TextInput.Affix text={unit} />}
+            accessibilityLabel={`Weight in ${label}`}
+          />
+        </View>
+        <Text variant="titleLarge" style={{ color: theme.colors.onSurfaceVariant }}>×</Text>
+        <View style={styles.repsWrap}>
+          <TextInput
+            mode="outlined"
+            keyboardType="numeric"
+            value={reps}
+            onChangeText={setReps}
+            placeholder="Reps"
+            accessibilityLabel="Number of repetitions"
+          />
+        </View>
+      </View>
 
       {!valid && weight !== "" && (
-        <Text variant="bodyMedium" style={{ color: theme.colors.error, marginTop: 12, textAlign: "center" }}>
+        <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8, textAlign: "center" }}>
           {parsed <= 0 || isNaN(parsed) ? "Enter a weight" : "Enter reps"}
         </Text>
       )}
@@ -154,7 +146,7 @@ export function RMCalculatorContent() {
                   <IconButton
                     icon="weight"
                     size={18}
-                    onPress={() => router.push(`/tools/plates?weight=${row.weight}&unit=${unit}`)}
+                    onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
                     accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
                     accessibilityRole="button"
                     style={{ minWidth: 48, minHeight: 48 }}
@@ -200,8 +192,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  input: {
-    fontSize: 18,
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  weightWrap: {
+    flex: 1,
+  },
+  repsWrap: {
+    width: 100,
   },
   results: {
     marginTop: 24,

@@ -54,7 +54,12 @@ export default function RootLayout() {
     getDatabase()
       .then(async () => {
         if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
-        const complete = await isOnboardingComplete();
+        // Allow e2e tests to bypass onboarding via window flag
+        const skipOnboarding =
+          Platform.OS === "web" &&
+          typeof window !== "undefined" &&
+          (window as Record<string, unknown>).__SKIP_ONBOARDING__ === true;
+        const complete = skipOnboarding || (await isOnboardingComplete());
         setOnboarded(complete);
         setReady(true);
         SplashScreen.hideAsync();

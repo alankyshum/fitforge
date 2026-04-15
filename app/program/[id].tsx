@@ -628,6 +628,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 24,
   },
+  scheduleSection: {
+    marginTop: 24,
+  },
+  daySlot: {
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  dayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dayLabel: {
+    width: 36,
+    fontWeight: "600",
+  },
+  dayInfo: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  picker: {
+    width: "100%",
+    maxHeight: "80%",
+  },
+  pickItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 48,
+    justifyContent: "center",
+  },
   history: {
     marginTop: 24,
   },

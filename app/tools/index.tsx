@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Card, Text, useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack } from "expo-router";
@@ -8,99 +7,57 @@ import { PlateCalculatorContent } from "./plates";
 import { RMCalculatorContent } from "./rm";
 import { TimerContent } from "./timer";
 
-type ToolKey = "plates" | "rm" | "timer";
-
-const TOOLS: { key: ToolKey; title: string; subtitle: string; icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"] }[] = [
-  {
-    key: "plates",
-    title: "Plate Calculator",
-    subtitle: "Calculate plates for any barbell weight",
-    icon: "weight",
-  },
-  {
-    key: "rm",
-    title: "1RM Calculator",
-    subtitle: "Estimate your one-rep max from submaximal sets",
-    icon: "arm-flex",
-  },
-  {
-    key: "timer",
-    title: "Interval Timer",
-    subtitle: "Tabata · EMOM · AMRAP",
-    icon: "timer-outline",
-  },
-];
-
-const CONTENT: Record<ToolKey, React.FC> = {
-  plates: () => <PlateCalculatorContent initialWeight="" initialUnit="" />,
-  rm: RMCalculatorContent,
-  timer: TimerContent,
-};
-
 export default function ToolsHub() {
   const theme = useTheme();
   const layout = useLayout();
-  const [expanded, setExpanded] = useState<ToolKey | null>(null);
-
-  function toggle(key: ToolKey) {
-    setExpanded(prev => (prev === key ? null : key));
-  }
 
   return (
     <>
       <Stack.Screen options={{ title: "Workout Tools" }} />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={{ padding: layout.horizontalPadding, paddingVertical: 24, gap: 12 }}
+        contentContainerStyle={{ padding: layout.horizontalPadding, paddingVertical: 24, gap: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        {TOOLS.map((tool) => {
-          const isOpen = expanded === tool.key;
-          const Content = CONTENT[tool.key];
-          return (
-            <Card
-              key={tool.key}
-              style={{ backgroundColor: theme.colors.surface }}
-            >
-              <Pressable
-                onPress={() => toggle(tool.key)}
-                accessibilityLabel={`${isOpen ? "Collapse" : "Expand"} ${tool.title}`}
-                accessibilityRole="button"
-              >
-                <Card.Content style={styles.cardHeader}>
-                  <MaterialCommunityIcons
-                    name={tool.icon}
-                    size={28}
-                    color={theme.colors.primary}
-                    style={styles.icon}
-                  />
-                  <View style={styles.textCol}>
-                    <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
-                      {tool.title}
-                    </Text>
-                    {!isOpen && (
-                      <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                        {tool.subtitle}
-                      </Text>
-                    )}
-                  </View>
-                  <MaterialCommunityIcons
-                    name={isOpen ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color={theme.colors.onSurfaceVariant}
-                  />
-                </Card.Content>
-              </Pressable>
-              {isOpen && (
-                <Card.Content style={styles.cardBody}>
-                  <Content />
-                </Card.Content>
-              )}
-            </Card>
-          );
-        })}
+        <ToolCard icon="timer-outline" title="Interval Timer">
+          <TimerContent />
+        </ToolCard>
+
+        <ToolCard icon="arm-flex" title="1RM Calculator">
+          <RMCalculatorContent />
+        </ToolCard>
+
+        <ToolCard icon="weight" title="Plate Calculator">
+          <PlateCalculatorContent />
+        </ToolCard>
       </ScrollView>
     </>
+  );
+}
+
+function ToolCard({ icon, title, children }: {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  title: string;
+  children: React.ReactNode;
+}) {
+  const theme = useTheme();
+  return (
+    <Card style={{ backgroundColor: theme.colors.surface }}>
+      <Card.Content>
+        <View style={styles.header}>
+          <MaterialCommunityIcons
+            name={icon}
+            size={24}
+            color={theme.colors.primary}
+            style={styles.icon}
+          />
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface }}>
+            {title}
+          </Text>
+        </View>
+        {children}
+      </Card.Content>
+    </Card>
   );
 }
 
@@ -108,17 +65,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  cardHeader: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 16,
   },
   icon: {
-    marginRight: 16,
-  },
-  textCol: {
-    flex: 1,
-  },
-  cardBody: {
-    paddingTop: 8,
+    marginRight: 12,
   },
 });

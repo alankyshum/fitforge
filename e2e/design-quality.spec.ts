@@ -42,7 +42,6 @@ const TOOL_SCREENS: Screen[] = [
 
 const STANDALONE_SCREENS: Screen[] = [
   { name: "Workout History", path: "/history" },
-  { name: "Weekly Schedule", path: "/schedule" },
   { name: "Feedback", path: "/feedback" },
   { name: "Error Log", path: "/errors" },
   { name: "Body Measurements", path: "/body/measurements" },
