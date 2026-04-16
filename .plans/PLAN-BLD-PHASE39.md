@@ -166,7 +166,20 @@ Add a new **Calendar** screen accessible from the History screen (as a toggle be
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-16)
+
+Critical issues found:
+1. **[C-1]** Plan doesn't acknowledge that `app/history.tsx` already implements a monthly calendar grid (day cells, dot indicators, month nav, day selection, today highlighting, a11y labels). Must rewrite as enhancement, not greenfield.
+2. **[C-A11Y]** Missing screen reader focus management for month changes and day detail panel. Missing VoiceOver/TalkBack swipe conflict resolution.
+3. **[C-TOUCH]** Must specify minimum 48dp touch target for calendar cells (current code uses 44dp minimum, already below SKILL requirement).
+
+Major issues:
+- **[M-1]** List/Calendar toggle may be a UX regression — current unified view shows calendar + list together.
+- **[M-2]** Month Summary Bar duplicates existing Streak Summary Card — clarify relationship.
+- **[M-3]** Gesture conflict strategy needs concrete specification (recognizer type, activation threshold, scope).
+- **[M-A11Y]** Missing `useReducedMotion()` fallback for Reanimated animations.
+
+Full review posted on BLD-242 issue comments.
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
