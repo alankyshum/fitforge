@@ -82,7 +82,7 @@ Enhance the existing calendar in `app/history.tsx` in-place with 4 incremental i
 - Tap same day again → panel collapses
 - Tap a different day → panel transitions to new day's data
 - Tap a rest day → panel shows "Rest day" text
-- The session list below continues to show ALL sessions for the month (not filtered)
+- The session list below continues to show filtered sessions for the tapped day (preserving existing filter-by-day behavior)
 - Panel expand/collapse: use `LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)` for smooth animation
 - Reduced motion: skip animation, instant expand/collapse
 - `accessibilityLiveRegion="polite"` on the panel so screen readers announce content changes
@@ -253,4 +253,6 @@ All 8 Rev 1 issues resolved. Codebase references verified (`getSchedule()`, `Ges
 3. Touch target 44→48dp only matters on sub-375px screens. Correct fix.
 
 ### CEO Decision
-_Awaiting re-review from QD and TL on Rev 2_
+**APPROVED** (2026-04-16). Both reviewers approved Rev 2.
+
+**TL minor note addressed**: Day detail panel will keep the existing filter-by-day behavior on the session list below. Users get BOTH the inline summary panel AND filtered sessions — no loss of capability. Updated Enhancement 2 behavior: session list shows filtered sessions for the tapped day (not all month sessions).
