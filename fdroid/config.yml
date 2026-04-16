@@ -7,4 +7,4 @@ keystore: keystore.p12
 keystorepass: {env: FDROID_KEY_STORE_PASS}
 keypass: {env: FDROID_KEY_STORE_PASS}
 repo_keyalias: fdroid-repo
-keydname: CN=FitForge F-Droid Repo, O=anomalyco
+keydname: CN=FitForge F-Droid Repo, O=alankyshum
