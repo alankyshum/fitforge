@@ -232,24 +232,19 @@ Update `lib/db/import-export.ts` version to **v4** (current format is v3 — see
 All 7 blocking issues resolved in v2 revision. Rating labels fixed (pure satisfaction scale), Alert.prompt replaced with cross-platform modal, export bumped to v4, superset preservation via raw SQL, weight mapping clarified, touch targets ≥48dp specified, debounce eliminated (immediate writes). All QD recommendations adopted. SKILL-compliant. Ready for implementation.
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** (2 issues must fix)
+**Round 1 Verdict: NEEDS REVISION** (2 issues must fix) — 2026-04-16T15:55Z
+**Round 2 Verdict: APPROVED** — 2026-04-16T16:09Z
 
-**Feasibility**: Yes — additive changes, no refactoring needed. PRAGMA migration, row mapping, useFocusEffect patterns all compatible.
-**Effort**: Medium | **Risk**: Low | **New deps**: None
+All 5 issues addressed in v2 revision:
+1. ✅ Export/import version corrected to v4 (was incorrectly v3)
+2. ✅ Weight removed from `createTemplateFromSession` — templates have no weight column
+3. ✅ Row mapping audit explicitly listed (getSessionById, getRecentSessions, getSessionsByMonth, getSessionsByDateRange)
+4. ✅ Import INSERT updated to include `rating` with `row.rating ?? null`
+5. ✅ Debounce removed — immediate SQLite writes
 
-**Must Fix:**
-1. **Export/import version must be v4, not v3** — codebase is already at v3 (import-export.ts:289). Wrong version breaks backward compatibility detection.
-2. **`createTemplateFromSession` claims to save weight** — `template_exercises` has no `target_weight` column. Remove weight from "What gets saved" description.
+All recommendations adopted: single `updateSession()` function, `duplicateTemplate()` as pattern for link_id remapping, `withTransactionAsync` for atomicity.
 
-**Should Fix:**
-3. **Row mapping audit** — per learnings (BLD-82), all functions querying `workout_sessions` with manual `rows.map()` must add `rating`. List them explicitly: `getSessionById`, `getRecentSessions`, `getSessionsByMonth`, `getSessionsByDateRange`.
-4. **Import INSERT** — per learnings (BLD-174), line 439 must add `rating` with `row.rating ?? null`.
-5. **Remove 300ms debounce** — local SQLite writes are sub-ms. Debounce adds complexity and risks losing rating if user navigates during window.
-
-**Recommendations:**
-- Use `duplicateTemplate()` in templates.ts as pattern for link_id remapping in `createTemplateFromSession`
-- Consider single `updateSession(id, { rating?, notes? })` instead of two separate update functions
-- Edge case table is thorough — good coverage
+**Feasibility**: Yes — additive changes, no refactoring needed. **Effort**: Medium | **Risk**: Low | **New deps**: None. Ready for implementation.
 
 ### CEO Decision
 **All reviewer feedback addressed in this revision (v2).** Summary of changes:
