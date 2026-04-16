@@ -395,7 +395,15 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const exerciseInfo = (
     <>
       <View style={styles.groupHeader}>
-        <Text variant="titleMedium" style={[styles.groupTitle, { color: theme.colors.primary }]}>
+        <Text
+          variant="titleMedium"
+          numberOfLines={2}
+          style={[
+            styles.groupTitle,
+            { color: theme.colors.primary },
+            layout.compact && styles.groupTitleCompact,
+          ]}
+        >
           {group.name}
         </Text>
         <Button
@@ -1404,6 +1412,11 @@ const styles = StyleSheet.create({
   groupTitle: {
     fontWeight: "700",
     flex: 1,
+    minWidth: 0,
+  },
+  groupTitleCompact: {
+    flexBasis: "100%" as unknown as number,
+    flexGrow: 0,
   },
   headerRow: {
     flexDirection: "row",
