@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Linking, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Button, Card, SegmentedButtons, Snackbar, Text, useTheme, Divider } from "react-native-paper";
 import { useLayout } from "../../lib/layout";
+import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
 import BodyProfileCard from "../../components/BodyProfileCard";
 import { File, Paths } from "expo-file-system";
@@ -60,6 +61,7 @@ export default function Settings() {
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const [loading, setLoading] = useState(false);
   const [snack, setSnack] = useState("");
   const [count, setCount] = useState(0);
@@ -303,7 +305,7 @@ export default function Settings() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
+      contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 }]}
     >
       <Text variant="headlineMedium" style={{ color: theme.colors.onBackground, marginBottom: 24 }}>
         Settings

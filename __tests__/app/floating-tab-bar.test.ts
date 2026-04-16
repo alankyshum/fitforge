@@ -1,0 +1,152 @@
+import * as fs from "fs";
+import * as path from "path";
+
+const floatingTabBarSrc = fs.readFileSync(
+  path.resolve(__dirname, "../../components/FloatingTabBar.tsx"),
+  "utf-8"
+);
+
+const layoutSrc = fs.readFileSync(
+  path.resolve(__dirname, "../../app/(tabs)/_layout.tsx"),
+  "utf-8"
+);
+
+describe("FloatingTabBar component (BLD-212)", () => {
+  it("exports FLOATING_TAB_BAR_HEIGHT constant", () => {
+    expect(floatingTabBarSrc).toContain("export const FLOATING_TAB_BAR_HEIGHT");
+  });
+
+  it("exports useFloatingTabBarHeight hook", () => {
+    expect(floatingTabBarSrc).toContain("export function useFloatingTabBarHeight");
+  });
+
+  it("uses useSafeAreaInsets for bottom padding", () => {
+    expect(floatingTabBarSrc).toContain("useSafeAreaInsets");
+    expect(floatingTabBarSrc).toContain("insets.bottom");
+  });
+
+  it("positions bar with position absolute", () => {
+    expect(floatingTabBarSrc).toContain('position: "absolute"');
+  });
+
+  it("has border radius for floating design", () => {
+    expect(floatingTabBarSrc).toContain("borderRadius");
+    expect(floatingTabBarSrc).toContain("BAR_BORDER_RADIUS");
+  });
+
+  it("has elevation/shadow for floating effect", () => {
+    expect(floatingTabBarSrc).toContain("elevation");
+    expect(floatingTabBarSrc).toContain("shadowColor");
+    expect(floatingTabBarSrc).toContain("shadowOffset");
+  });
+
+  it("defines center button with circular shape", () => {
+    expect(floatingTabBarSrc).toContain("CENTER_BUTTON_SIZE");
+    expect(floatingTabBarSrc).toContain("borderRadius: CENTER_BUTTON_SIZE / 2");
+  });
+
+  it("center button has proper accessibility", () => {
+    expect(floatingTabBarSrc).toContain('accessibilityRole="tab"');
+    expect(floatingTabBarSrc).toContain('accessibilityLabel="Workouts"');
+    expect(floatingTabBarSrc).toContain('accessibilityHint="Navigate to workout screen"');
+    expect(floatingTabBarSrc).toContain("accessibilityState={{ selected:");
+  });
+
+  it("all tab buttons have accessibilityRole tab", () => {
+    const tabRoleCount = (floatingTabBarSrc.match(/accessibilityRole="tab"/g) || []).length;
+    expect(tabRoleCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it("handles keyboard show/hide events", () => {
+    expect(floatingTabBarSrc).toContain("keyboardDidShow");
+    expect(floatingTabBarSrc).toContain("keyboardDidHide");
+    expect(floatingTabBarSrc).toContain("keyboardWillShow");
+    expect(floatingTabBarSrc).toContain("keyboardWillHide");
+  });
+
+  it("animates bar off-screen on keyboard show", () => {
+    expect(floatingTabBarSrc).toContain("translateY");
+    expect(floatingTabBarSrc).toContain("withTiming");
+  });
+
+  it("respects reduced motion preference", () => {
+    expect(floatingTabBarSrc).toContain("useReducedMotion");
+  });
+
+  it("defines correct tab order (exercises, nutrition, index, progress, settings)", () => {
+    const orderMatch = floatingTabBarSrc.match(/TAB_ORDER\s*=\s*\[([^\]]+)\]/);
+    expect(orderMatch).not.toBeNull();
+    const order = orderMatch![1].replace(/["\s]/g, "").split(",");
+    expect(order).toEqual(["exercises", "nutrition", "index", "progress", "settings"]);
+  });
+
+  it("minimum touch targets are at least 48dp", () => {
+    expect(floatingTabBarSrc).toContain("minWidth: 48");
+    expect(floatingTabBarSrc).toContain("minHeight: 48");
+  });
+});
+
+describe("Tab layout uses FloatingTabBar (BLD-212)", () => {
+  it("imports FloatingTabBar", () => {
+    expect(layoutSrc).toContain("FloatingTabBar");
+  });
+
+  it("passes FloatingTabBar as tabBar prop", () => {
+    expect(layoutSrc).toContain("tabBar=");
+    expect(layoutSrc).toContain("FloatingTabBar");
+  });
+
+  it("defines exercises tab screen", () => {
+    expect(layoutSrc).toContain('name="exercises"');
+  });
+
+  it("defines nutrition tab screen", () => {
+    expect(layoutSrc).toContain('name="nutrition"');
+  });
+
+  it("defines index (Workouts) tab screen", () => {
+    expect(layoutSrc).toContain('name="index"');
+  });
+
+  it("defines progress tab screen", () => {
+    expect(layoutSrc).toContain('name="progress"');
+  });
+
+  it("defines settings tab screen", () => {
+    expect(layoutSrc).toContain('name="settings"');
+  });
+
+  it("does not use old tabBarStyle configuration", () => {
+    expect(layoutSrc).not.toContain("tabBarActiveTintColor");
+    expect(layoutSrc).not.toContain("tabBarInactiveTintColor");
+    expect(layoutSrc).not.toContain("tabBarStyle");
+  });
+});
+
+describe("Tab screens use useFloatingTabBarHeight (BLD-212)", () => {
+  const screenFiles = [
+    "index.tsx",
+    "exercises.tsx",
+    "nutrition.tsx",
+    "progress.tsx",
+    "settings.tsx",
+  ];
+
+  for (const file of screenFiles) {
+    it(`${file} imports useFloatingTabBarHeight`, () => {
+      const src = fs.readFileSync(
+        path.resolve(__dirname, `../../app/(tabs)/${file}`),
+        "utf-8"
+      );
+      expect(src).toContain("useFloatingTabBarHeight");
+    });
+
+    it(`${file} uses tabBarHeight for padding`, () => {
+      const src = fs.readFileSync(
+        path.resolve(__dirname, `../../app/(tabs)/${file}`),
+        "utf-8"
+      );
+      expect(src).toContain("tabBarHeight");
+    });
+  }
+});

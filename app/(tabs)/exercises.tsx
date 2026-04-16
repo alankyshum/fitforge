@@ -22,6 +22,7 @@ import { semantic, difficultyText, CATEGORY_ICONS, DIFFICULTY_COLORS, muscle } f
 import { useLayout } from "../../lib/layout";
 import { MuscleMap } from "../../components/MuscleMap";
 import { useFocusRefetch } from "../../lib/query";
+import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 
 type FilterType = Category | "custom";
 const FILTER_ALL: FilterType[] = [...CATEGORIES, "custom"];
@@ -30,6 +31,7 @@ export default function Exercises() {
   const theme = useTheme();
   const router = useRouter();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const mc = theme.dark ? muscle.dark : muscle.light;
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<FilterType>>(new Set());
@@ -206,6 +208,7 @@ export default function Exercises() {
         keyExtractor={keyExtractor}
         numColumns={1}
         ListEmptyComponent={empty}
+        contentContainerStyle={{ paddingBottom: tabBarHeight }}
       />
       <FAB
         icon="plus"

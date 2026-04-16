@@ -41,6 +41,7 @@ import {
 } from "../../lib/db";
 import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
 import { useLayout } from "../../lib/layout";
+import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { toDisplay, toKg } from "../../lib/units";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WeeklySummary from "../../components/WeeklySummary";
@@ -58,6 +59,7 @@ function today(): string {
 export default function Progress() {
   const theme = useTheme();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const [segment, setSegment] = useState("workouts");
@@ -365,7 +367,7 @@ export default function Progress() {
         data={[]}
         renderItem={null}
         style={{ flex: 1 }}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 16 }]}
         ListHeaderComponent={
           layout.atLeastMedium ? (
             <>

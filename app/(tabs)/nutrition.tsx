@@ -28,6 +28,7 @@ import type { DailyLog, FoodEntry, MacroTargets, Meal } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
 import { semantic } from "../../constants/theme";
 import { useLayout } from "../../lib/layout";
+import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import { todayKey, formatDateKey } from "../../lib/format";
 import SwipeToDelete from "../../components/SwipeToDelete";
 
@@ -45,6 +46,7 @@ function label(d: Date): string {
 export default function Nutrition() {
   const theme = useTheme();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const [date, setDate] = useState(new Date());
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [summary, setSummary] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
@@ -161,7 +163,7 @@ export default function Nutrition() {
       sections={sections}
       keyExtractor={(item) => item.id}
       style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 16 }]}
       stickySectionHeadersEnabled={false}
       renderSectionHeader={({ section }) => (
         <Text variant="titleSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
@@ -238,7 +240,7 @@ export default function Nutrition() {
     <FlashList
       data={favorites}
       keyExtractor={(f) => f.id}
-      contentContainerStyle={styles.addContent}
+      contentContainerStyle={[styles.addContent, { paddingBottom: tabBarHeight + 16 }]}
       renderItem={({ item: f }) => (
         <Card
           style={[styles.favCard, { backgroundColor: theme.colors.surfaceVariant }]}

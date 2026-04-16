@@ -53,6 +53,7 @@ import { useFocusRefetch } from "../../lib/query";
 import { useSnackbar } from "../../components/SnackbarProvider";
 import { useLayout } from "../../lib/layout";
 import { flowCardStyle } from "../../components/ui/FlowContainer";
+import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 
 async function loadHomeData() {
   const [tpls, sess, act, timestamps, prData, progs, nw, sched, done, adh] = await Promise.all([
@@ -109,6 +110,7 @@ export default function Workouts() {
   const queryClient = useQueryClient();
   const { showSnack } = useSnackbar();
   const layout = useLayout();
+  const tabBarHeight = useFloatingTabBarHeight();
   const [segment, setSegment] = useState("templates");
   const [menu, setMenu] = useState<string | null>(null);
 
@@ -238,7 +240,7 @@ export default function Workouts() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16 }}
+      contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 16 }}
     >
       {/* Stats Row */}
       <View style={styles.statsRow}>

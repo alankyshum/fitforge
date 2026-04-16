@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 92
+Total learnings: 93
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 44 learnings
+- [React Native + Expo](patterns/react-native.md) — 45 learnings
 - [Testing](patterns/testing.md) — 6 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-183 | Debounced Save Must Clear Timer on Unmount and Guard Async State | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-205 | Absolute-Positioned Bars Need Exported Height Constants | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-205 | Android overflow: visible Does Not Propagate Touches | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-16 | BLD-205 | Android Elevation Clips to Parent View Bounds | Pitfalls | [build-config.md](pitfalls/build-config.md) |

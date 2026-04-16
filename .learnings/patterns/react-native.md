@@ -353,3 +353,11 @@
 **Learning**: When a tab bar or any persistent UI element uses `position: 'absolute'`, the layout system does not reserve space for it. React Navigation's `useBottomTabBarHeight()` depends on the default layout-flow tab bar and returns 0 for custom absolute-positioned bars. Every scrollable screen must manually add bottom padding equal to the bar's height plus safe area insets.
 **Action**: When implementing an absolute-positioned persistent bar, export a height constant (e.g., `FLOATING_TAB_BAR_HEIGHT`) and a hook (e.g., `useFloatingTabBarHeight()`) that includes safe area insets. Update ALL screens that scroll behind the bar in the PR same do not defer this to a follow-up, as every screen will have content hidden behind the bar until patched. 
 **Tags**: react-native, position-absolute, tab-bar, content-padding, useBottomTabBarHeight, safe-area, layout, navigation
+
+### Debounced Save Must Clear Timer on Unmount and Guard Async State
+**Source**: BLD-183/188 — Settings body profile inline editing
+**Date**: 2026-04-16
+**Context**: Replacing a modal-based body profile editor with inline fields used `setTimeout`-based debounced save on blur. Code review flagged a MAJOR issue: the timer was never cleared on unmount, so the save callback could fire after the component unmounted and call state setters on an unmounted component.
+**Learning**: Any `setTimeout` or `setInterval` used for debounced saves must be stored in a `useRef` and cleared in the component's unmount cleanup. Additionally, async operations triggered by the timer (DB writes, API calls) should guard state updates with an `isMounted` ref to prevent "setState on unmounted component" warnings and potential memory leaks.
+**Action**: When implementing debounced auto-save: (1) store the timer ID in `useRef`, (2) clear it in `useEffect` cleanup (`return () => clearTimeout(ref.current)`), (3) create an `isMounted` ref set to `true` on mount and `false` on unmount, (4) guard all post-async `setState` calls with `if (isMounted.current)`. This pattern applies to any component that triggers delayed or async writes.
+**Tags**: react, useref, settimeout, debounce, auto-save, unmount, cleanup, memory-leak, useeffect
