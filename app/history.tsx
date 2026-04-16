@@ -87,6 +87,7 @@ function HistoryScreen() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const dayDetailRef = useRef<View>(null);
   const selectedCellRef = useRef<View>(null);
   const prevSelected = useRef<string | null>(null);
@@ -108,12 +109,18 @@ function HistoryScreen() {
 
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled().then(setScreenReaderEnabled);
-    const sub = AccessibilityInfo.addEventListener(
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotionEnabled);
+    const srSub = AccessibilityInfo.addEventListener(
       "screenReaderChanged",
       setScreenReaderEnabled
     );
+    const rmSub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReduceMotionEnabled
+    );
     return () => {
-      sub.remove();
+      srSub.remove();
+      rmSub.remove();
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);
@@ -251,7 +258,7 @@ function HistoryScreen() {
       Gesture.Pan()
         .activeOffsetX([-SWIPE_THRESHOLD, SWIPE_THRESHOLD])
         .enabled(!screenReaderEnabled)
-        .onEnd((e) => {
+        .onEnd((e: { translationX: number }) => {
           if (e.translationX < -SWIPE_THRESHOLD) {
             changeMonth(1);
           } else if (e.translationX > SWIPE_THRESHOLD) {
@@ -285,12 +292,9 @@ function HistoryScreen() {
   const tapDay = (key: string) => {
     setQuery("");
     setResults(null);
-    // Check reduced motion for LayoutAnimation
-    AccessibilityInfo.isReduceMotionEnabled().then((reduced) => {
-      if (!reduced) {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      }
-    });
+    if (!reduceMotionEnabled) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
     setSelected(selected === key ? null : key);
   };
 
@@ -310,6 +314,7 @@ function HistoryScreen() {
   const offset = weekday(new Date(year, month, 1));
   const today = new Date();
   const todayKey = formatDateKey(today.getTime());
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const cellSize = Math.max(MIN_TOUCH_TARGET, Math.floor(layout.width / 7) - 4);
 
   const renderDay = (day: number) => {
@@ -320,7 +325,7 @@ function HistoryScreen() {
     const isSel = key === selected;
     const dayOfWeek = weekday(d);
     const scheduleEntry = scheduleMap.get(dayOfWeek);
-    const isPast = d.getTime() < today.setHours(0, 0, 0, 0);
+    const isPast = d.getTime() < todayMidnight;
     const isFuture = d.getTime() > Date.now();
     const isScheduled = !!scheduleEntry;
     const isMissedScheduled = isScheduled && isPast && count === 0;
@@ -819,15 +824,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   countBadge: {
-    minWidth: 14,
-    height: 14,
-    borderRadius: 7,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 2,
   },
   countBadgeText: {
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
   },
