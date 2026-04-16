@@ -361,3 +361,11 @@
 **Learning**: Any `setTimeout` or `setInterval` used for debounced saves must be stored in a `useRef` and cleared in the component's unmount cleanup. Additionally, async operations triggered by the timer (DB writes, API calls) should guard state updates with an `isMounted` ref to prevent "setState on unmounted component" warnings and potential memory leaks.
 **Action**: When implementing debounced auto-save: (1) store the timer ID in `useRef`, (2) clear it in `useEffect` cleanup (`return () => clearTimeout(ref.current)`), (3) create an `isMounted` ref set to `true` on mount and `false` on unmount, (4) guard all post-async `setState` calls with `if (isMounted.current)`. This pattern applies to any component that triggers delayed or async writes.
 **Tags**: react, useref, settimeout, debounce, auto-save, unmount, cleanup, memory-leak, useeffect
+
+### Use useLayout().horizontalPadding for All Screen-Level Horizontal Padding
+**Source**: BLD-185 — Programme detail page padding & consistent container audit (GitHub #95)
+**Date**: 2026-04-16
+**Context**: An audit of all FitForge routes revealed 13 screens using hardcoded `padding: 16` instead of the responsive `useLayout()` hook. This caused inconsistent padding on medium/expanded window classes and made the programme detail page look misaligned.
+**Learning**: FitForge's `lib/layout.ts` exports a `useLayout()` hook that returns `horizontalPadding` — a responsive value (16px compact, 24px medium, 32px expanded) based on Material 3 window size classes. All screen-level containers must use this value instead of hardcoded padding. When migrating, split `padding: N` into `paddingVertical: N` (keep static) plus `paddingHorizontal: layout.horizontalPadding` (responsive). Apply via `contentContainerStyle` on ScrollView/FlashList, or directly on the outer View's style.
+**Action**: When creating or editing any screen component: (1) import `useLayout` from `lib/layout`, (2) call `const layout = useLayout()` in the component body, (3) apply `paddingHorizontal: layout.horizontalPadding` to the outermost scrollable container's `contentContainerStyle` or the root View's style. Never hardcode horizontal padding values on screen-level containers.
+**Tags**: react-native, layout, padding, responsive, useLayout, material-design, window-class, consistency
