@@ -139,3 +139,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-182 | LEARNINGS_EXTRACTED | 2026-04-16 |
 | BLD-188 | NO_LEARNINGS | 2026-04-16 |
 | BLD-205 | LEARNINGS_EXTRACTED | 2026-04-16 |
+| BLD-183 | LEARNINGS_EXTRACTED | 2026-04-16 |
