@@ -130,3 +130,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-168 | NO_LEARNINGS | 2026-04-15 |
 | BLD-178 | NO_LEARNINGS | 2026-04-15 |
 | BLD-176 | NO_LEARNINGS | 2026-04-16 |
+| BLD-174 | LEARNINGS_EXTRACTED | 2026-04-16 |
