@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 95
+Total learnings: 97
 
 ## How to Use This Knowledge Base
 
@@ -41,6 +41,8 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-16 | BLD-203 | Flex Text Overflow: minWidth: 0 and Conditional flexBasis for Responsive Wrapping | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-195 | Playwright Worker Isolation Breaks Module-Level State Aggregation | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-16 | BLD-183 | Debounced Save Must Clear Timer on Unmount and Guard Async State | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-16 | BLD-200/202 | Adding Module Exports Breaks Partial jest.mock() Declarations | Patterns | [testing.md](patterns/testing.md) |
+| 2026-04-16 | BLD-200/202 | Use @gorhom/bottom-sheet Instead of Modal for Expandable Drawers | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-205 | Absolute-Positioned Bars Need Exported Height Constants | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-205 | Android overflow: visible Does Not Propagate Touches | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-16 | BLD-205 | Android Elevation Clips to Parent View Bounds | Pitfalls | [build-config.md](pitfalls/build-config.md) |

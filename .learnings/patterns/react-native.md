@@ -377,3 +377,11 @@
 **Learning**: In React Native (and CSS flexbox), flex items have an implicit `minWidth: auto`, meaning text containers won't shrink below their content's intrinsic minimum width — even with `flex: 1`. Setting `minWidth: 0` on the text container allows it to shrink properly. For responsive wrapping, combine this with a conditional `flexBasis: '100%'` style on compact layouts: when the text takes full width, sibling elements in a `flexWrap: 'wrap'` container automatically flow to the next line.
 **Action**: When a flex row contains a text element and sibling buttons/icons that get cramped on narrow viewports: (1) add `minWidth: 0` to the text container's style, (2) create a compact variant style with `flexBasis: '100%', flexGrow: 0`, (3) apply the compact style conditionally via `layout.compact && styles.compactVariant`, (4) add `numberOfLines` with ellipsis for very long text.
 **Tags**: react-native, flexbox, minWidth, flexBasis, responsive, overflow, wrapping, compact-layout, text-truncation
+
+### Use @gorhom/bottom-sheet Instead of Modal for Expandable Drawers
+**Source**: BLD-200/BLD-202 — Fix workout session details drawer
+**Date**: 2026-04-16
+**Context**: The exercise detail drawer used React Native's `<Modal>` with `maxHeight: 60%`, making it a fixed-height overlay that could not be dragged to expand or scroll. Users expected a pull-up sheet that fills the screen.
+**Learning**: React Native's `<Modal>` component has no built-in gesture support — it is a fixed overlay. For drawers that need drag-to-expand, snap points, and scrollable content, `@gorhom/bottom-sheet` provides `<BottomSheet>` with configurable snap points (e.g., `["40%", "90%"]`), `<BottomSheetFlatList>` for virtualized scrolling inside the sheet, and `<BottomSheetBackdrop>` for tap-to-dismiss. Control visibility via `ref.current?.snapToIndex(0)` (open) and `ref.current?.close()` (close) with `index={-1}` as the hidden state.
+**Action**: When implementing a detail panel, exercise drawer, or any expandable overlay, use `@gorhom/bottom-sheet` (already in FitForge deps) instead of `<Modal>`. Define snap points with `useMemo`, use `BottomSheetFlatList` instead of `FlatList` for scrollable content, and add a Jest mock at `__mocks__/@gorhom/bottom-sheet.js`.
+**Tags**: react-native, bottom-sheet, modal, gorhom, gesture, snap-points, drawer, expandable, ui-pattern

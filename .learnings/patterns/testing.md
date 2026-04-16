@@ -57,3 +57,11 @@
 **Learning**: Playwright runs each project (e.g., mobile/tablet/desktop viewports) in separate worker processes when `fullyParallel: true`. Module-level variables are NOT shared between workers — each worker gets its own empty copy. `test.afterAll` runs per-worker, not globally, so aggregation across projects fails silently.
 **Action**: Never use module-level variables to aggregate data across Playwright projects. For cross-worker data collection, use `globalTeardown` (runs once in the main process after all workers finish) and scan the filesystem for artifacts written by individual workers. Each worker should write its outputs to disk; the teardown script collects them.
 **Tags**: playwright, testing, worker-isolation, globalteardown, parallel, cross-project, e2e
+
+### Adding Module Exports Breaks Partial jest.mock() Declarations
+**Source**: BLD-200/BLD-202 — Replace Modal with BottomSheet for workout session drawer
+**Date**: 2026-04-16
+**Context**: BLD-207 added `getAppSetting` to `lib/db.ts`. Three test files mocked `lib/db` with an explicit object listing only the functions they used (`getAllExercises`, `getExerciseById`, etc.). The new `getAppSetting` was not in their mocks, causing 30 tests to fail with `TypeError: getAppSetting is not a function`.
+**Learning**: When `jest.mock('module', () => ({ fn1, fn2 }))` uses an explicit return object, it replaces the ENTIRE module — any export not listed in the mock becomes `undefined`. Adding a new export to a widely-mocked module silently breaks all test files that use partial explicit mocks. The breakage is invisible until tests run.
+**Action**: After adding a new export to any module, grep for `jest.mock.*<module-path>` across the entire test suite and add the new export to every partial mock. Alternatively, use `jest.mock('module')` with `jest.spyOn` for individual functions — this auto-mocks all exports and survives new additions.
+**Tags**: jest, testing, mock, module-exports, partial-mock, breaking-change, test-maintenance
