@@ -64,7 +64,7 @@ function SubstitutionItem({
             { backgroundColor: matchBgColor(item.score) },
           ]}
         >
-          <Text style={[styles.matchText, { color: matchColor(item.score) }]}>
+          <Text variant="labelSmall" style={[styles.matchText, { color: matchColor(item.score) }]}>
             {item.score}%
           </Text>
         </View>
@@ -76,7 +76,7 @@ function SubstitutionItem({
             { backgroundColor: theme.colors.surfaceVariant },
           ]}
         >
-          <Text
+          <Text variant="labelSmall"
             style={[styles.equipText, { color: theme.colors.onSurfaceVariant }]}
           >
             {EQUIPMENT_LABELS[ex.equipment]}
@@ -88,7 +88,7 @@ function SubstitutionItem({
             { backgroundColor: theme.colors.surfaceVariant },
           ]}
         >
-          <Text
+          <Text variant="labelSmall"
             style={[styles.equipText, { color: theme.colors.onSurfaceVariant }]}
           >
             {DIFFICULTY_LABELS[ex.difficulty]}
@@ -105,7 +105,7 @@ function SubstitutionItem({
                 { backgroundColor: theme.colors.secondaryContainer },
               ]}
             >
-              <Text
+              <Text variant="labelSmall"
                 style={[
                   styles.muscleText,
                   { color: theme.colors.onSecondaryContainer },
@@ -239,7 +239,7 @@ export default function SubstitutionSheet({
                     { backgroundColor: theme.colors.primaryContainer },
                   ]}
                 >
-                  <Text
+                  <Text variant="labelSmall"
                     style={[
                       styles.muscleText,
                       { color: theme.colors.onPrimaryContainer },
@@ -347,7 +347,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   muscleText: {
-    fontSize: 12,
     lineHeight: 16,
   },
   filterRow: {
@@ -384,7 +383,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   matchText: {
-    fontSize: 12,
     fontWeight: "700",
   },
   itemMeta: {
@@ -398,7 +396,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   equipText: {
-    fontSize: 12,
   },
   emptyState: {
     paddingVertical: 48,
