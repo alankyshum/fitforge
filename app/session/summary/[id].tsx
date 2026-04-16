@@ -207,13 +207,23 @@ export default function Summary() {
 
   const handleRatingChange = useCallback(async (newRating: number | null) => {
     if (!id) return;
+    const previousRating = rating;
     setRating(newRating);
-    await updateSession(id, { rating: newRating });
-  }, [id]);
+    try {
+      await updateSession(id, { rating: newRating });
+    } catch {
+      setRating(previousRating);
+      setSnackbar({ message: "Failed to save rating" });
+    }
+  }, [id, rating]);
 
   const handleNotesSave = useCallback(async () => {
     if (!id) return;
-    await updateSession(id, { notes: notesText });
+    try {
+      await updateSession(id, { notes: notesText });
+    } catch {
+      setSnackbar({ message: "Failed to save notes" });
+    }
   }, [id, notesText]);
 
   const handleSaveAsTemplate = useCallback(async () => {
@@ -891,6 +901,7 @@ const styles = StyleSheet.create({
   notesHeader: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 48,
   },
   notesInput: {
     borderWidth: 1,
