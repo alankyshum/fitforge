@@ -49,3 +49,19 @@
 **Learning**: Changing a category enum in the type system does not change the values already stored in the database. Custom user data (is_custom = 1) using old enum values must be explicitly migrated via UPDATE statements with category mapping. Seed data can be soft-deleted and re-inserted with new values, but user data must be preserved and remapped. Missing this step causes custom exercises to have invalid categories, breaking filters and UI grouping.
 **Action**: When restructuring an enum stored as TEXT in SQLite: (1) define an explicit old-to-new mapping for every old value, (2) run UPDATE SET category = 'new' WHERE is_custom = 1 AND category IN ('old1', 'old2') for each mapping inside a transaction, (3) verify no rows remain with unmapped old values after migration, (4) only apply mapping to user data — seed data should be re-created with correct values.
 **Tags**: sqlite, enum-migration, category-restructuring, data-integrity, user-data, custom-exercises, transaction
+
+### INSERT OR IGNORE Cannot Repair Corrupted Existing Rows
+**Source**: BLD-174 — Starter workout templates missing on Workout tab
+**Date**: 2026-04-16
+**Context**: Starter templates were seeded with `INSERT OR IGNORE`. A later import operation stripped the `is_starter=1` flag. On the next app launch, `seedStarters()` re-ran INSERT OR IGNORE, but since the rows already existed, the corrupted `is_starter=0` values were never repaired.
+**Learning**: `INSERT OR IGNORE` is an existence check, not a correctness check. It guarantees a row exists but cannot enforce that existing rows have correct column values. If any other code path (import, migration, manual edit) corrupts a flag on a seeded row, INSERT OR IGNORE will silently skip it on every subsequent run, leaving the corruption permanent.
+**Action**: For seeded data with invariant flags (e.g., `is_starter`, `is_default`, `is_system`), add a self-healing UPDATE step that runs before or after the INSERT OR IGNORE: `UPDATE table SET flag = 1 WHERE id IN (known_ids) AND flag = 0`. This repair runs on every init and is idempotent. Place it outside the version gate so it executes even when the seed version hasn't changed.
+**Tags**: sqlite, insert-or-ignore, seed-data, data-corruption, self-healing, idempotent, flags
+
+### Import/Export Must Include All Semantic Columns — Not Just Core Fields
+**Source**: BLD-174 — Starter workout templates missing on Workout tab
+**Date**: 2026-04-16
+**Context**: The import function for `workout_templates` and `programs` inserted only the "core" columns (id, name, timestamps) but omitted `is_starter`. Importing a backup silently converted all starter templates into user templates, breaking the Workout tab display.
+**Learning**: Import INSERT statements that enumerate columns will silently drop any column not listed. Unlike SELECT mappings (which return `undefined` for unmapped fields), import INSERTs actively overwrite the row with a default value (typically 0 or NULL), destroying the original data. Every boolean flag, enum column, or metadata field must be explicitly included in the import INSERT with a sensible default for user-created entries (e.g., `row.is_starter ?? 0`).
+**Action**: When adding a new column to any table that has import/export support, update both the export query (SELECT) and the import INSERT to include the new column. Use nullish coalescing (`?? default`) for backward compatibility with backups that predate the column. During code review of schema changes, search for all `insertRow` / `INSERT INTO` statements for the affected table.
+**Tags**: sqlite, import-export, data-loss, column-enumeration, backward-compatibility, schema-evolution
