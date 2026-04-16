@@ -121,7 +121,7 @@ function CenterButton({
           <MaterialCommunityIcons
             name="arm-flex"
             size={28}
-            color={focused ? "#FFFFFF" : color}
+            color={focused ? theme.colors.onPrimary : color}
           />
         </Pressable>
       </Animated.View>
