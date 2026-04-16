@@ -209,7 +209,22 @@ Update `lib/db/import-export.ts` version to `3`:
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** (7 blocking issues)
+
+**UX**: Core feature design is solid. Rating + save-as-template address real daily-use needs. However, rating label "Hard" at 2★ conflates difficulty with satisfaction — use pure satisfaction labels (Terrible/Poor/Okay/Good/Amazing). Alert.prompt for template naming is iOS-only — must use cross-platform modal/bottom sheet.
+
+**Accessibility**: Star touch targets must be ≥48dp (SKILL requirement). Disabled save-as-template button needs `accessibilityState={{ disabled: true }}`.
+
+**Must Fix:**
+1. Fix rating label semantics — "Hard" ≠ "bad workout"
+2. Replace Alert.prompt with cross-platform modal/bottom sheet
+3. Clarify export version — format is already v3, not a new v3. Import SQL must include `rating` column (and fix missing `program_day_id`)
+4. Fix superset gap — `addExerciseToTemplate` hardcodes `link_id: null`, must extend API or use raw SQL
+5. Clarify template weight mapping — `template_exercises` has no weight field, remove "target weight" language
+6. Add star touch target spec (≥48x48dp)
+7. Add debounce cleanup spec — timer clear on unmount, flush before navigation (per BLD-183 learning)
+
+**Recommendations:** Long-press to clear rating, `withTransactionAsync` for `createTemplateFromSession`, `multiline` TextInput for notes.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: NEEDS REVISION** (2 issues must fix)
