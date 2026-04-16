@@ -3,7 +3,7 @@
 **Issue**: BLD-240
 **Author**: CEO
 **Date**: 2026-04-16
-**Status**: DRAFT
+**Status**: DRAFT → IN_REVIEW (v2 — addressing QD + Techlead feedback)
 
 ## Problem Statement
 
@@ -30,12 +30,13 @@ Add a "Swap" button on each exercise card in the active workout screen. Tapping 
 4. Category match (compound vs isolation)
 5. Difficulty proximity
 
-Selecting an alternative replaces the exercise in the current session (keeping existing set structure) and optionally remembers the swap for future template use.
+Selecting an alternative replaces **only pending (uncompleted) sets** in the current session. Completed sets retain their original exercise for history accuracy. An undo snackbar provides a 5-second recovery window.
 
 ### UX Design
 
 #### Entry Point
 - Each exercise card in the active workout (`app/session/[id].tsx`) gets a "Swap" icon button (swap-horizontal icon) in the exercise header, next to the existing "Details" button
+- Touch target: **minimum 56×56dp** per active workout accessibility rules
 - Also available from exercise detail view (info modal) via a "Find Alternatives" button
 
 #### Swap Bottom Sheet
@@ -50,17 +51,21 @@ Selecting an alternative replaces the exercise in the current session (keeping e
   - Difficulty indicator
 - List sorted by match score descending
 - Maximum 20 results shown
-- Optional "Equipment" filter chips at the top (show only exercises using selected equipment)
+- **Equipment filter chips** at the top (show only exercises using selected equipment)
+- **Equipment filter empty state**: "No alternatives with this equipment. Try removing the filter."
 - Tap an alternative → confirmation: "Replace {Old} with {New}?" → swap
 
 #### After Swap
-- The exercise in the current session is replaced: exercise_id changes, sets keep their structure (weight/reps cleared if the movement pattern is very different, preserved if similar)
-- Rest timer seconds transfer from the original exercise's template setting (or default 90s)
-- A subtle toast: "Swapped to {New Exercise}"
-- The swap is NOT propagated back to the template — it's session-local only
+- **Only pending (uncompleted) sets** have their `exercise_id` changed to the new exercise. Completed sets retain the original `exercise_id` to preserve workout history accuracy.
+- Weight and rep values on pending sets are preserved** **always the user adjusts manually if needed. (Simplicity over magic — per Techlead recommendation.) 
+- Rest timer uses the **new exercise's** configured rest seconds (or default 90s).
+- **Undo snackbar**: A Snackbar appears for 5 seconds with "Swapped to {New Exercise} — UNDO" action. Tapping Undo reverts all pending sets back to the original exercise_id and restores any changed values. Uses existing `SnackbarProvider`.
+- A subtle "Swapped from {Original}" label appears on the exercise group header in history view, so users can see what was originally programmed.
+- The swap is NOT propagated back to the template — it's session-local only.
 
-#### Empty State
-- If no alternatives found (unlikely but possible for very niche exercises): "No alternatives found. Try adding the exercise manually."
+#### Empty States
+- **No alternatives found** (unlikely for most exercises): "No alternatives found. Try adding the exercise manually."
+- **No primary muscles defined** on the source exercise: "No muscle data for this exercise — can't suggest alternatives."
 
 ### Technical Approach
 
@@ -86,78 +91,95 @@ function findSubstitutions(source: Exercise, allExercises: Exercise[], limit?: n
 Scoring breakdown:
 - **Primary muscle overlap** (50 pts max): `(intersection of primary muscles / union of primary muscles) * 50`. Full overlap = 50, partial = proportional
 - **Secondary muscle overlap** (20 pts max): Same formula as primary, scaled to 20
-- **Equipment match** (15 pts max): Same equipment = 15, same category (free weight, machine, cable, bodyweight) = 8, different = 0
-- **Category match** (10 pts max): Same category (compound/isolation) = 10, different = 0
+- **Equipment match** (15 pts max): Same equipment = 15, same equipment group (see grouping below) = 8, different = 0
+- **Category match** (10 pts max): Same category = 10, different = 0
 - **Difficulty proximity** (5 pts max): Same difficulty = 5, ±1 level = 3, ±2 = 1, more = 0
 
-Minimum threshold: 30 points (below this, exercises are too dissimilar to suggest)
+**Minimum threshold: 20 points** (lowered from 30 per QD recommendation — cable fly scores ~28 vs bench press but IS a valid substitute).
 
-#### Equipment Grouping
+**Source exercise exclusion**: The source exercise is always excluded from results (per Techlead recommendation).
 
-For the equipment match scoring, group equipment types:
-- **Free weights**: barbell, dumbbell, kettlebell, ez_bar
-- **Machines**: machine, smith_machine, cable
-- **Bodyweight**: bodyweight, suspension
-- **Other**: band, medicine_ball, other
+#### Equipment Grouping (matches `lib/types.ts` Equipment type exactly)
 
-Same group = 8pts, same exact equipment = 15pts.
+| Group | Equipment Values |
+|-------|-----------------|
+| Free weights | `barbell`, `dumbbell`, `kettlebell` |
+| Machines | `machine`, `cable` |
+| Bodyweight | `bodyweight` |
+| Accessories | `band`, `other` |
+
+Same group = 8pts, same exact equipment = 15pts, different group = 0pts.
 
 #### Database/Query Layer (`lib/db/exercises.ts`)
 
-Add a function to fetch all non-deleted exercises (already exists as `getAllExercises` or similar). The scoring runs client-side since the exercise library is bounded (typically 200-500 exercises) and the scoring is O(n) with small constant factors.
+Use existing `getAllExercises` function to fetch all non-deleted exercises. The scoring runs client-side since the exercise library is bounded (typically 200-500 exercises) and the scoring is O(n) with small constant factors.
 
 No new database tables or schema changes needed.
 
 #### UI Components
 
 1. **SwapButton** — icon button added to exercise group header in `app/session/[id].tsx`
+   - Minimum touch target: 56×56dp
+   - Icon: `swap-horizontal` from Material Community Icons
 2. **SubstitutionSheet** — new bottom sheet component (`components/SubstitutionSheet.tsx`)
    - Uses `@gorhom/bottom-sheet` (already a dependency)
    - Accepts: `sourceExercise`, `onSelect`, `onDismiss`
    - Internally calls `findSubstitutions()` and renders the ranked list
+   - Uses `useMemo` to cache scored results; equipment filter filters the pre-scored array (no re-scoring on filter change)
 3. **MatchBadge** — small component showing match percentage with color coding:
    - 80-100%: green
    - 60-79%: amber
-   - 30-59%: red/orange
+   - 20-59%: red/orange
 
 #### Session Swap Logic (`lib/db/sessions.ts`)
 
 Add `swapExerciseInSession(sessionId, oldExerciseId, newExerciseId)`:
-- Updates all `workout_sets` rows for this session+exercise: changes `exercise_id` from old to new
-- If the new exercise has very different movement pattern (different category), clear weight values but keep rep targets
-- If similar (same category + primary muscles), preserve weight and rep values
+- Updates only **uncompleted** `workout_sets` rows for this session+exercise: changes `exercise_id` from old to new
+- Completed sets (where `completed = 1`) are **never modified** — they retain the original `exercise_id` for history accuracy
+- Weight and rep values are **always preserved** on swapped sets (user adjusts manually if needed)
+- Returns the list of modified set IDs (for undo support)
+
+Add `undoSwapInSession(setIds, originalExerciseId)`:
+- Reverts the specified sets back to `originalExerciseId`
+- Called by the undo snackbar action within 5s window
 
 ### Scope
 
 **In Scope:**
-- Swap button on exercise cards in active workout screen
+- Swap button on exercise cards in active workout screen (56×56dp touch target)
 - Substitution scoring algorithm with 5-factor ranking
 - Bottom sheet with ranked alternatives list
-- Equipment filter chips in the bottom sheet
-- Session-local swap (changes exercise_id on workout_sets)
-- Toast confirmation after swap
+- Equipment filter chips in the bottom sheet (with empty state)
+- Session-local swap (changes exercise_id on **uncompleted** workout_sets only)
+- Undo snackbar (5s window) using existing SnackbarProvider
+- "Swapped from {Original}" indicator in session history
 - Accessibility labels on all interactive elements
+- Source exercise excluded from substitution results
 
 **Out of Scope:**
 - Propagating swaps back to templates (future phase)
 - User-defined swap preferences/favorites (future phase)
-- "Swap history" tracking (future phase)
+- "Swap history" tracking beyond the session-local indicator (future phase)
 - Machine learning or collaborative filtering for recommendations (overkill for this scope)
 - Swap during template editing (template already has full exercise picker)
+- Weight-clearing logic based on equipment/category change (user adjusts manually — simpler, less error-prone)
 
 ### Acceptance Criteria
 
-- [ ] Given an active workout with exercises, When user taps the swap icon on an exercise card, Then a bottom sheet opens showing ranked alternatives
+- [ ] Given an active workout with exercises, When user taps the swap icon (56×56dp touch target) on an exercise card, Then a bottom sheet opens showing ranked alternatives
 - [ ] Given the swap bottom sheet is open, When alternatives are displayed, Then each shows name, match percentage, equipment, muscles, and difficulty
 - [ ] Given an exercise with primary_muscles=["chest", "triceps"], When finding substitutions, Then exercises with chest+triceps score highest (>80%)
 - [ ] Given the alternative list, When user taps an alternative, Then a confirmation dialog appears: "Replace {Old} with {New}?"
-- [ ] Given user confirms the swap, When the swap completes, Then the exercise in the current session changes, sets are preserved, and a toast confirms the swap
-- [ ] Given user confirms a swap for exercises with the same category, When weight/rep values exist on sets, Then values are preserved (not cleared)
-- [ ] Given user confirms a swap for exercises with different categories, When weight values exist, Then weight values are cleared but rep targets are preserved
+- [ ] Given user confirms the swap, When the swap completes, Then only uncompleted sets change exercise_id, completed sets retain the original, weight/reps are preserved, and an undo snackbar appears for 5s
+- [ ] Given the undo snackbar is visible, When user taps "Undo" within 5s, Then all swapped sets revert to the original exercise
+- [ ] Given the swap is performed, When viewing the session history, Then a "Swapped from {Original}" label is visible on the exercise group
 - [ ] Given the swap bottom sheet, When equipment filter chips are tapped, Then the list filters to show only exercises with matching equipment
-- [ ] Given an exercise with no good alternatives (score < 30 for all), When swap sheet opens, Then an empty state message is shown
+- [ ] Given equipment filter is active and no exercises match, When viewing the list, Then an empty state message appears: "No alternatives with this equipment. Try removing the filter."
+- [ ] Given an exercise with no good alternatives (score < 20 for all), When swap sheet opens, Then an empty state message is shown
+- [ ] Given an exercise with no primary_muscles defined, When swap icon is tapped, Then an empty state message: "No muscle data — can't suggest alternatives"
 - [ ] Given a screen reader is active, When navigating the swap flow, Then all buttons, list items, and badges have descriptive accessibility labels
 - [ ] Given the swap is performed, When the rest timer auto-starts, Then it uses the new exercise's configured rest seconds (or default 90s)
+- [ ] Given the source exercise, When substitution results are computed, Then the source exercise itself is NOT in the results list
 - [ ] PR passes all existing tests with no regressions
 - [ ] No new lint warnings
 - [ ] TypeScript compiles with zero errors (`npx tsc --noEmit`)
@@ -170,54 +192,58 @@ Add `swapExerciseInSession(sessionId, oldExerciseId, newExerciseId)`:
 | Only 1-2 alternatives exist (small library) | Show whatever exists, even if low scores. No minimum count. |
 | User has custom exercises | Include custom exercises in substitution candidates |
 | Deleted exercises | Exclude soft-deleted exercises from substitution candidates |
-| Swap mid-set (some sets completed) | Swap applies to ALL sets (completed and pending). Completed set data is preserved as-is (weight/reps stay). |
+| Swap mid-set (some sets completed) | Only pending sets get the new exercise_id. Completed sets keep original exercise for history. |
 | Same exercise selected as swap | No-op — dismiss sheet, no toast |
-| Very large exercise library (500+) | Scoring is O(n) — should compute in <50ms. No pagination needed. |
+| Very large exercise library (500+) | Scoring is O(n) — should compute in <50ms. useMemo caches results. |
 | Swap cancellation (user dismisses sheet) | No changes to session |
+| Equipment filter shows no results | "No alternatives with this equipment. Try removing the filter." |
+| User taps Undo after 5s window expires | Snackbar dismissed, swap is permanent |
+| All sets for an exercise are completed | Swap button still available but swap is effectively a no-op (no pending sets to change). Show info toast: "All sets completed — nothing to swap." |
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Scoring algorithm produces poor suggestions | Medium | Medium | Tune weights via manual testing with common exercises. Primary muscle overlap dominates (50/100). |
-| Performance on large exercise libraries | Low | Low | O(n) scoring with ~500 exercises = negligible. Could add memoization if needed. |
-| User accidentally swaps and loses set data | Low | High | Confirmation dialog before swap. Weight/reps preserved when possible. |
-| Equipment grouping doesn't match user expectations | Medium | Low | Conservative grouping. Can be refined based on feedback. |
+| Scoring algorithm produces poor suggestions | Medium | Medium | Tune weights via manual testing with common exercises. Primary muscle overlap dominates (50/100). Threshold lowered to 20 for edge cases. |
+| Performance on large exercise libraries | Low | Low | O(n) scoring with ~500 exercises = negligible. useMemo caches results. |
+| User accidentally swaps and loses set data | Low | Medium | Confirmation dialog before swap. 5s undo snackbar. Completed sets never modified. |
+| Equipment grouping doesn't match user expectations | Medium | Low | Conservative grouping matching actual Equipment type. Can be refined based on feedback. |
+| Undo window too short | Low | Low | 5s is standard Material Design pattern. Completed sets are safe regardless. |
+
+## Changes from v1 (addressing reviewer feedback)
+
+### QD Critical Issues — All Resolved
+1. **[C1] Destructive swap corrupts history** — FIXED: Only uncompleted sets are swapped. Completed sets retain original exercise_id.
+2. **[C2] Rest timer contradiction** — FIXED: Plan body now consistently says "new exercise's rest seconds".
+3. **[C3] No undo** — FIXED: Added 5s undo snackbar using existing SnackbarProvider.
+4. **[C4] Weight clearing too coarse** — RESOLVED DIFFERENTLY: Dropped weight-clearing entirely (per Techlead recommendation). User adjusts manually. Simpler and less error-prone.
+5. **[C5] Touch target size** — FIXED: Swap icon explicitly specifies 56×56dp minimum.
+
+### QD Major Recommendations — Addressed
+- Threshold lowered from 30→20 ✅
+- Equipment filter empty state added ✅
+- "Swapped from {X}" indicator in history added ✅
+- Re: extending ExercisePickerSheet — decided AGAINST. ExercisePickerSheet handles category-based browsing with search. SubstitutionSheet has fundamentally different UX: ranked scoring, match badges, equipment filters, confirmation flow. Sharing would over-complicate both components.
+
+### Techlead Recommendations — All Addressed
+1. Equipment grouping fixed to match actual `lib/types.ts` Equipment type ✅
+2. Weight-clearing logic dropped (always preserve) ✅
+3. Source exercise excluded from results ✅
+4. useMemo for caching scored results ✅
 
 ## Review Feedback
-<!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** — Reviewed 2026-04-16
+**v1 Verdict: NEEDS REVISION** — Reviewed 2026-04-16
+See v1 issues above — all 5 critical issues addressed in v2.
 
-5 critical issues must be fixed before approval:
-
-1. **[C1] Destructive swap corrupts history** — Updating `exercise_id` on completed sets loses provenance. Recommend: only swap pending sets, leave completed sets as original exercise.
-2. **[C2] Rest timer contradiction** — Plan body says "original exercise's rest", AC says "new exercise's rest". Fix plan body to match AC (new exercise is correct).
-3. **[C3] No undo** — Must add Snackbar with "Undo" action (5s window). `SnackbarProvider` already exists in codebase.
-4. **[C4] Weight clearing too coarse** — Clear weights when equipment changes (not just category). Same-category but different-equipment exercises have wildly different weight ranges.
-5. **[C5] Touch target size** — Swap icon must be 56x56dp per active workout SKILL rule.
-
-Major recommendations: Lower scoring threshold from 30→20 (cable fly scores ~28 vs bench press but IS a valid substitute). Add equipment filter empty state. Add "Swapped from {X}" indicator in history. Consider extending `ExercisePickerSheet` instead of building new `SubstitutionSheet`.
-
-Full review posted as comment on BLD-240.
+**v2 Review**: _Pending re-review_
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: APPROVED** (with minor recommendations)
+**v1 Verdict: APPROVED** (with minor recommendations) — Reviewed 2026-04-16
+All 4 recommendations incorporated into v2.
 
-- **Feasibility**: Fully buildable. Pure computation over bounded data, existing types, no new deps.
-- **Architecture Fit**: Compatible — additive changes following established patterns (bottom sheet, db-layer mutations, lib/ modules).
-- **Effort**: Medium | **Risk**: Low | **New deps**: None
-
-**Concerns (minor):**
-1. Equipment grouping in plan references types not in codebase (`smith_machine`, `ez_bar`, etc.). Must match actual `Equipment` type: `barbell | dumbbell | cable | machine | bodyweight | kettlebell | band | other`.
-2. Weight-clearing on category mismatch adds complexity for marginal benefit. Recommend always preserving set data — let users adjust manually.
-
-**Recommendations:**
-1. Fix equipment grouping to match `lib/types.ts`
-2. Drop weight-clearing logic (simplify)
-3. Explicitly exclude source exercise from `findSubstitutions` results
-4. Use `useMemo` to cache scored results; filter pre-scored array on equipment filter change
+**v2 Review**: _Pending confirmation_
 
 ### CEO Decision
-_Pending reviews_
+All v1 feedback addressed in v2. Awaiting re-review from Quality Director and confirmation from Tech Lead.
