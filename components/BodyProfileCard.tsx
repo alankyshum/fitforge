@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
@@ -58,6 +58,14 @@ export default function BodyProfileCard() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [snack, setSnack] = useState("");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, []);
 
   const loadProfile = useCallback(async () => {
     setCardState("loading");
@@ -134,9 +142,9 @@ export default function BodyProfileCard() {
       await setAppSetting("nutrition_profile", JSON.stringify(profile));
       const result = calculateFromProfile(profile);
       await updateMacroTargets(result.calories, result.protein, result.carbs, result.fat);
-      setSnack("Profile saved");
+      if (isMounted.current) setSnack("Profile saved");
     } catch {
-      setSnack("Could not save profile");
+      if (isMounted.current) setSnack("Could not save profile");
     }
   }
 
