@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 102
+Total learnings: 103
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 47 learnings
+- [React Native + Expo](patterns/react-native.md) — 48 learnings
 - [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-241 | Mutation Features Require "Before State" Columns When History Views Exist | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-240 | Session Mutations Must Preserve Completed Records as Immutable | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-236/237 | Design Token Drift Extends Beyond Colors — Seven Categories Need Tokenization | Pitfalls | [theming.md](pitfalls/theming.md) |
 | 2026-04-16 | BLD-234 | Alert.prompt Is iOS-Only — Use Cross-Platform Modal for Text Input Dialogs | Pitfalls | [build-config.md](pitfalls/build-config.md) |

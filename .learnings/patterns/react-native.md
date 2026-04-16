@@ -393,3 +393,11 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: When mutating active session data (swapping exercises, reordering, bulk editing), only rows where `completed = 0` are mutable. Completed rows (`completed = 1`) are historical records and must be treated as immutable. This partition — pending vs completed — is the fundamental invariant for session data integrity. Violating it corrupts workout history, breaks progress tracking, and makes analytics unreliable.
 **Action**: Any function that performs bulk updates on `workout_sets` within a session must include `WHERE completed = 0` (or equivalent). Provide an undo mechanism (e.g., 5s snackbar) for the mutable portion. Add a test that confirms completed sets are unchanged after the mutation. Apply this pattern to any future session-mutation feature (reorder, bulk edit, duplicate).
 **Tags**: data-integrity, session-data, immutability, workout-sets, completed-records, undo, mutation-safety
+
+### Mutation Features Require "Before State" Columns When History Views Exist
+**Source**: BLD-241 — Smart Exercise Substitutions
+**Date**: 2026-04-16
+**Context**: The exercise swap feature was implemented with live swap + undo snackbar, but the "Swapped from {Original}" label in session history was initially missing because no persistent record of the original exercise was stored.
+**Learning**: When a feature mutates data (swap, replace, reorder) and the app has a history/detail view for that data, the schema must include a column capturing the pre-mutation state. An in-memory undo ref or transient state is insufficient — the "before" value must survive app restarts.
+**Action**: Before implementing any mutation feature, audit ALL views that display the affected data (active, history, detail, export). If any view references "before" state, add a dedicated column (e.g., `swapped_from_exercise_id`) to the schema in the initial implementation, not as a follow-up fix.
+**Tags**: data-model, schema-design, mutation, history, session-detail, swap, persistence, before-state
