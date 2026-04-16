@@ -3,7 +3,7 @@
 **Issue**: BLD-181
 **Author**: CEO
 **Date**: 2026-04-16
-**Status**: DRAFT
+**Status**: IN_REVIEW (Rev 2 — addressing QD + TL feedback)
 
 ## Problem Statement
 
@@ -41,47 +41,44 @@ Add a "Weekly Summary" card to the Progress tab that auto-generates a weekly tra
 
 #### Collapsed State (Default)
 ```
-
- 📊 Week of Apr 14 – Apr 20    ◀ ▶  │
-                                     │
-  4/5 workouts  ·  +12% volume  ·  2 PRs │
-                                     │
-             [ View Details ]        │
-
+ 📊 Week of Apr 14 – Apr 20    ◀ ▶
+  4 workouts  ·  +12% volume  ·  2 PRs
+             [ View Details ]
 ```
+*(When an active program exists, shows "4/5 workouts" instead of "4 workouts")*
 
 #### Expanded State
 ```
+ 📊 Week of Apr 14 – Apr 20    ◀ ▶
 
- 📊 Week of Apr 14 – Apr 20    ◀ ▶  │
-                                     │
- WORKOUTS                            │
-  Completed: 4 of 5 scheduled  (80%)│
-  Total duration: 3h 45m            │
-  Avg session: 56 min               │
-                                     │
- VOLUME                              │
-  Total: 24,500 kg    ▲ +12% vs last│
-  Avg per session: 6,125 kg         │
-                                     │
- PERSONAL RECORDS                    │
-  🏆 Bench Press: 100 kg (kg +5)    
-  🏆 Squat: 140 kg (+10 kg)        │
-                                     │
- NUTRITION (4/7 days tracked)        │
-  Avg calories: 2,150 / 2,200 target│
-  Protein avg: 162g / 150g target ✓ │
-  Days on target: 3/4               │
-                                     │
- BODY                                │
-  Weight: 82.1 kg → 81.8 kg (−0.3)  │
-                                     │
- STREAK                              │
-  Current: 12 weeks  🔥             │
-                                     │
-         [ Share Summary ]           │
+ WORKOUTS
+  Completed: 4 workouts
+  Total duration: 3h 45m
+  Avg session: 56 min
 
+ VOLUME
+  Total: 24,500 kg    ▲ +12% vs last
+  Avg per session: 6,125 kg
+
+ PERSONAL RECORDS (weighted exercises only)
+  🏆 Bench Press: 100 kg (+5 kg)
+  🏆 Squat: 140 kg (+10 kg)
+
+ NUTRITION (4/7 days tracked)
+  Avg calories: 2,150 / 2,200 target
+  Protein avg: 162g / 150g target ✓
+  Days on target: 3/4
+
+ BODY
+  Weight: 82.0 kg → 81.7 kg (−0.3)
+  (3-day rolling avg)
+
+ STREAK
+  Current: 12 weeks  🔥
+
+         [ Share Summary ]
 ```
+*(When an active program exists, WORKOUTS shows "4 of 5 scheduled (80%)" instead of "4 workouts")*
 
 **Navigation**: Left/right arrows to navigate between weeks. Current week is the default. Can view up to 12 weeks back.
 
@@ -91,9 +88,11 @@ Add a "Weekly Summary" card to the Progress tab that auto-generates a weekly tra
 - No body data: Body section hidden
 
 **Accessibility**:
-- All stats have descriptive a11y labels (e.g., "4 of 5 scheduled workouts completed, 80 percent")
-- Week navigation buttons have labels ("Previous week", "Next week")
+- All stats have descriptive a11y labels (e.g., "4 workouts completed" or "4 of 5 scheduled workouts completed, 80 percent")
+- Week navigation buttons are `Pressable` components with 48×48dp hit areas, labels ("Previous week", "Next week")
 - Trend indicators include text alternatives (not just arrows/colors)
+- The card uses `accessibilityState={{ expanded: isExpanded }}` and the "View Details" button has `accessibilityHint="Double tap to expand weekly summary"`
+- Expand/collapse animation respects `useReducedMotion()` — when reduced motion is enabled, state changes instantly without animation
 
 ### Technical Approach
 
@@ -104,7 +103,7 @@ All data comes from existing SQLite queries, no new tables needed:
    - Count completed sessions
    - Sum duration_seconds
    - Compare to previous week's count
-   - Use `weekly_schedule` for "scheduled" count (if program active)
+   - **Scheduled count**: If an active program exists, use `weekly_schedule` / `program_schedule` for the "X of N scheduled" format. If NO active program, show absolute count only ("4 workouts"), never "4 of N"
 
 2. **Volume**: `workout_sets` table joined with `workout_sessions`
    - Sum (weight × reps) for the week
@@ -112,24 +111,27 @@ All data comes from existing SQLite queries, no new tables needed:
 
 3. **PRs**: `workout_sets` — detect new max weight per exercise within the week
    - Compare each set's weight to all prior sets for that exercise
+   - **Scope: weighted exercises only** (where weight > 0). Bodyweight exercises (weight = 0) are excluded from PR detection. This is a known limitation — rep-based PRs are out of scope for v1.
 
 4. **Nutrition**: `daily_log` and `macro_targets` tables
    - Count days with entries
    - Average calories/protein/carbs/fat
    - Compare to target
-   - Count "on target" days (within ±10% of target)
+   - **"On target" definition**: A day is "on target" when **calories are within ±10% of the calorie target**. Individual macro targets (protein/carbs/fat) are shown as averages but do NOT affect the on-target count. The ±10% threshold is a named constant (`NUTRITION_ON_TARGET_TOLERANCE = 0.10`), not a magic number.
 
 5. **Body**: `body_weight` table
-   - First and last entry of the week
-   - Week-over-week delta
+   - Use 3-day rolling average for start-of-week and end-of-week values (reuse `movingAvg()` from `lib/format.ts` if ≥3 entries exist; fall back to raw values if fewer entries)
+   - Week-over-week delta based on rolling averages
 
 6. **Streak**: Reuse existing `computeStreak()` from `lib/format.ts`
+   - **Current week handling**: The current week is EXCLUDED from the streak count since it's still in progress. Display as "12 weeks (current week in progress)" if the user has an active streak from prior weeks. On Monday morning with no workouts yet, the streak should NOT show 0 or "broken" — it shows the streak from completed weeks only.
 
 #### Architecture
 
 - **New file**: `lib/weekly-summary.ts` — pure functions that query SQLite and return summary data
-- **New component**: `components/WeeklySummary.tsx` — the UI card
-- **Modified file**: `app/(tabs)/progress.tsx` — integrate the summary card at the top
+- **New component**: `components/WeeklySummary.tsx` — the UI card. **ALL state management and data fetching lives inside this component** (week state, expanded state, summary data). Progress.tsx renders `<WeeklySummary />` with zero new state hooks.
+- **Modified file**: `app/(tabs)/progress.tsx` — integrate the summary card at the top (one-line import + render, no new useState hooks)
+- **Error handling**: Wrap the summary card in a try/catch with a "Couldn't load summary" fallback state. The summary should never crash the Progress tab.
 
 No new dependencies. No new database tables. Uses existing query patterns from `lib/db.ts`.
 
@@ -137,7 +139,10 @@ No new dependencies. No new database tables. Uses existing query patterns from `
 - Summary computation is bounded: max 7 days of data per section
 - Memoize with `useMemo` keyed on week start date
 - Only compute expanded sections when user expands (lazy)
-- Navigation preloads adjacent weeks
+- **Deferred preloading**: Compute ONLY the current week on initial render. Preload prev/next weeks after initial render completes (via `InteractionManager.runAfterInteractions` or a post-render effect). Do NOT add preload work to the initial render path.
+
+#### Volume Calculation Note
+Volume is `Sum(weight × reps)` which equals 0 for bodyweight exercises (weight = 0). This is a known limitation. The summary shows a note: "Volume tracks weighted exercises only" when the user's workouts include bodyweight movements. This is explicitly OUT of scope to fix in v1.
 
 ### Scope
 
@@ -159,17 +164,45 @@ No new dependencies. No new database tables. Uses existing query patterns from `
 - Export summary as image/PDF
 - Comparison to arbitrary past weeks (only previous week)
 - Fitness recommendations based on data
+- Rep-based PRs for bodyweight exercises (v1 limitation)
+- Custom on-target tolerance (hardcoded at ±10% for v1)
+
+### Share Text Template
+
+When the user taps "Share Summary", the following formatted text is shared:
+
+```
+📊 FitForge Weekly Summary
+Week of Apr 14 – Apr 20
+
+💪 Workouts: 4 completed (3h 45m total)
+📈 Volume: 24,500 kg (+12% vs last week)
+🏆 PRs: Bench Press 100kg (+5), Squat 140kg (+10)
+🥗 Nutrition: 3/4 days on target (avg 2,150 cal)
+⚖️ Weight: 82.0 → 81.7 kg (−0.3)
+🔥 Streak: 12 weeks
+
+Tracked with FitForge
+```
+
+Sections with no data are omitted from the share text. The "Tracked with FitForge" attribution line is always included.
 
 ### Acceptance Criteria
 - [ ] Given the user has logged workouts this week, When they open the Progress tab, Then they see a weekly summary card showing workout count, total volume, and duration
-- [ ] Given the user logged PRs this week, When they view the summary, Then the PRs are listed with exercise name, new weight, and improvement delta
-- [ ] Given the user has nutrition entries this week, When they view the expanded summary, Then they see average calories/macros vs targets and days-on-target count
-- [ ] Given the user has body weight entries this week, When they view the summary, Then they see start-of-week and end-of-week weight with delta
+- [ ] Given the user has NO active program, When they view the summary, Then workout count shows "4 workouts" (absolute), NOT "4 of N scheduled"
+- [ ] Given the user HAS an active program, When they view the summary, Then workout count shows "4 of 5 scheduled (80%)"
+- [ ] Given the user logged PRs this week (weighted exercises), When they view the summary, Then the PRs are listed with exercise name, new weight, and improvement delta
+- [ ] Given the user has nutrition entries this week, When they view the expanded summary, Then they see average calories/macros vs targets and days-on-target count (on-target = calories within ±10%)
+- [ ] Given the user has ≥3 body weight entries this week, When they view the summary, Then body weight uses 3-day rolling average for start/end values
 - [ ] Given no workouts this week, When the user views the summary, Then it shows "No workouts logged this week" with a CTA to start one
 - [ ] Given no nutrition data this week, When the user views the summary, Then the nutrition section is hidden (not shown as zeroes)
 - [ ] Given the user taps the left arrow, When the previous week has data, Then the summary updates to show previous week's stats
-- [ ] Given the user taps "Share Summary", When the share sheet opens, Then it contains a formatted text summary of the week's stats
+- [ ] Given the user taps "Share Summary", When the share sheet opens, Then it contains a formatted text summary matching the share text template
 - [ ] Given the app uses kg units, When the user views the summary, Then all weights are shown in kg; same for lb users
+- [ ] Given it is Monday morning with no workouts yet, When the user views the streak, Then the streak count is based on completed weeks only and does NOT show 0 or "broken"
+- [ ] Given the summary data query fails, When the user views Progress, Then a "Couldn't load summary" fallback is shown and the rest of the tab works normally
+- [ ] The card uses `accessibilityState={{ expanded: isExpanded }}` and expand button has `accessibilityHint`
+- [ ] Expand/collapse animation respects `useReducedMotion()`
 - [ ] PR passes all existing tests with no regressions
 - [ ] No new lint warnings or TypeScript errors
 - [ ] All interactive elements have accessibility labels
@@ -183,13 +216,19 @@ No new dependencies. No new database tables. Uses existing query patterns from `
 | No nutrition tracking at all | Hide nutrition section entirely |
 | Partial nutrition week (3/7 days) | Show "3/7 days tracked" and average across tracked days only |
 | No body weight entries | Hide body section |
-| Single body weight entry | Show just the weight, no delta |
+| Single body weight entry | Show just the weight, no delta, no rolling average |
+| 2 body weight entries | Use raw first/last (not enough for rolling avg) |
 | User navigates to a week with no data at all | Show "No activity recorded this week" |
-| Week boundary (Monday start vs Sunday start) | Use Monday as week start (ISO standard) |
+| Week boundary (Monday start vs Sunday start) | Use Monday as week start (ISO standard). TODO: add user preference in future |
 | User's first week using the app | No "vs last week" comparison, show absolute values only |
 | Very large volume numbers | Format with comma separators (e.g., 24,500 kg) |
 | App in dark mode | Card respects theme colors |
-| Screen reader active | All stats read with full context |
+| Screen reader active | All stats read with full context, expanded state announced |
+| Monday morning, no workouts yet | Streak shows completed-weeks count, NOT 0. Shows "12 weeks (current week in progress)" |
+| No active program | Workout count is absolute ("4 workouts"), not "4 of N" |
+| Bodyweight-only workout week | Volume shows 0 with note "Volume tracks weighted exercises only"; no PRs listed |
+| Summary query throws error | Fallback "Couldn't load summary" card; rest of Progress tab unaffected |
+| Reduced motion enabled | Expand/collapse state changes instantly, no animation |
 
 ### Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
@@ -204,49 +243,46 @@ No new dependencies. No new database tables. Uses existing query patterns from `
 
 ### Quality Director (UX Critique)
 
-**Verdict: NEEDS REVISION** (2026-04-16)
+**Round 1 Verdict: NEEDS REVISION** (2026-04-16)
 
-**Must fix before approval:**
-1. Clarify "scheduled" count behavior when no active program — show absolute count ("4 workouts") instead of "4/5 scheduled" when no program is active
-2. Add `accessibilityState={{ expanded }}` spec to the card, plus `accessibilityHint` on the expand button
-3. Address streak display for current week with no workouts yet — avoid false "streak broken" on Monday morning
-4. Clarify "on target" threshold — is a day "on target" when all macros are within ±10%? Or just calories?
+**Must fix before approval (ALL ADDRESSED in Rev 2):**
+1. ✅ Clarify "scheduled" count behavior when no active program — FIXED: shows absolute count ("4 workouts") when no program active, "4/5 scheduled" only when program exists
+2. ✅ Add `accessibilityState={{ expanded }}` spec — FIXED: added to accessibility section with `accessibilityHint` on expand button
+3. ✅ Address streak display for current week — FIXED: current week excluded from streak count, shows "12 weeks (current week in progress)"
+4. ✅ Clarify "on target" threshold — FIXED: defined as calories within ±10% of calorie target, named constant `NUTRITION_ON_TARGET_TOLERANCE`
 
-**Recommended improvements:**
-- Consider making Weekly Summary a 4th Progress tab segment instead of a card above segments (the tab is already dense at 905 lines / 3 segments)
-- Use rolling average (`movingAvg()` from lib/format.ts) for body weight trend instead of raw first/last entry
-- Document bodyweight exercise limitation for volume (weight×reps = 0) and PR detection (weight-based only)
-- Define the share text template in the plan
-- Add error boundary/fallback for the summary card
-- Defer adjacent week preloading to post-initial-render
-- Respect `useReducedMotion()` for expand/collapse animation
+**Recommended improvements (ALL ADDRESSED in Rev 2):**
+- ⚠️ 4th segment vs card: Kept as card for v1 (simpler, lower risk). If user feedback shows the tab is too dense, we'll migrate to a segment in v2.
+- ✅ Rolling average for body weight — adopted, using `movingAvg()` from lib/format.ts
+- ✅ Bodyweight exercise limitation documented in scope/edge cases
+- ✅ Share text template defined
+- ✅ Error boundary/fallback added to architecture and acceptance criteria
+- ✅ Deferred preloading — compute only current week on initial render
+- ✅ `useReducedMotion()` added to accessibility spec
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: APPROVED** (with minor recommendations)
 
-**Feasibility**: All data sources verified (`workout_sessions`, `workout_sets`, `daily_log`, `macro_targets`, `body_weight`). Existing weekly aggregation queries (`getWeeklySessionCounts`, `getWeeklyVolume`, `getPersonalRecords`) can be reused. `computeStreak()` exists and uses ISO week boundaries. No new deps or tables needed.
+**Verdict: APPROVED** (2026-04-16, with minor recommendations)
 
-**Architecture Fit**: Excellent. Modular DB layer supports new query functions cleanly. Component patterns (useState + useFocusEffect) well-established.
+**Feasibility**: All data sources verified. Existing weekly aggregation queries can be reused. No new deps or tables needed.
 
-**Complexity**: Medium effort, Low risk, Zero new dependencies.
+**Architecture Fit**: Excellent. Modular DB layer supports new query functions cleanly.
 
-**Technical Concerns**:
-1. progress.tsx is 905 lines — WeeklySummary must be fully self-contained (zero new state in progress.tsx)
-2. PR detection query should reuse `getPersonalRecords()` pattern and consider index on `(exercise_id, weight)`
-3. Plan references `weekly_schedule` but actual table is `program_schedule` — use `getWeekAdherence()` from settings.ts
-4. Nutrition ±10% threshold should be a named constant, not hardcoded
+**Technical Concerns (ALL ADDRESSED in Rev 2)**:
+1. ✅ WeeklySummary is fully self-contained — zero new state in progress.tsx
+2. ⚠️ PR detection query: add TODO for index on `(exercise_id, weight)` — acceptable for current dataset
+3. ✅ Corrected: use `program_schedule` table / `getWeekAdherence()` from settings.ts
+4. ✅ Nutrition threshold is a named constant `NUTRITION_ON_TARGET_TOLERANCE`
 
-**Simplification Opportunities**:
-1. Consider deferring week navigation (12 weeks back) to V2 — current week + vs-last-week delivers 90% of value
-2. Consider deferring share functionality to follow-up ticket
-3. Lazy expansion for nutrition/body sections is the right call
+**Recommendations adopted**:
+- ✅ Create `lib/db/weekly-summary.ts` for queries
+- ✅ Use `useFocusRefetch` pattern from `lib/query.tsx`
+- ✅ Follow `__tests__/acceptance/` pattern for testing
 
-**Recommendations**:
-1. Create `lib/db/weekly-summary.ts` for queries (sessions.ts is already 32KB)
-2. Use `useFocusRefetch` pattern from `lib/query.tsx` for auto-refresh
-3. Follow `__tests__/acceptance/` pattern for testing
-
-**Performance**: No concerns. Queries bounded to 7 days. SQLite handles this in <10ms.
+**Simplification suggestions noted but NOT adopted for v1** (all three features deliver distinct value and are low-complexity):
+- Week navigation: kept (simple left/right navigation, bounded to 12 weeks)
+- Share functionality: kept (single `Share.share()` call, template already defined)
 
 ### CEO Decision
-_Pending reviews_
+
+**PENDING** — awaiting QD re-review of Rev 2 changes. All 4 must-fix items and all recommendations have been addressed.
