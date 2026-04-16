@@ -2,10 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from "
 import {
   AccessibilityInfo,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
-  FlatList as RNFlatList,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -30,6 +28,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { activateKeepAwakeAsync } from "expo-keep-awake";
+import BottomSheet, { BottomSheetFlatList, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { play as playAudio, setEnabled as setAudioEnabled } from "../../lib/audio";
 import {
   addSet,
@@ -604,7 +603,7 @@ function ExerciseDetailDrawerContent({ exercise }: { exercise: Exercise }) {
     : screenWidth - 48;
 
   return (
-    <RNFlatList
+    <BottomSheetFlatList
       data={[]}
       renderItem={null}
       style={styles.detailBody}
@@ -692,6 +691,8 @@ export default function ActiveSession() {
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
   const [modes, setModes] = useState<Record<string, TrainingMode>>({});
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null);
+  const detailSheetRef = useRef<BottomSheet>(null);
+  const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -1051,6 +1052,7 @@ export default function ActiveSession() {
   const handleShowDetail = useCallback(async (exerciseId: string) => {
     const ex = await getExerciseById(exerciseId);
     setDetailExercise(ex);
+    detailSheetRef.current?.snapToIndex(0);
   }, []);
 
   const handlePickExercise = useCallback(async (exercise: { id: string }) => {
@@ -1335,35 +1337,36 @@ export default function ActiveSession() {
         onDismiss={() => setPickerOpen(false)}
         onPick={handlePickExercise}
       />
-      <Modal
-        visible={!!detailExercise}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDetailExercise(null)}
-        accessibilityViewIsModal
+      <BottomSheet
+        ref={detailSheetRef}
+        index={-1}
+        snapPoints={detailSnapPoints}
+        enablePanDownToClose
+        enableDynamicSizing={false}
+        onClose={() => setDetailExercise(null)}
+        backdropComponent={(props) => (
+          <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
+        )}
+        backgroundStyle={{ backgroundColor: theme.colors.surface }}
+        handleIndicatorStyle={{ backgroundColor: theme.colors.onSurfaceVariant }}
       >
-        <View style={styles.detailOverlay}>
-          <Pressable style={styles.detailDismiss} onPress={() => setDetailExercise(null)} accessibilityRole="button" accessibilityLabel="Close details" />
-          <View style={[styles.detailSheet, { backgroundColor: theme.colors.surface, shadowColor: theme.colors.shadow }]}>
-            {detailExercise && (
-              <>
-                <View style={styles.detailHeader}>
-                  <Text variant="titleLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
-                    {detailExercise.name}
-                  </Text>
-                  <IconButton
-                    icon="close"
-                    size={24}
-                    onPress={() => setDetailExercise(null)}
-                    accessibilityLabel="Close exercise details"
-                  />
-                </View>
-                <ExerciseDetailDrawerContent exercise={detailExercise} />
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+        {detailExercise && (
+          <>
+            <View style={styles.detailHeader}>
+              <Text variant="titleLarge" style={{ color: theme.colors.onSurface, flex: 1 }}>
+                {detailExercise.name}
+              </Text>
+              <IconButton
+                icon="close"
+                size={24}
+                onPress={() => detailSheetRef.current?.close()}
+                accessibilityLabel="Close exercise details"
+              />
+            </View>
+            <ExerciseDetailDrawerContent exercise={detailExercise} />
+          </>
+        )}
+      </BottomSheet>
     </>
   );
 }
@@ -1568,23 +1571,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     minHeight: 48,
     justifyContent: "center",
-  },
-  detailOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  detailDismiss: {
-    flex: 1,
-  },
-  detailSheet: {
-    maxHeight: "60%",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 16,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
   },
   detailHeader: {
     flexDirection: "row",
