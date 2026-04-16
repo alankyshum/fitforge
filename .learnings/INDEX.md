@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 87
+Total learnings: 89
 
 ## How to Use This Knowledge Base
 
@@ -21,11 +21,11 @@ Before starting work on a task, search this index for relevant learnings:
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
 - [Build Configuration](pitfalls/build-config.md) — 8 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
-- [SQL Queries](pitfalls/sql-queries.md) — 9 learnings
+- [SQL Queries](pitfalls/sql-queries.md) — 10 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 5 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 6 learnings
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-182 | COUNT(*) Overcounts When Joining Tables with Duplicate Dimension Values | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-16 | BLD-182 | Conditional Algorithm Specs Require Branch-by-Branch Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-16 | BLD-186/187 | Seed Data Repair Must Cover ALL Canonical Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-186/187 | Canonical Constants as UI Fallback for DB-Sourced Display Data | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-179 | GitHub Actions Release Notes with Markdown Break GITHUB_OUTPUT Heredoc | Pitfalls | [build-config.md](pitfalls/build-config.md) |

@@ -73,3 +73,11 @@
 **Learning**: When a data corruption pattern affects one column, it almost certainly affects others seeded from the same source. Fixing only the symptom column (the one causing the current bug) leaves a time bomb: the next column to fail produces a near-identical bug report. The repair loop should iterate ALL columns defined in the canonical seed source, not just the one currently broken.
 **Action**: When writing seed data repair logic, iterate all fields from the canonical source constant (e.g., `STARTER_TEMPLATES`), not just the field that triggered the bug. Pattern: `for (const tpl of TEMPLATES) { UPDATE table SET col1=?, col2=?, ... WHERE id=? AND (col1 IS NULL OR col1='') }`. Review the full canonical source and repair every column that could have been corrupted by import, migration, or prior incomplete seeding.
 **Tags**: sqlite, seed-data, self-healing, partial-fix, data-repair, canonical-source, regression
+
+### COUNT(*) Overcounts When Joining Tables with Duplicate Dimension Values
+**Source**: BLD-182 — Weekly Training Summary & Insights
+**Date**: 2026-04-16
+**Context**: The weekly summary counted scheduled workouts by querying program_schedule with COUNT(*). When multiple workout templates were assigned to the same day_of_week, each template produced a separate row, inflating the "scheduled workouts this week" count beyond the actual number of distinct training days.
+**Learning**: COUNT(*) counts rows, not distinct values. In any query that joins or queries a table where the grouping/dimension column (e.g., day_of_week) can have multiple rows per value, COUNT(*) will overcount. The result is numerically plausible but silently wrong — a 3-day program with 2 templates per day reports 6 scheduled workouts instead of 3.
+**Action**: When counting distinct occurrences of a dimension (days, users, categories), use `COUNT(DISTINCT dimension_column)` instead of `COUNT(*)`. During review, check every COUNT(*) in aggregate queries: if the FROM clause involves a table where the counted dimension is not the primary key, it likely needs COUNT(DISTINCT). Add a test with duplicate dimension values to verify the count.
+**Tags**: sqlite, sql, count-distinct, aggregation, overcounting, join, dimension, code-review
