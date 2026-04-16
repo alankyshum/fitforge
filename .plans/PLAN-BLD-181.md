@@ -203,7 +203,23 @@ No new dependencies. No new database tables. Uses existing query patterns from `
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION** (2026-04-16)
+
+**Must fix before approval:**
+1. Clarify "scheduled" count behavior when no active program — show absolute count ("4 workouts") instead of "4/5 scheduled" when no program is active
+2. Add `accessibilityState={{ expanded }}` spec to the card, plus `accessibilityHint` on the expand button
+3. Address streak display for current week with no workouts yet — avoid false "streak broken" on Monday morning
+4. Clarify "on target" threshold — is a day "on target" when all macros are within ±10%? Or just calories?
+
+**Recommended improvements:**
+- Consider making Weekly Summary a 4th Progress tab segment instead of a card above segments (the tab is already dense at 905 lines / 3 segments)
+- Use rolling average (`movingAvg()` from lib/format.ts) for body weight trend instead of raw first/last entry
+- Document bodyweight exercise limitation for volume (weight×reps = 0) and PR detection (weight-based only)
+- Define the share text template in the plan
+- Add error boundary/fallback for the summary card
+- Defer adjacent week preloading to post-initial-render
+- Respect `useReducedMotion()` for expand/collapse animation
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
