@@ -232,6 +232,7 @@ export default function FeedbackScreen() {
         multiline
         numberOfLines={4}
         style={[styles.input, { minHeight: 100 }]}
+        contentStyle={styles.multilineContent}
         accessibilityLabel="Report description"
       />
 
@@ -313,6 +314,10 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   segment: { marginBottom: 8 },
   input: { marginBottom: 4 },
+  multilineContent: {
+    paddingTop: 12,
+    paddingHorizontal: 12,
+  },
   diagHeader: {
     flexDirection: "row",
     alignItems: "center",
