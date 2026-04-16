@@ -32,6 +32,9 @@ jest.mock('../../lib/db', () => ({
   updateSession: jest.fn().mockResolvedValue(undefined),
   getSessionSetCount: jest.fn().mockResolvedValue(0),
   createTemplateFromSession: jest.fn().mockResolvedValue('new-template-id'),
+  getAllExercises: jest.fn().mockResolvedValue([]),
+  swapExerciseInSession: jest.fn().mockResolvedValue([]),
+  undoSwapInSession: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

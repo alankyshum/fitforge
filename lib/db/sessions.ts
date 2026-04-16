@@ -1158,3 +1158,40 @@ export async function createTemplateFromSession(
 
   return newTemplateId;
 }
+
+// ---- Exercise Swap ----
+
+export async function swapExerciseInSession(
+  sessionId: string,
+  oldExerciseId: string,
+  newExerciseId: string
+): Promise<string[]> {
+  const rows = await query<{ id: string }>(
+    `SELECT id FROM workout_sets
+     WHERE session_id = ? AND exercise_id = ? AND completed = 0`,
+    [sessionId, oldExerciseId]
+  );
+
+  const setIds = rows.map((r) => r.id);
+  if (setIds.length === 0) return [];
+
+  const placeholders = setIds.map(() => "?").join(",");
+  await execute(
+    `UPDATE workout_sets SET exercise_id = ? WHERE id IN (${placeholders})`,
+    [newExerciseId, ...setIds]
+  );
+
+  return setIds;
+}
+
+export async function undoSwapInSession(
+  setIds: string[],
+  originalExerciseId: string
+): Promise<void> {
+  if (setIds.length === 0) return;
+  const placeholders = setIds.map(() => "?").join(",");
+  await execute(
+    `UPDATE workout_sets SET exercise_id = ? WHERE id IN (${placeholders})`,
+    [originalExerciseId, ...setIds]
+  );
+}
