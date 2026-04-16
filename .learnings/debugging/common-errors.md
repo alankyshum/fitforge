@@ -2,6 +2,14 @@
 
 ## Learnings
 
+### Expo Kotlin NoSuchMethodError on Newer Android = SDK Version Too Old
+**Source**: BLD-179 — Android crash on launch (NativeDatabase.constructor SharedRef error)
+**Date**: 2026-04-16
+**Context**: The app crashed immediately on launch on Android 16 (OS 36) with `NoSuchMethodError: No direct method <init>` in `expo.modules.kotlin.sharedobjects.SharedRef`. The APK was built with Expo SDK 54; the user's device ran Android 16 which shipped after SDK 54's release.
+**Learning**: `java.lang.NoSuchMethodError` in `expo.modules.kotlin.*` classes on a newer Android version is a reliable signal that the Expo SDK's Kotlin native modules are binary-incompatible with the target OS. Each Android OS release may change ABI expectations for constructor signatures. Upgrading to the latest Expo SDK (which targets the newer OS) resolves it. This is distinct from JS-level errors — it is a native binary crash that no JS fix can address.
+**Action**: When users report native Kotlin/Java crashes (`NoSuchMethodError`, `NoSuchFieldError`, `AbstractMethodError`) in `expo.modules.*` on a newer Android version, check which Expo SDK the APK was built with. If the SDK predates the Android version, upgrade the SDK. Do not attempt JS-level fixes — the crash is in compiled native code.
+**Tags**: expo, android, kotlin, nosuchmethoderror, native-crash, sdk-upgrade, sharedref, binary-compatibility
+
 ### Async Singleton Initialization Requires a Promise Mutex
 **Source**: BLD-3 — Workout detail crash (NativeDatabase.prepareAsync NullPointerException)
 **Date**: 2026-04-13

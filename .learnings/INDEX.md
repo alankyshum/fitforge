@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 83
+Total learnings: 85
 
 ## How to Use This Knowledge Base
 
@@ -19,7 +19,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
-- [Build Configuration](pitfalls/build-config.md) — 7 learnings
+- [Build Configuration](pitfalls/build-config.md) — 8 learnings
 - [Theming](pitfalls/theming.md) — 4 learnings
 - [SQL Queries](pitfalls/sql-queries.md) — 8 learnings
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
@@ -32,12 +32,14 @@ Before starting work on a task, search this index for relevant learnings:
 - [Architecture](decisions/architecture.md) — 1 learning
 
 ### Debugging
-- [Common Errors](debugging/common-errors.md) — 1 learning
+- [Common Errors](debugging/common-errors.md) — 2 learnings
 
 ## Recent Learnings
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-179 | GitHub Actions Release Notes with Markdown Break GITHUB_OUTPUT Heredoc | Pitfalls | [build-config.md](pitfalls/build-config.md) |
+| 2026-04-16 | BLD-179 | Expo Kotlin NoSuchMethodError on Newer Android = SDK Version Too Old | Debugging | [common-errors.md](debugging/common-errors.md) |
 | 2026-04-16 | BLD-181 | Four Plan Specification Gaps That Block Approval | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-16 | BLD-174 | INSERT OR IGNORE Cannot Repair Corrupted Existing Rows | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-174 | Import/Export Must Include All Semantic Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |

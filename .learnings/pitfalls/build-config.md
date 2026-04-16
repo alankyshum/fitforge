@@ -50,6 +50,14 @@
 **Action**: Before assigning `accessibilityRole="button"` to any component, verify it has an `onPress` handler. For informational cards, badges, and display-only elements, use `accessibilityRole="summary"` or omit the role entirely. Add this check to code review checklists for accessibility compliance.
 **Tags**: accessibility, accessibilityrole, screen-reader, a11y, button, react-native, cards, voiceover, talkback
 
+### GitHub Actions Release Notes with Markdown Break GITHUB_OUTPUT Heredoc
+**Source**: BLD-179 — Android crash on launch / F-Droid release pipeline fix
+**Date**: 2026-04-16
+**Context**: The scheduled release workflow generated release notes containing markdown (triple backticks for F-Droid repo URL) and passed them via `GITHUB_OUTPUT` heredoc. The `gh release create --notes` command received corrupted input because the markdown backticks prematurely terminated the heredoc delimiter.
+**Learning**: `GITHUB_OUTPUT` heredoc syntax (`echo 'notes<<EOF' >> $GITHUB_OUTPUT`) fails when the content contains triple backticks or other shell-significant characters. The heredoc delimiter gets confused by markdown code fences. Additionally, `gh workflow run` (used to trigger the F-Droid build) requires `actions:write` permission — without it, the trigger fails silently.
+**Action**: When generating release notes or any multi-line markdown content in GitHub Actions, write to a temporary file and use `--notes-file` instead of `--notes` with `GITHUB_OUTPUT`. Always include `actions: write` in the `permissions` block when a workflow triggers other workflows via `gh workflow run`.
+**Tags**: github-actions, release-notes, heredoc, github-output, markdown, permissions, ci-cd, gh-cli
+
 ### Expo Go Cannot Load Custom Native Modules — Migrate to expo-dev-client First
 **Source**: BLD-136 — expo-dev-client migration for Health integration
 **Date**: 2026-04-15
