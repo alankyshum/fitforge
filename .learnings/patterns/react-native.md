@@ -337,3 +337,11 @@
 **Learning**: When launching a feature that retroactively analyzes historical data (achievements, streaks, milestones, badges), the first evaluation must distinguish between "earned now" and "already earned." Evaluate silently on first open, mark all qualifying items as already-earned, and show a single summary banner ("We found N achievements from your history") instead of individual unlock notifications.
 **Action**: For any feature that evaluates historical user data on first launch: (1) run the evaluation silently without triggering per-item animations/haptics/notifications, (2) persist results with the current timestamp, (3) show a single aggregated banner ("We found N items"), (4) only trigger individual unlock UX for items earned in future sessions.
 **Tags**: retroactive, achievements, gamification, ux, first-launch, migration, silent-evaluation, banner
+
+### Canonical Constants as UI Fallback for DB-Sourced Display Data
+**Source**: BLD-186/187 — Starter workout cards showing empty names
+**Date**: 2026-04-16
+**Context**: Starter workout cards rendered blank because the DB rows had null/empty `name` values. The rendering code used `item.name` directly from the DB query result with no fallback.
+**Learning**: When the same data exists in both the database and a canonical JS/TS constant (e.g., `STARTER_TEMPLATES`), the UI should use the constant as a fallback source. This provides resilience against DB corruption without masking the underlying issue — the repair logic fixes the root cause while the fallback ensures the UI never shows blank content to users.
+**Action**: For any UI rendering of seeded/canonical data, use the pattern `canonicalSource?.field || dbRow.field` (e.g., `meta?.name || item.name`). This defense-in-depth approach prevents blank UI while the self-healing DB repair catches up. Apply this specifically to seeded data where a JS constant is the source of truth.
+**Tags**: react-native, defense-in-depth, fallback, db-corruption, seed-data, ui-resilience, canonical-source
