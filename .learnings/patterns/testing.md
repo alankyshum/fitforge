@@ -65,3 +65,11 @@
 **Learning**: When `jest.mock('module', () => ({ fn1, fn2 }))` uses an explicit return object, it replaces the ENTIRE module — any export not listed in the mock becomes `undefined`. Adding a new export to a widely-mocked module silently breaks all test files that use partial explicit mocks. The breakage is invisible until tests run.
 **Action**: After adding a new export to any module, grep for `jest.mock.*<module-path>` across the entire test suite and add the new export to every partial mock. Alternatively, use `jest.mock('module')` with `jest.spyOn` for individual functions — this auto-mocks all exports and survives new additions.
 **Tags**: jest, testing, mock, module-exports, partial-mock, breaking-change, test-maintenance
+
+### Source-Level Structural Tests for Design System Compliance
+**Source**: BLD-198/BLD-212 — Floating bottom navbar redesign (GitHub #103)
+**Date**: 2026-04-16
+**Context**: PR #112 was blocked twice for hardcoded `#000` shadowColor and undersized font (10px). These are recurring review findings. The fix PR added structural tests that read component source code with `fs.readFileSync` and validate design system rules: `expect(src).toContain("theme.colors.shadow")`, `expect(src).not.toContain('shadowColor: "#000"')`, regex extraction of `fontSize` values asserting `≥ 12`.
+**Learning**: When code review repeatedly catches the same category of violation (hardcoded colors, undersized fonts, missing a11y attributes), encode those rules as structural source-level tests. Unlike render-based tests, these read the file as a string and assert patterns — making them fast, deterministic, and independent of runtime mocking. They shift enforcement from review time to CI time.
+**Action**: For components with design system requirements, add a test that reads the source via `fs.readFileSync`, then asserts: (1) theme tokens are used (`toContain("theme.colors.X")`), (2) hardcoded values are absent (`not.toContain`), (3) numeric style values meet minimums via regex extraction. Group these as a `describe("design system compliance")` block in the component's test file.
+**Tags**: testing, structural-tests, design-system, theme-compliance, accessibility, code-review-automation, source-analysis, jest

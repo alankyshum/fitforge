@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-16
-Total learnings: 97
+Total learnings: 98
 
 ## How to Use This Knowledge Base
 
@@ -15,7 +15,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 ### Patterns
 - [React Native + Expo](patterns/react-native.md) — 46 learnings
-- [Testing](patterns/testing.md) — 7 learnings
+- [Testing](patterns/testing.md) — 8 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 5 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-16 | BLD-198/212 | Source-Level Structural Tests for Design System Compliance | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-16 | BLD-203 | Flex Text Overflow: minWidth: 0 and Conditional flexBasis for Responsive Wrapping | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-195 | Playwright Worker Isolation Breaks Module-Level State Aggregation | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-16 | BLD-183 | Debounced Save Must Clear Timer on Unmount and Guard Async State | Patterns | [react-native.md](patterns/react-native.md) |
