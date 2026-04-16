@@ -3,7 +3,7 @@
 **Issue**: BLD-198
 **Author**: CEO
 **Date**: 2026-04-16
-**Status**: IN_REVIEW (Rev 2 — addressing Tech Lead feedback)
+**Status**: IN_REVIEW (Rev 3 — addressing Quality Director feedback)
 
 ## Problem Statement
 Two issues with the current bottom navbar:
@@ -44,9 +44,22 @@ Replace the default Expo Router `Tabs` tab bar with a custom `FloatingTabBar` co
 
 **Accessibility:**
 - All tabs maintain `accessibilityRole: "tab"` and `accessibilityLabel`
+- All tabs include `accessibilityState: { selected: route.key === state.routes[state.index].key }` so screen readers announce "selected" state
 - Center button: `accessibilityLabel: "Workouts"`, `accessibilityHint: "Navigate to workout screen"`
-- Minimum touch target: 48x48dp for all tabs
+- Minimum touch target: 48x48dp for all tabs, 56dp for center button (full circle tappable including 12dp protrusion — use `hitSlop` or expanded wrapper)
 - Color contrast meets WCAG AA for both light and dark themes
+- Screen reader tab order matches visual order (left-to-right, mirrored in RTL)
+
+**Reduced Motion:**
+- Center button scale animation respects `useReducedMotion()` from `react-native-reanimated`
+- When reduced motion is enabled: replace scale animation with instant opacity change (0.7 → 1.0) on press — no spring/timing animations
+- All other tabs already use no animation (simple highlight), so no changes needed
+
+**Keyboard Behavior:**
+- The floating tab bar HIDES when the software keyboard is open
+- Implementation: Listen to `Keyboard.addListener('keyboardDidShow')` / `keyboardDidHide` events from `react-native` and animate the bar out (translateY off-screen) on show, back on hide
+- This prevents the floating bar from occluding text inputs (exercise search, macro entry, etc.)
+- Must work on both iOS and Android
 
 ### Technical Approach
 
@@ -62,9 +75,15 @@ Replace the default Expo Router `Tabs` tab bar with a custom `FloatingTabBar` co
 - Use `useSafeAreaInsets()` to get bottom padding for Android gesture bar
 - Center button: Wrap in a `View` spanning full height (bar + protrusion) to ensure Android touch targets work — do NOT rely on `overflow: 'visible'` which doesn't propagate touches on Android
 - Floating effect: `position: 'absolute'`, `bottom: insets.bottom + 8`, `left: 16`, `right: 16`
-- Export `FLOATING_TAB_BAR_HEIGHT` constant (bar height + margin + inset buffer) for screens to use as `paddingBottom`
-- Provide `useFloatingTabBarHeight()` hook that accounts for safe area insets dynamically (React Navigation's `useBottomTabBarHeight()` won't work with absolute positioning)
-- All tab screens MUST use this constant/hook for bottom padding — update in same PR
+- **Background**: Opaque `theme.colors.surface` background with `borderRadius: 24`. Content scrolling behind the bar in the gap between bar edges and screen edges is acceptable since the bar itself is opaque. The area below the bar (safe area zone) inherits the screen's background color.
+
+**Content Bottom Padding Strategy (CRITICAL):**
+- Export `FLOATING_TAB_BAR_HEIGHT` constant from `FloatingTabBar.tsx` = bar height (56dp) + bottom margin (8dp) + buffer (8dp) = 72dp base
+- Provide `useFloatingTabBarHeight()` hook that returns `FLOATING_TAB_BAR_HEIGHT + insets.bottom` (accounts for safe area dynamically)
+- React Navigation's `useBottomTabBarHeight()` will NOT work with absolute positioning — use our custom hook instead
+- **All tab screens MUST use `useFloatingTabBarHeight()` for `contentContainerStyle.paddingBottom`** — update every scrollable container in same PR
+- Screens to update: `app/(tabs)/index.tsx`, `app/(tabs)/exercises.tsx`, `app/(tabs)/nutrition.tsx`, `app/(tabs)/progress.tsx`, `app/(tabs)/settings.tsx`
+- This is done in the same PR as the tab bar component — not a follow-up
 - Shadow: Apply `elevation` independently to bar container and center button (Android elevation clips to parent bounds, so protruding center button needs its own elevation)
 - Theme-aware: use `useTheme()` from react-native-paper for colors
 
@@ -102,7 +121,11 @@ This requires reordering the `<Tabs.Screen>` definitions in `_layout.tsx`.
 - [ ] Given light mode, When viewing the navbar, Then colors correctly follow the light theme
 - [ ] Given any tab, When tapping it, Then navigation works correctly (same as before)
 - [ ] Given the Workouts center button, When pressing it, Then a subtle scale animation plays
-- [ ] Given a screen reader, When navigating the tab bar, Then all tabs are announced with correct labels and roles
+- [ ] Given OS "Reduce Motion" is enabled, When pressing the center button, Then no scale animation plays (opacity change instead)
+- [ ] Given a screen reader, When navigating the tab bar, Then all tabs are announced with correct labels, roles, and selected state
+- [ ] Given `accessibilityState`, When a tab is active, Then screen readers announce "selected" state
+- [ ] Given a text input is focused (e.g., exercise search), When the keyboard opens, Then the floating tab bar hides
+- [ ] Given any tab screen with scrollable content, When the floating bar is visible, Then no content is hidden behind the bar (paddingBottom accounts for bar height via `useFloatingTabBarHeight()`)
 - [ ] TypeScript compiles with zero errors (`npx tsc --noEmit`)
 - [ ] `FLOATING_TAB_BAR_HEIGHT` constant exported and used by all tab screens for bottom padding
 - [ ] No content hidden behind the floating bar on any screen
@@ -112,9 +135,9 @@ This requires reordering the `<Tabs.Screen>` definitions in `_layout.tsx`.
 ### Edge Cases
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Very narrow screen (320px) | Tabs compress but remain tappable (48dp minimum) |
+| Very narrow screen (320px) | Tabs compress but remain tappable (48dp min). If width < 320px, remove tab labels and use icon-only mode |
 | Landscape orientation | Floating bar adjusts width, center button still raised |
-| Keyboard open | Tab bar may hide or stay; follow platform convention |
+| Keyboard open | Floating tab bar hides via Keyboard API listener; animates back when keyboard dismisses |
 | RTL layout | Tab order mirrors correctly |
 | Device with no gesture bar | Bar still looks correct with minimal bottom padding |
 | Android 3-button nav | Different inset values; bar adjusts correctly |
@@ -133,27 +156,14 @@ This requires reordering the `<Tabs.Screen>` definitions in `_layout.tsx`.
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-**Verdict**: NEEDS REVISION — 4 blocking issues, 3 major recommendations
-**Reviewed at**: 2026-04-16T06:14:00Z
-
-**UX Assessment**: Floating navbar with raised center button is a well-established pattern. Tab reorder (Workouts → center) is justified. Design direction is sound.
-
-**Blocking Issues**:
-1. **[C] Content Bottom Padding** — Switching to absolute-positioned bar means every screen's content extends behind it. Must specify content-inset strategy (context provider, wrapper, or equivalent).
-2. **[C] Missing `accessibilityState: { selected }`** — Screen reader users can't tell which tab is active. Must add `accessibilityState: { selected: true/false }` to all tab items.
-3. **[C] `useReducedMotion()` Not Addressed** — Center button scale animation must respect OS reduced-motion setting. Disable or replace with opacity change.
-4. **[C] Keyboard Behavior Underspecified** — Floating bar will stay on top of keyboard by default, occluding inputs. Must specify hide-on-keyboard behavior.
-
-**Major Recommendations**:
-5. [M] Specify floating bar background treatment (opaque vs semi-transparent)
-6. [M] Ensure center button hit area covers full 56dp circle including 12dp protrusion (use `hitSlop`)
-7. [M] Add narrow screen floor (<320px → icon-only mode)
-
-**Additional Acceptance Criteria Needed**:
-- Content not hidden behind floating bar (bottom padding accounts for bar height)
-- `accessibilityState` announces selected tab
-- Reduced motion disables scale animation
-- Floating tab bar hides when keyboard is open
+**Verdict**: NEEDS REVISION (4 blocking, 3 major)
+- [x] Content bottom padding strategy → Added explicit `useFloatingTabBarHeight()` hook + all screens listed for update
+- [x] `accessibilityState: { selected }` → Added to Accessibility section + acceptance criteria
+- [x] `useReducedMotion()` → Added Reduced Motion section + acceptance criteria
+- [x] Keyboard behavior → Added Keyboard Behavior section + acceptance criteria
+- [x] Floating bar background treatment (major) → Specified opaque `theme.colors.surface`
+- [x] Hit area for protruding center button (major) → Already addressed in Rev 2 (wrapper View)
+- [x] Narrow screen <320px fallback (major) → Added icon-only mode fallback
 
 ### Tech Lead (Technical Feasibility)
 **Verdict**: NEEDS REVISION
@@ -187,4 +197,5 @@ Rev 2 addresses all Tech Lead findings:
 - MAJOR (index.tsx): Explicit callout that index.tsx must not be renamed
 - MINOR (shadow): Independent elevation for bar and center button
 
-Awaiting Quality Director UX review before final approval.
+Rev 2 sent to Quality Director. Rev 3 addresses all 4 QD blocking issues and 3 major recommendations.
+Resubmitting for QD re-review.
