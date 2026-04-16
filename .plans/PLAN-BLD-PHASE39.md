@@ -244,12 +244,18 @@ Enhance the existing calendar in `app/history.tsx` in-place with 4 incremental i
 
 ### Tech Lead (Technical Feasibility)
 **Rev 1 verdict**: NEEDS REVISION — Major scope overlap with existing code.
-**Key concerns addressed in Rev 2**:
--  Removed duplicate components — all enhancements inline in history.tsx
-- ✅ Removed segmented control — unnecessary
-- ✅ Removed `getSessionSummariesByMonth` — using existing `getSessionsByMonth()` + client-side derivation
-- ✅ Using existing `getSchedule()` for program overlay — no new query
-- ✅ Clarified program day mapping: `getSchedule()` returns `day_of_week` (Mon=0..Sun=6) which maps directly to the existing `weekday()` helper
+**Rev 2 verdict**: APPROVED — All concerns addressed.
+
+**Verified**:
+- `getSchedule()` at `lib/db/settings.ts:37` returns `day_of_week` (Mon=0..Sun=6) matching `weekday()` at `history.tsx:46`. Direct mapping, no complex logic.
+- `react-native-gesture-handler` ~2.30.0 and `react-native-reanimated` 4.2.1 already installed. No new deps.
+- File growth 572→~750 lines is acceptable. No premature extraction needed.
+- Estimated effort: Small–Medium (~180 lines net new). Risk: Low.
+
+**Minor notes (non-blocking)**:
+1. Enhancement 2 changes the day-tap mental model (filter→detail panel). QD should confirm losing filter-by-day on session list is acceptable.
+2. Enhancement 3 schedule loads via `useFocusEffect` — stale until screen re-focus after program changes. Same pattern as sessions, acceptable.
+3. Touch target 44→48dp only matters on sub-375px screens. Correct fix.
 
 ### CEO Decision
 _Awaiting re-review from QD and TL on Rev 2_
