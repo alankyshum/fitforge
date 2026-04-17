@@ -56,8 +56,10 @@ import {
   updateSetRPE,
   updateSetNotes,
   updateSetTrainingMode,
+  updateSetWarmup,
   getExerciseById,
   getAppSetting,
+  setAppSetting,
 } from "../../lib/db";
 import {
   getSessionProgramDayId,
@@ -119,12 +121,13 @@ type SetRowProps = {
   onNotes: (setId: string, text: string) => void;
   onNotesDraftChange: (setId: string, text: string) => void;
   onToggleNotes: (setId: string) => void;
+  onToggleWarmup: (setId: string) => void;
 };
 
 const SetRow = memo(function SetRow({
   set, step, unit, notesOpen, notesDraft, halfStep,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes,
+  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onToggleWarmup,
 }: SetRowProps) {
   const theme = useTheme();
 
@@ -138,11 +141,28 @@ const SetRow = memo(function SetRow({
             styles.setRow,
             set.completed && { backgroundColor: theme.colors.primaryContainer + "40" },
             { backgroundColor: theme.colors.background },
+            set.is_warmup && { borderLeftWidth: 3, borderLeftColor: theme.colors.surfaceVariant },
           ]}
         >
-          <Text variant="bodyMedium" style={[styles.colSet, { color: theme.colors.onSurface }]}>
-            {set.round ? `R${set.round}` : set.set_number}
-          </Text>
+          <Pressable
+            onPress={() => onToggleWarmup(set.id)}
+            hitSlop={10}
+            style={styles.colSet}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: set.is_warmup }}
+            accessibilityLabel={`Set ${set.set_number}, ${set.is_warmup ? "warm-up set" : "working set"}`}
+            accessibilityHint="Double tap to toggle between warm-up and working set"
+          >
+            {set.is_warmup ? (
+              <View style={[styles.warmupChip, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, fontWeight: "700" }}>W</Text>
+              </View>
+            ) : (
+              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, textAlign: "center" }}>
+                {set.round ? `R${set.round}` : set.set_number}
+              </Text>
+            )}
+          </Pressable>
           <Text variant="bodySmall" style={[styles.colPrev, { color: theme.colors.onSurfaceVariant }]}>
             {set.previous}
           </Text>
@@ -325,6 +345,7 @@ type GroupCardProps = {
   onNotes: (setId: string, text: string) => void;
   onNotesDraftChange: (setId: string, text: string) => void;
   onToggleNotes: (setId: string) => void;
+  onToggleWarmup: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
 };
@@ -334,7 +355,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   notesOpenMap, notesDraftMap, halfStep, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes,
+  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onToggleWarmup,
   onShowDetail, onSwap,
 }: GroupCardProps) {
   const theme = useTheme();
@@ -514,6 +535,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onNotes={onNotes}
           onNotesDraftChange={onNotesDraftChange}
           onToggleNotes={onToggleNotes}
+          onToggleWarmup={onToggleWarmup}
         />
       ))}
       <Button
@@ -960,6 +982,7 @@ export default function ActiveSession() {
               round: newLinkId ? s.set_number : null,
               trainingMode: (s.training_mode as TrainingMode) ?? null,
               tempo: s.tempo ?? null,
+              isWarmup: s.is_warmup,
             });
           }
           const created = await addSetsBatch(setsToInsert);
@@ -1313,6 +1336,32 @@ export default function ActiveSession() {
     setNotesOpen((prev) => ({ ...prev, [setId]: !prev[setId] }));
   }, []);
 
+  const handleToggleWarmup = useCallback(async (setId: string) => {
+    let newVal = false;
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sets: g.sets.map((s) => {
+          if (s.id === setId) {
+            newVal = !s.is_warmup;
+            return { ...s, is_warmup: newVal };
+          }
+          return s;
+        }),
+      }))
+    );
+    // Wait for state to settle before DB call (newVal captured in closure)
+    await updateSetWarmup(setId, newVal);
+    Haptics.selectionAsync();
+
+    // First-use tooltip
+    const shown = await getAppSetting("warmup_tooltip_shown");
+    if (!shown) {
+      setSnackbar("Set marked as warm-up. Warm-up sets are excluded from volume and PR tracking.");
+      await setAppSetting("warmup_tooltip_shown", "1");
+    }
+  }, []);
+
   const isPR = (set: SetWithMeta) => {
     if (!set.completed || !set.weight || set.weight <= 0) return false;
     const max = maxes[set.exercise_id];
@@ -1453,6 +1502,7 @@ export default function ActiveSession() {
             onNotes={handleNotes}
             onNotesDraftChange={handleNotesDraftChange}
             onToggleNotes={toggleNotes}
+            onToggleWarmup={handleToggleWarmup}
             onShowDetail={handleShowDetail}
             onSwap={handleSwapOpen}
           />
@@ -1648,6 +1698,16 @@ const styles = StyleSheet.create({
   colSet: {
     width: 36,
     textAlign: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 36,
+  },
+  warmupChip: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   colPrev: {
     width: 64,
