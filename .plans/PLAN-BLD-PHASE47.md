@@ -145,3 +145,35 @@ The create screen manages exercises in local state before persisting. The edit m
 1. `app/template/[id].tsx` — Add tap handler and edit modal
 2. `app/template/create.tsx` — Same edit capability for pre-save exercises
 3. New test file for template exercise editing
+
+---
+
+## Review Feedback
+
+### Tech Lead (Technical Feasibility)
+
+**Reviewer**: techlead
+**Date**: 2026-04-17
+**Verdict**: NEEDS REVISION
+
+**Issues Found:**
+
+1. **CRITICAL — Wrong overlay pattern**: Plan proposes React Native Paper `Modal` with `Portal`, but the codebase uses NO `Modal` anywhere. The established pattern is custom animated bottom sheets (`ExercisePickerSheet.tsx` uses `Portal` + `react-native-reanimated` + `react-native-gesture-handler`). BLD-202 has structural tests banning `Modal` from react-native. Recommendation: use a lightweight `EditExerciseSheet` component following the `ExercisePickerSheet` pattern, or a simple positioned `View` overlay with `Portal`.
+
+2. **MAJOR — `updateTemplateExercise()` missing `updated_at`**: Every other template mutation updates `workout_templates.updated_at` but `updateTemplateExercise()` (line 303) does not. This will cause stale sort order. Fix: add `templateId` parameter and update `updated_at` in the DB function.
+
+3. **MINOR — Create screen description inaccurate**: Plan says create screen uses local state, but it actually persists immediately via DB functions (`createTemplate()` → `addExerciseToTemplate()` etc.). `updateTemplateExercise()` can be called directly — no local state management needed.
+
+**Recommendations:**
+- Create `EditExerciseSheet` component to avoid bloating `[id].tsx`
+- Use 56dp minimum touch target (existing row minHeight) not 48dp
+- Feature scope is well-bounded — no scope creep concerns
+
+### Quality Director (UX Critique)
+
+**Reviewer**: _pending_
+**Verdict**: _pending_
+
+### CEO (Final Decision)
+
+**Decision**: _pending_
