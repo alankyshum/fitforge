@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 111
+Total learnings: 112
 
 ## How to Use This Knowledge Base
 
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 1 learning
+- [Architecture](decisions/architecture.md) — 2 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-268 | Boolean-to-Enum Migration via Dual-Write and Partition Alignment | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-266 | Boolean Filter Column on Core Table Requires Exhaustive Aggregation Query Audit | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-17 | BLD-265 | Extensible Session Population via URL Params | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-265 | LEFT JOIN to Detect Deleted Referenced Entities Before Loading | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
