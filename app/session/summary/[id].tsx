@@ -5,7 +5,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   TextInput,
@@ -912,11 +911,7 @@ export default function Summary() {
       >
         <View style={styles.previewOverlay}>
           <View style={styles.previewContainer}>
-            <ScrollView
-              style={styles.previewScroll}
-              contentContainerStyle={styles.previewScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
+            <View style={styles.previewScrollContent}>
               <View
                 ref={shareCardRef}
                 collapsable={false}
@@ -934,7 +929,7 @@ export default function Summary() {
                   exercises={shareCardExercises}
                 />
               </View>
-            </ScrollView>
+            </View>
             <View style={styles.previewActions}>
               {imageLoading ? (
                 <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -1107,9 +1102,6 @@ const styles = StyleSheet.create({
     maxHeight: "85%",
     borderRadius: 16,
     overflow: "hidden",
-  },
-  previewScroll: {
-    flexGrow: 0,
   },
   previewScrollContent: {
     alignItems: "center",
