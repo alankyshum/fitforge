@@ -153,3 +153,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-240 | LEARNINGS_EXTRACTED | 2026-04-16 |
 | BLD-241 | LEARNINGS_EXTRACTED | 2026-04-16 |
 | BLD-242 | NO_LEARNINGS | 2026-04-16 |
+| BLD-244 | NO_LEARNINGS | 2026-04-17 |
