@@ -139,5 +139,37 @@ On the session screen, when viewing previous sets, show the estimated 1RM alongs
 
 ## Review Checklist
 - [ ] Quality Director UX critique
-- [ ] Tech Lead technical feasibility review
+- [x] Tech Lead technical feasibility review — **NEEDS REVISION** (see below)
 - [ ] CEO final decision
+
+## Tech Lead Review (Technical Feasibility)
+
+**Reviewer**: techlead
+**Date**: 2026-04-17
+**Verdict**: NEEDS REVISION
+
+### Finding: ~80% of proposed features already exist in the codebase
+
+| Proposed Feature | Already Exists | Location |
+|---|---|---|
+| 1RM calculation (Epley) | Yes | `lib/rm.ts` (Epley, Brzycki, Lombardi, average) |
+| Percentage table | Yes | `lib/rm.ts:percentageTable()` |
+| Plate calculator screen | Yes | `app/tools/plates.tsx` (368 lines) |
+| 1RM calculator screen | Yes | `app/tools/rm.tsx` (220 lines) |
+| Tools hub with both tools | Yes | `app/tools/index.tsx` |
+| Est 1RM on exercise detail | Yes | `app/exercise/[id].tsx:408-415` |
+| % 1RM table on exercise detail | Yes | `app/exercise/[id].tsx:426-474` |
+| % table → plate calc link | Yes | `app/tools/rm.tsx:153` |
+| Bodyweight exclusion | Yes | `app/exercise/[id].tsx:373-394` |
+| Progressive overload suggestions | Yes | `lib/rm.ts:suggest()` |
+| Plate solving logic | Yes | `lib/plates.ts` |
+
+### Actual remaining scope (incremental)
+
+1. **1RM Trend Chart** — Current chart shows MAX(weight). A 1RM trend requires `MAX(weight * (1 + reps/30.0))` per session + chart toggle.
+2. **Session 1RM annotation** — Previous sets show `80×8`, could add `(1RM: 101)`.
+3. **Exercise detail → plate calc shortcut** — Exercise detail % table links to `/tools/rm`, not directly to plates.
+
+### Recommendation
+
+Rescope to these 3 items only. Consider whether this justifies a full "Phase 43" or should be a simple enhancement ticket.
