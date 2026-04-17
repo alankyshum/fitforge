@@ -31,6 +31,9 @@ jest.mock('../../lib/errors', () => ({ logError: jest.fn(), generateReport: jest
 jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().mockResolvedValue([]) }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
+jest.mock('../../lib/useProfileGender', () => ({
+  useProfileGender: () => 'male' as const,
+}))
 
 const exercises: Exercise[] = [
   createExercise({ id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest', 'triceps'] }),
