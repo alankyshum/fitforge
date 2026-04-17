@@ -55,24 +55,24 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 #### Phase B1: Inline Search Card
 1. Replace the FAB navigation with a state toggle (`showAddCard`)
 2. When expanded, show a search card below the macro targets with:
+   - **Favorites row** — horizontal scrollable list of favorite foods as chips for quick-log (tap chip → log immediately to selected meal). If no favorites, show hint text "Star foods to add them here."
    - Search input (searches both local database AND online simultaneously)
-   - Meal selector chips
-   - Results list (local results first, online results below with a separator)
-   - "Manual Entry" button that opens a bottom sheet for custom food entry
+   - Meal selector chips (Breakfast / Lunch / Dinner / Snack)
+   - Results list (local results first, online results below with a labeled separator "Online Results")
+   - **"Manual Entry" button** → opens a **bottom sheet** (using existing `BottomSheet` component pattern from the app) containing the manual food entry form (calories, protein, carbs, fat, serving size). Bottom sheet dismisses on save or swipe-down.
+   - **Barcode scan icon button** (in search input's right accessory) → opens the existing `BarcodeScanner` component as a **full-screen modal overlay** (same `visible` prop pattern used in `app/(tabs)/_layout.tsx`). On scan, auto-populates search or shows the scanned food for logging.
 3. When collapsed, show just the FAB (current behavior)
 
-#### Phase B2: Remove `/nutrition/add` Route
-1. After inline search is working and tested, remove `app/nutrition/add.tsx`
-2. Update `app/_layout.tsx` to remove the route registration
-3. Update `app/(tabs)/_layout.tsx` to remove the scan button (move barcode scan to inline card)
-4. Keep barcode scanning accessible via an icon button in the search card header
+#### Tablet Layout — UNCHANGED
+**The tablet side-by-side layout is explicitly NOT modified in this phase.** Tablets continue to use the existing `layout.atLeastMedium` inline add form. Only phone layout (non-medium breakpoint) gets the new collapsible card behavior. No conditional rendering changes to the tablet path.
+
+#### Route Deletion — DEFERRED
+`/nutrition/add` route deletion is **deferred to a separate follow-up issue** to reduce blast radius. During this phase, the route remains functional but the phone FAB navigates to the inline card instead. The route continues to work if accessed directly (e.g., deep link).
 
 ### Important Considerations
 
 #### Tablet Layout
-The tablet layout already has an inline add form. The new design should:
-- Phone: Show collapsible add card (new behavior)
-- Tablet: Keep the side-by-side layout (existing behavior, possibly enhanced with search)
+**No changes to tablet layout — explicitly out of scope (see Phase B1 "Tablet Layout — UNCHANGED" above).**
 
 #### State Management
 - Search state lives inside the inline card component (not the parent tab)
@@ -101,11 +101,10 @@ The tablet layout already has an inline add form. The new design should:
 ### Part B (UX Overhaul)
 | File | Change |
 |------|--------|
-| `app/(tabs)/nutrition.tsx` | Add inline search card component, replace FAB behavior |
-| `app/nutrition/add.tsx` | **DELETE** after Part B is complete |
-| `app/_layout.tsx` | Remove `nutrition/add` route |
-| `app/(tabs)/_layout.tsx` | Remove scan button (line 51) |
-| `components/InlineFoodSearch.tsx` | **NEW** — extracted search component for reuse |
+| `app/(tabs)/nutrition.tsx` | Add inline search card component, replace FAB behavior (phone only) |
+| `components/InlineFoodSearch.tsx` | **NEW** — extracted inline search component with favorites, search, manual entry bottom sheet, barcode scan |
+
+**Route deletion** (`app/nutrition/add.tsx`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx`) is **deferred** to a follow-up issue.
 
 ### Tests to Add/Update
 | File | Change |
@@ -168,6 +167,29 @@ The tablet layout already has an inline add form. The new design should:
 | Very long food name | Text truncates with ellipsis (numberOfLines={2}) |
 | Log food while card open | Food appears in daily log immediately; card stays open for adding more |
 | Keyboard overlaps results | KeyboardAvoidingView pushes results up |
+
+## Review Feedback
+
+### Quality Director (UX Critique)
+**Verdict**: NEEDS REVISION
+**Reviewed**: 2026-04-17
+
+**Critical issues:**
+1. Favorites tab migration MISSING — plan removes Favs tab but never specifies where favorites go in inline design
+2. Barcode scanner UX not specified — "icon button" is insufficient; need full flow (camera view, permissions, result handling)
+
+**Major issues:**
+3. Accidental card close loses search state — consider explicit close button
+4. Deep link/route removal risk — need redirect from old `/nutrition/add` route
+5. Keyboard avoidance for inline card on small screens not specified
+
+**Part A (keyboard fix) APPROVED for immediate independent implementation.**
+
+### Tech Lead (Technical Feasibility)
+_Pending review_
+
+### CEO Decision
+_Pending reviews_
 
 ## Out of Scope
 - Nutrition history page changes
