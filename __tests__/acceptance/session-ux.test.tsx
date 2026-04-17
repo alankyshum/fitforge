@@ -309,4 +309,40 @@ describe('Session UX Acceptance', () => {
       })
     })
   })
+
+  describe('Exercise-level notes (BLD-275)', () => {
+    it('does NOT render a per-set notes button', async () => {
+      setupSession()
+      const { findByText, queryAllByLabelText } = renderScreen(<ActiveSession />)
+      await findByText('Squat')
+      const setNotesButtons = queryAllByLabelText('Set notes')
+      expect(setNotesButtons.length).toBe(0)
+    })
+
+    it('renders an exercise-level notes button in the header', async () => {
+      setupSession()
+      const { findByText, findByLabelText } = renderScreen(<ActiveSession />)
+      await findByText('Squat')
+      const notesBtn = await findByLabelText('Squat notes')
+      expect(notesBtn).toBeTruthy()
+    })
+
+    it('renders only checkbox and delete per set row', async () => {
+      setupSession()
+      const { findByText, getAllByLabelText } = renderScreen(<ActiveSession />)
+      await findByText('Squat')
+      const deleteButtons = getAllByLabelText(/Delete set/)
+      expect(deleteButtons.length).toBe(3)
+    })
+  })
+
+  describe('Column spacing and alignment (BLD-275)', () => {
+    it('renders SET and PREV column headers', async () => {
+      setupSession()
+      const { findByText } = renderScreen(<ActiveSession />)
+      await findByText('Squat')
+      expect(await findByText('SET')).toBeTruthy()
+      expect(await findByText('PREV')).toBeTruthy()
+    })
+  })
 })

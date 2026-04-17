@@ -211,19 +211,6 @@ const SetRow = memo(function SetRow({
             )}
           </Pressable>
           <Pressable
-            onPress={() => onToggleNotes(set.id)}
-            hitSlop={6}
-            style={styles.actionBtn}
-            accessibilityLabel="Set notes"
-            accessibilityRole="button"
-          >
-            <MaterialCommunityIcons
-              name={set.notes ? "note-text" : "note-text-outline"}
-              size={22}
-              color={theme.colors.onSurfaceVariant}
-            />
-          </Pressable>
-          <Pressable
             onPress={() => onDelete(set.id)}
             hitSlop={6}
             style={styles.actionBtn}
