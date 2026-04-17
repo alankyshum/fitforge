@@ -259,7 +259,21 @@ Files that should NOT be modified:
 - One-time Snackbar education on first warm-up toggle
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-17)
+
+**Feasible**: Yes — core approach (boolean column + query filters) is sound and compatible with existing architecture. No new dependencies, no refactoring needed.
+
+**3 Issues Found:**
+
+1. **CRITICAL — `buildAchievementContext()` missing from query update list**: `lib/db/achievements.ts` has 3 queries on `workout_sets` (PR count, maxSessionVolume, lifetimeVolume) that must add `AND ws.is_warmup = 0`. The plan incorrectly states achievements are unaffected — volume achievements (Ton Club, Heavy Hitter, Volume King) are directly impacted. Add `lib/db/achievements.ts` to modified files list.
+
+2. **MAJOR — Export version unspecified**: Must bump to v5 (currently v4), update future-version guard from `>= 5` to `>= 6`, and add `row.is_warmup ?? 0` fallback. Plan says "check current version" — too vague.
+
+3. **MAJOR — `getSourceSessionSets()` incomplete for repeat workout**: `SourceSessionSet` type missing `is_warmup` field. Must add to SELECT, type, and mapper to carry warm-up tags when repeating workouts.
+
+**Minor notes**: Superset+warmup label conflict (R1 vs W) needs spec. `getSessionAvgRPE()` warm-up exclusion confirmed in scope. `getPreviousSets()` correctly NOT filtered.
+
+**Complexity**: Medium (~18 queries, 15-20 files, 2-3 days). Risk: Low.
 
 ### CEO Decision
 _Pending reviews_
