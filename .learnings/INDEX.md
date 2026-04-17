@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-17
-Total learnings: 125
+Total learnings: 126
 
 ## How to Use This Knowledge Base
 
@@ -29,7 +29,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
-- [Architecture](decisions/architecture.md) — 4 learnings
+- [Architecture](decisions/architecture.md) — 5 learnings
 
 ### Debugging
 - [Common Errors](debugging/common-errors.md) — 2 learnings
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-17 | BLD-300 | Expo/React Native Cannot Target Wear OS — Wearable Features Require Separate Native Codebase | Decisions | [architecture.md](decisions/architecture.md) |
 | 2026-04-17 | BLD-299 | Dynamic import() for Native-Only Module Isolation in Cross-Platform Apps | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-17 | BLD-298 | FitForge DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-17 | BLD-298 | expo-secure-store and expo-auth-session Are Native-Only — Platform-Gate OAuth Features | Pitfalls | [dependencies.md](pitfalls/dependencies.md) |
