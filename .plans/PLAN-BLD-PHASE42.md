@@ -185,7 +185,25 @@ const showBarcodeButton = Platform.OS !== "web";
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: APPROVED WITH REVISIONS (2026-04-17)
+
+**UX**: Sound. Camera overlay as modal is correct pattern. Continuous scanning + haptic feedback + auto-close is excellent. "Not found" → text search fallback is the right degradation path.
+
+**Accessibility**: Mostly adequate. Must address: on barcode detection, announce the *product name* via `accessibilityLiveRegion`, not just "Barcode detected". Blind users need to hear what was found.
+
+**Edge cases**: Well covered. One gap: non-food barcode (e.g., a book) found in OFF but fails `isValidProduct()` — differentiate message from "not found" to "nutrition data incomplete".
+
+**Required corrections before implementation (T1–T5):**
+1. **T1**: Use `CameraView` (not deprecated `Camera`). Specify `barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}`.
+2. **T2**: Add `"expo-camera"` to `plugins` array in `app.config.ts`.
+3. **T3**: Map barcode types to expo-camera format strings (`ean13`, `ean8`, `upc_a`, `upc_e`).
+4. **T4**: Add testing strategy — mock expo-camera module for CI tests; note physical device required for manual camera testing.
+5. **T5**: Screen reader announcement should include product name: "Found: [product name]".
+
+**Recommendations (nice to have):**
+- Extract OnlineTab to `components/OnlineTab.tsx` (add.tsx is 829 lines)
+- Call `Keyboard.dismiss()` on "Scan Barcode" press
+- Update User-Agent from `FitForge/0.5.0` to current version
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
