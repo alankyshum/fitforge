@@ -208,6 +208,31 @@ describe("Health Connect lib module", () => {
     expect(source).toContain("await initialize()");
   });
 
+  it("lib/health-connect.ts maps SDK_UNAVAILABLE to needs_install", () => {
+    const fs = require("fs");
+    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    expect(source).toContain("SdkAvailabilityStatus.SDK_UNAVAILABLE:");
+    expect(source).toContain('"needs_install"');
+    // getSdkStatus should be called before ensureInitialized to avoid masking status
+    const sdkStatusFn = source.match(
+      /async function getHealthConnectSdkStatus[\s\S]*?^}/m
+    );
+    expect(sdkStatusFn).toBeTruthy();
+    const fnBody = sdkStatusFn![0];
+    const getSdkIdx = fnBody.indexOf("getSdkStatus");
+    const ensureInitIdx = fnBody.indexOf("ensureInitialized()");
+    expect(getSdkIdx).toBeLessThan(ensureInitIdx);
+  });
+
+  it("lib/health-connect.ts extracts record building into helper", () => {
+    const fs = require("fs");
+    const source = fs.readFileSync("lib/health-connect.ts", "utf8");
+    expect(source).toContain("buildExerciseSessionRecord");
+    // Helper should be used in both sync and reconcile functions
+    const matches = source.match(/buildExerciseSessionRecord/g);
+    expect(matches!.length).toBeGreaterThanOrEqual(3); // definition + 2 callsites
+  });
+
   it("lib/health-connect.ts has MAX_RETRIES = 3", () => {
     const fs = require("fs");
     const source = fs.readFileSync("lib/health-connect.ts", "utf8");

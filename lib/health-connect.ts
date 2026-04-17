@@ -40,12 +40,16 @@ async function ensureInitialized(): Promise<void> {
 export async function getHealthConnectSdkStatus(): Promise<SdkStatusResult> {
   if (Platform.OS !== "android") return "unavailable";
   try {
-    await ensureInitialized();
+    // Check SDK status BEFORE initialize() — initialize() may throw when HC
+    // is not installed, masking the actual SDK status.
     const { getSdkStatus, SdkAvailabilityStatus } = await getHCModule();
     const status = await getSdkStatus();
     switch (status) {
       case SdkAvailabilityStatus.SDK_AVAILABLE:
+        await ensureInitialized();
         return "available";
+      case SdkAvailabilityStatus.SDK_UNAVAILABLE:
+        return "needs_install";
       case SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED:
         return "needs_update";
       default:
@@ -93,6 +97,57 @@ export function openHealthConnectPlayStore(): void {
   Linking.openURL(HC_PLAY_STORE_URL).catch(() => {});
 }
 
+// ---- Record Building ----
+
+interface SessionData {
+  started_at: number;
+  completed_at: number | null;
+  name: string | null;
+}
+
+interface SetData {
+  exercise_id: string;
+}
+
+function buildExerciseSessionRecord(
+  sessionId: string,
+  session: SessionData,
+  completedSets: SetData[]
+) {
+  const sessionStartMs = session.started_at;
+  const sessionEndMs = session.completed_at ?? Date.now();
+
+  const exerciseMap = new Map<string, { startTime: string; endTime: string }>();
+  for (const set of completedSets) {
+    if (!exerciseMap.has(set.exercise_id)) {
+      exerciseMap.set(set.exercise_id, {
+        startTime: new Date(sessionStartMs).toISOString(),
+        endTime: new Date(sessionEndMs).toISOString(),
+      });
+    }
+  }
+
+  const segments = Array.from(exerciseMap.values()).map((timing) => ({
+    startTime: timing.startTime,
+    endTime: timing.endTime,
+    segmentType: 80, // EXERCISE_SEGMENT_TYPE_WEIGHTLIFTING
+    repetitions: 0,
+    exerciseType: 80,
+  }));
+
+  return {
+    recordType: "ExerciseSession" as const,
+    startTime: new Date(sessionStartMs).toISOString(),
+    endTime: new Date(sessionEndMs).toISOString(),
+    exerciseType: 80, // EXERCISE_TYPE_WEIGHTLIFTING
+    title: session.name || "Strength Training",
+    segments,
+    metadata: {
+      clientRecordId: `fitforge-${sessionId}`,
+    },
+  };
+}
+
 // ---- Sync ----
 
 export async function syncToHealthConnect(sessionId: string): Promise<boolean> {
@@ -122,42 +177,7 @@ export async function syncToHealthConnect(sessionId: string): Promise<boolean> {
 
   try {
     const { insertRecords } = await getHCModule();
-
-    // Build exercise segments — one per unique exercise
-    const exerciseMap = new Map<string, { startTime: string; endTime: string }>();
-    const sessionStartMs = session.started_at;
-    const sessionEndMs = session.completed_at ?? Date.now();
-
-    for (const set of completedSets) {
-      const exerciseId = set.exercise_id;
-      if (!exerciseMap.has(exerciseId)) {
-        exerciseMap.set(exerciseId, {
-          startTime: new Date(sessionStartMs).toISOString(),
-          endTime: new Date(sessionEndMs).toISOString(),
-        });
-      }
-    }
-
-    const segments = Array.from(exerciseMap.values()).map((timing) => ({
-      startTime: timing.startTime,
-      endTime: timing.endTime,
-      segmentType: 80, // EXERCISE_SEGMENT_TYPE_WEIGHTLIFTING
-      repetitions: 0,
-      exerciseType: 80,
-    }));
-
-    const record = {
-      recordType: "ExerciseSession" as const,
-      startTime: new Date(sessionStartMs).toISOString(),
-      endTime: new Date(sessionEndMs).toISOString(),
-      exerciseType: 80, // EXERCISE_TYPE_WEIGHTLIFTING
-      title: session.name || "Strength Training",
-      segments,
-      metadata: {
-        clientRecordId: `fitforge-${sessionId}`,
-      },
-    };
-
+    const record = buildExerciseSessionRecord(sessionId, session, completedSets);
     const result = await insertRecords([record]);
     const recordId = result?.[0];
     await markHCSyncSuccess(sessionId, recordId);
@@ -206,39 +226,7 @@ export async function reconcileHealthConnectQueue(): Promise<void> {
       }
 
       const { insertRecords } = await getHCModule();
-      const sessionStartMs = session.started_at;
-      const sessionEndMs = session.completed_at ?? Date.now();
-
-      const exerciseMap = new Map<string, { startTime: string; endTime: string }>();
-      for (const set of completedSets) {
-        if (!exerciseMap.has(set.exercise_id)) {
-          exerciseMap.set(set.exercise_id, {
-            startTime: new Date(sessionStartMs).toISOString(),
-            endTime: new Date(sessionEndMs).toISOString(),
-          });
-        }
-      }
-
-      const segments = Array.from(exerciseMap.values()).map((timing) => ({
-        startTime: timing.startTime,
-        endTime: timing.endTime,
-        segmentType: 80,
-        repetitions: 0,
-        exerciseType: 80,
-      }));
-
-      const record = {
-        recordType: "ExerciseSession" as const,
-        startTime: new Date(sessionStartMs).toISOString(),
-        endTime: new Date(sessionEndMs).toISOString(),
-        exerciseType: 80,
-        title: session.name || "Strength Training",
-        segments,
-        metadata: {
-          clientRecordId: `fitforge-${entry.session_id}`,
-        },
-      };
-
+      const record = buildExerciseSessionRecord(entry.session_id, session, completedSets);
       const result = await insertRecords([record]);
       const recordId = result?.[0];
       await markHCSyncSuccess(entry.session_id, recordId);
