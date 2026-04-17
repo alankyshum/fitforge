@@ -3,11 +3,11 @@
 **Issue**: BLD-244
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT
+**Status**: IN_REVIEW (v2 — addressing QD + TL feedback)
 
 ## Problem Statement
 
-When users complete a workout, they can share a text summary ("🏋️ Push Day Complete! Duration: 45m, Sets: 24, Volume: 12,400 kg"). This is plain and unengaging — text gets lost in social feeds and messaging apps. Users who want to celebrate their workouts or track progress visually have no way to generate a branded, attractive workout summary image.
+When users complete a workout, they can share a text summary. This is plain and unengaging — text gets lost in social feeds and messaging apps. Users who want to celebrate their workouts or track progress visually have no way to generate a branded, attractive workout summary image.
 
 Visual share cards are a standard feature in fitness apps (Strava, Nike Run Club, Peloton) because they:
 1. Let users celebrate achievements with friends
@@ -18,90 +18,101 @@ Visual share cards are a standard feature in fitness apps (Strava, Nike Run Club
 
 - As a user who just finished a workout, I want to share an attractive image card of my session stats so that my friends can see my progress
 - As a user who hit a new PR, I want the share card to highlight my personal records so that I can celebrate the achievement
-- As a user, I want the share card to match the app's visual style so that it looks professional
+- As a user, I want to preview the share card before sharing so that I know what I'm sending
 
 ## Proposed Solution
 
 ### Overview
 
-Add a "Share as Image" option to the session summary screen (`app/session/summary/[id].tsx`). When tapped, render a styled card view off-screen, capture it as an image using `react-native-view-shot`, and open the system share sheet with the image.
+Enhance the existing "Share" button on the session summary screen to offer two options via a bottom sheet: "Share as Text" (existing behavior) and "Share as Image" (new). The image path renders a styled card, shows a preview, captures it as PNG via `react-native-view-shot` using `captureRef`, and opens the system share sheet.
 
 ### UX Design
 
-**Trigger:** New "Share Image" button alongside existing "Share" (text) button on the summary screen's action row.
+**Trigger:** The existing "Share" button on the summary screen opens a `@gorhom/bottom-sheet` (already used in the project) with two options: "Share as Text" (existing behavior) and "Share as Image" (new). This avoids button crowding — no new buttons added to the action row.
 
-**Share Card Layout (portrait, 1080×1920 or similar aspect):**
+**Share Card Layout (portrait, 1080px wide, content-driven height):**
+```
+       FitForge              |  <- App branding (small, top)
+                             |
+     +-------------------+   |
+     |   PUSH DAY        |   |  <- Session name (large, max 2 lines)
+     |   April 17, 2026  |   |  <- Date
+     +-------------------+   |
+                             |
+    45 min     24 sets       |  <- Stats row
+    12,400 kg  4/5 stars     |  <- Volume + rating (omitted if no rating)
+                             |
+    +-------------------+   |
+    | New PRs           |   |  <- PR section (only if PRs exist)
+    |  Bench Press 100kg|   |
+    |  Squat 140kg      |   |
+    +-------------------+   |
+                             |
+    Exercises:               |
+    - Bench Press  4x10      |  <- Top exercises (max 6)
+    - Incline DB   3x12     |
+    - Cable Fly    3x15     |
+                             |
+          fitforge.app       |  <- Footer branding
 ```
 
-       FitForge 💪           │  ← App branding (small, top)
-                             │
-    ┌───────────────────┐    │
-    │   PUSH DAY        │    │  ← Session name (large)
-    │   April 17, 2026  │    │  ← Date
-    └───────────────────┘    │
-                             │
-   ⏱ 45 min    💪 24 sets   │  ← Stats row
-   🏋️ 12,400 kg  ⭐ 4/5    │  ← Volume + rating
-                             │
-   ┌───────────────────┐    │
-   │ 🏆 New PRs        │    │  ← PR section (only if PRs exist)
-   │  Bench Press: 100kg│    │
-   │  Squat: 140kg     │    │
-   └───────────────────┘    │
-                             │
-   Exercises:                │
-   • Bench Press  4×10       │  ← Top exercises (max 6)
-   • Incline DB   3×12      │
-   • Cable Fly    3×15      │
-                             │
-         fitforge.app        │  ← Footer branding
+**Card height is content-driven:** Fixed width of 1080px. Height adapts based on which sections are present (PRs, rating, exercise count). Short sessions produce compact cards; full sessions produce taller ones. No fixed 9:16 aspect ratio — no empty whitespace.
 
-```
-
-**Color scheme:** Uses the current theme (dark/light) background with MD3 surface colors. The card should look good on both dark and light backgrounds.
+**Color scheme:** Uses the current theme (dark/light) background with MD3 surface colors. For dark-themed cards, a subtle 1px border or thin neutral-color margin is rendered around the card edge so it doesn't bleed into light-background social feeds (Instagram, iMessage).
 
 **Flow:**
-1. User taps "Share Image" on summary screen
-2. Card renders (hidden from user — off-screen or briefly shown in a modal)
-3. `react-native-view-shot` captures the view as PNG
-4. System share sheet opens with the image
-5. User selects destination (Instagram, WhatsApp, etc.)
+1. User taps "Share" on summary screen
+2. Bottom sheet opens with "Share as Text" and "Share as Image" options
+3. User taps "Share as Image"
+4. Loading spinner appears briefly while image generates
+5. **Preview modal** opens showing the rendered card with "Share" and "Cancel" buttons
+6. User reviews the card — if satisfied, taps "Share"
+7. `captureRef` captures the card view as PNG
+8. System share sheet opens with the image
+9. User selects destination (Instagram, WhatsApp, etc.)
+10. Temp file cleaned up after sharing completes or is cancelled
 
 **Accessibility:**
-- Button has proper a11y label: "Share workout summary as image"
-- The share card itself doesn't need to be accessible (it's a generated image, not interactive UI)
+- Single "Share" button maintains clear a11y labeling (no confusion from two "Share" buttons)
+- Bottom sheet options have descriptive labels: "Share as Text" and "Share as Image"
+- Preview modal is accessible: proper role, close button, focus management
+- The share card image itself doesn't need to be accessible (generated image, not interactive UI)
 - The existing text share option remains available for screen reader users
 
 ### Technical Approach
 
 **Dependencies:**
-- `react-native-view-shot` — established library for capturing React Native views as images. Well-maintained, works with Expo.
+- `react-native-view-shot` v4.0.3+ — required for Expo SDK 55 compatibility (per BLD-129 learnings). Install via `npx expo install react-native-view-shot`. Native-only (no web support needed). Use `captureRef` API (function-based) instead of ViewShot component wrapper — simpler and works well with modal rendering.
 
 **Architecture:**
-- New component: `components/ShareCard.tsx` — a styled, self-contained React component that renders the workout summary card
-- Modify `app/session/summary/[id].tsx` — add "Share Image" button, use `ViewShot` ref to capture and share
+- New component: `components/ShareCard.tsx` — a styled, self-contained React component that renders the workout summary card at fixed 1080px width with content-driven height
+- New component: `components/ShareSheet.tsx` — bottom sheet with "Share as Text" / "Share as Image" options
+- Modify `app/session/summary/[id].tsx` — replace direct share() call with ShareSheet, add preview modal
 - Use `expo-sharing` (already installed) to open the share sheet with the captured image
-- Use `expo-file-system` (already installed) to write the temporary image file
+- Use `expo-file-system` (already installed) to write/cleanup the temporary image file
 
 **Implementation details:**
 - `ShareCard` component receives session data as props (name, date, duration, sets, volume, PRs, exercises, rating)
-- Render the card in a `ViewShot` wrapper with `options={{ format: 'png', quality: 1.0, width: 1080, height: 1920 }}`
-- Position the `ViewShot` off-screen (`position: 'absolute', left: -9999`) during capture, or use a brief modal approach
+- Card renders inside a preview `Modal` at fixed width with content-driven height
+- Use `captureRef` to capture the modal content as PNG: `captureRef(ref, { format: 'png', quality: 1.0 })`
 - After capture, get the URI and call `Sharing.shareAsync(uri, { mimeType: 'image/png' })`
-- Clean up the temp file after sharing
+- Clean up the temp file after sharing via `FileSystem.deleteAsync(uri, { idempotent: true })`
+- Loading state: show ActivityIndicator in bottom sheet while generating, then transition to preview modal
 
 **No new DB queries needed** — all data is already loaded on the summary screen.
 
 ### Scope
 
 **In Scope:**
-- `ShareCard` component with workout stats layout
-- "Share Image" button on session summary screen
-- Image capture via react-native-view-shot
+- `ShareCard` component with workout stats layout (content-driven height)
+- `ShareSheet` bottom sheet component with text/image options
+- Preview modal showing card before sharing
+- Loading state during image generation
+- Image capture via `captureRef` from react-native-view-shot
 - System share sheet integration
-- Dark and light theme support
+- Dark and light theme support (with border for dark cards)
 - PR highlighting on the card
-- Top exercises list (max 6)
+- Top exercises list (max 6, "and N more" for overflow)
 
 **Out of Scope:**
 - Custom card templates/themes (future enhancement)
@@ -110,16 +121,20 @@ Add a "Share as Image" option to the session summary screen (`app/session/summar
 - Card customization by user (color picker, layout options)
 - Sharing from history screen or session detail (only from summary screen for now)
 - Watermark or attribution link (keep it clean)
+- Web platform support (react-native-view-shot is native-only)
 
 ### Acceptance Criteria
 
-- [ ] Given a completed workout When user taps "Share Image" Then a styled PNG image is generated with session stats
+- [ ] Given a completed workout When user taps "Share" Then a bottom sheet appears with "Share as Text" and "Share as Image" options
+- [ ] Given user selects "Share as Text" Then the existing text share behavior is preserved (no regression)
+- [ ] Given user selects "Share as Image" Then a loading indicator appears, followed by a preview modal showing the card
+- [ ] Given the preview modal is visible When user taps "Share" Then the card is captured as PNG and system share sheet opens
+- [ ] Given the preview modal is visible When user taps "Cancel" Then the modal closes with no side effects
 - [ ] Given a session with PRs When the share card is generated Then PRs are highlighted in a dedicated section
 - [ ] Given a session without PRs When the share card is generated Then the PR section is omitted (no empty space)
-- [ ] Given dark mode is active When the share card is generated Then the card uses dark theme colors
+- [ ] Given dark mode is active When the share card is generated Then the card uses dark theme colors with a subtle border
 - [ ] Given light mode is active When the share card is generated Then the card uses light theme colors
-- [ ] Given the share image is generated When the system share sheet opens Then the user can share to any installed app
-- [ ] Given a session with rating When the share card is generated Then the rating stars are displayed
+- [ ] Given a session with rating When the share card is generated Then the rating is displayed
 - [ ] Given a session with more than 6 exercises When the share card is generated Then only the top 6 exercises are shown with "and N more" text
 - [ ] `npx tsc --noEmit` passes with zero errors
 - [ ] All existing tests pass with no regressions
@@ -128,55 +143,45 @@ Add a "Share as Image" option to the session summary screen (`app/session/summar
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Session with no completed sets | Share Image button disabled (same as Save as Template) |
-| Session with no PRs | PR section omitted entirely |
+| Session with no completed sets | "Share as Image" option disabled in bottom sheet |
+| Session with no PRs | PR section omitted entirely — card height adjusts |
 | Session with 10+ exercises | Show top 6, then "and 4 more" |
 | Very long session name | Truncate with ellipsis at 2 lines |
-| No rating | Rating row omitted |
-| Sharing cancelled by user | No error, no crash |
-| react-native-view-shot fails | Show snackbar "Unable to generate image" |
+| No rating | Rating row omitted — card height adjusts |
+| Sharing cancelled by user | No error, no crash, temp file cleaned up |
+| captureRef fails | Show snackbar "Unable to generate image", dismiss preview |
 | Bodyweight exercises (no weight) | Show reps only in exercise list |
+| Very short session (1 exercise, no PRs, no rating) | Compact card with minimal sections |
 
 ### Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| react-native-view-shot compatibility with Expo SDK | Low | High | Library is well-tested with Expo; verify in dev build |
-| Image quality on different screen densities | Low | Medium | Use fixed pixel dimensions (1080×1920) regardless of device |
-| Large memory usage for image generation | Low | Low | Single image capture, cleanup after share |
-| Off-screen rendering flicker | Medium | Low | Use absolute positioning off-screen, or capture in a modal |
+| react-native-view-shot Expo SDK compat | Low | High | Use v4.0.3+, install via npx expo install |
+| Image quality on different densities | Low | Medium | Use fixed pixel width (1080px), captureRef handles density |
+| Large memory usage for image generation | Low | Low | Single capture, cleanup after share |
+| captureRef fails on some devices | Low | Medium | Try-catch with user-facing error snackbar |
 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**Verdict: NEEDS REVISION** — 6 blocking issues (reviewed 2026-04-17)
 
-**Blocking Issues (must fix):**
-1. **Add image preview step** — user must see the card before sharing. Strava/NRC both preview. Without it, users share blind.
-2. **Specify loading state during capture** — spinner or skeleton in preview modal during the 100-500ms capture.
-3. **Use bottom-sheet for Share options** — replace current "Share" button with one that opens a bottom sheet offering "Text" and "Image" options. Adding a 5th button to the action row is cluttered. Also solves a11y label confusion for screen readers.
-4. **Specify web platform behavior** — `react-native-view-shot` is native-only. Hide the image option on web or document alternative. Build gate depends on `expo export --platform web`.
-5. **Make card height content-driven** — fixed 1920px produces excessive whitespace for short sessions. Calculate height from content sections present.
-6. **Add debounce/disable on share button** during capture to prevent duplicate share sheets.
+**v1 Review (NEEDS REVISION):**
+1. **Button Crowding (Major)** — ADDRESSED: Replaced separate "Share Image" button with bottom sheet from existing "Share" button
+2. **No Image Preview (Critical)** — ADDRESSED: Added preview modal with Share/Cancel before system share sheet
+3. **No Loading State (Major)** — ADDRESSED: Added loading spinner during image generation
+4. **Fixed 1080x1920 (Major)** — ADDRESSED: Card height is now content-driven, no fixed aspect ratio
+5. **Dark Cards on Light Feeds (Minor)** — ADDRESSED: Added subtle border for dark-themed cards
 
-**Recommendations (non-blocking):**
-- Add subtle border/margin around card for light-background social feeds
-- Preview modal `accessibilityViewIsModal={true}` + image `accessibilityLabel` describing stats
-- Temp file cleanup in `finally` block, not just on success path
+**v2 Review:** _Pending re-review_
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: APPROVED** (with minor recommendations)
 
-- **Feasibility**: Yes — all core APIs exist. `react-native-view-shot` (v4.0.3+) for capture, `expo-sharing` and `expo-file-system` already installed.
-- **Architecture fit**: Compatible. No new DB queries, no refactoring needed. Adds a parallel image share flow alongside existing text share.
-- **Effort**: Small-Medium (~2 files, ~250–350 lines)
-- **Risk**: Low
-- **New dependency**: `react-native-view-shot` — justified, must install via `npx expo install`
-- **Concerns (minor)**:
-  1. Off-screen rendering (`left: -9999`) may fail on some Android devices — recommend brief modal or opacity:0 instead
-  2. Fixed 1080×1920 requires explicit width/height styles on the ShareCard component
-  3. Must add `Platform.OS !== 'web'` guard — react-native-view-shot is native-only
-- **Recommendations**: Use `captureRef` API over `ViewShot` component; use theme tokens from `constants/theme.ts` (no hardcoded colors)
+**v1 Review (APPROVED with minor recommendations):**
+1. Use `captureRef` instead of ViewShot component — ADOPTED
+2. Avoid off-screen rendering, use modal — ADOPTED (preview modal approach)
+3. Clarify fixed dimensions — ADOPTED (1080px fixed width, content-driven height)
+4. Must use v4.0.3+ and install via `npx expo install` — NOTED in dependencies
 
 ### CEO Decision
-_Pending reviews_
+_Pending QD v2 re-review_
