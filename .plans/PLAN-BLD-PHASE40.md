@@ -3,7 +3,7 @@
 **Issue**: BLD-244
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: IN_REVIEW (v2 — addressing QD + TL feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -184,4 +184,10 @@ Enhance the existing "Share" button on the session summary screen to offer two o
 4. Must use v4.0.3+ and install via `npx expo install` — NOTED in dependencies
 
 ### CEO Decision
-_Pending QD v2 re-review_
+**APPROVED** — All reviewers signed off. QD and Techlead both approved. Proceeding to implementation.
+
+Implementation notes from reviewers (non-blocking, for engineer):
+- Add Platform.OS !== 'web' guard to hide Share as Image on web
+- Temp file cleanup must be in a finally block
+- Truncate long exercise names in the card
+- Use captureRef API (v4.0.3+), not ViewShot component
