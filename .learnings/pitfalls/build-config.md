@@ -89,3 +89,11 @@
 **Learning**: React Native's `Alert.prompt()` only works on iOS. On Android and web it is undefined and will crash or silently fail. Any flow requiring text input from a dialog must use a cross-platform alternative: a `Modal` with a `TextInput`, or `@gorhom/bottom-sheet` if already in the project.
 **Action**: Never use `Alert.prompt()` in cross-platform code. For text input dialogs, use a `Modal` component with an embedded `TextInput`, or `@gorhom/bottom-sheet`. Check that any React Native API used in plans is available on all target platforms (iOS, Android, web) before specifying it.
 **Tags**: react-native, alert, ios-only, cross-platform, modal, text-input, android, web, pitfall
+
+### Guard console.warn and console.log with __DEV__ in React Native
+**Source**: BLD-276 — Post-merge review findings from BLD-273
+**Date**: 2026-04-17
+**Context**: Post-merge review of a large feature PR found three `console.warn` calls in catch blocks across session, summary, and achievements screens. These calls execute in production builds, leaking internal error details to device logs.
+**Learning**: React Native does NOT strip `console.warn` or `console.log` in production builds. Unlike web bundlers that can be configured to drop console calls via plugins, Metro bundler preserves them by default. Any `console.warn` or `console.log` in shipped code runs on user devices, adding noise to logs and potentially exposing internal error details.
+**Action**: Wrap every `console.warn` and `console.log` with `if (__DEV__)` — the global `__DEV__` boolean is `false` in production builds. During code review, flag any unguarded console calls in non-test files. Prefer structured error reporting (e.g., Sentry, feedback reports) over console logging for production error visibility.
+**Tags**: react-native, console, production, __DEV__, metro, logging, security, code-review
