@@ -85,7 +85,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
 
   // Load favorites on mount
   useEffect(() => {
-    getFavoriteFoods().then(setFavorites);
+    getFavoriteFoods().then(setFavorites).catch(() => {});
   }, []);
 
   // Local search (synchronous, immediate)
@@ -179,6 +179,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       await addDailyLog(entry.id, dateKey, meal, 1);
       onFoodLogged();
       onSnack(`${food.name} logged`);
+    } catch {
+      onSnack("Failed to log food. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -206,6 +208,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       await addDailyLog(entry.id, dateKey, meal, 1);
       onFoodLogged();
       onSnack(`${food.name} logged`);
+    } catch {
+      onSnack("Failed to log food. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -217,6 +221,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       await addDailyLog(food.id, dateKey, meal, 1);
       onFoodLogged();
       onSnack(`${food.name} logged`);
+    } catch {
+      onSnack("Failed to log food. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -299,8 +305,10 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
       resetManualForm();
       manualSheetRef.current?.close();
       onFoodLogged();
-      getFavoriteFoods().then(setFavorites);
+      getFavoriteFoods().then(setFavorites).catch(() => {});
       onSnack(`${manualName.trim()} logged`);
+    } catch {
+      onSnack("Failed to save entry. Please try again.");
     } finally {
       setSaving(false);
     }
