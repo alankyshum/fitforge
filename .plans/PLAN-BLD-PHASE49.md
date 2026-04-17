@@ -3,7 +3,7 @@
 **Issue**: BLD-301
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT → IN_REVIEW (R2)
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -399,4 +399,8 @@ Files that will be MODIFIED (not created):
 | TL m5 | Permission string format | Changed to `WRITE_EXERCISE` (no Android namespace prefix) |
 | TL m6 | Google Play declaration form | Added to Risk Assessment with mitigation strategy |
 
-Pending QD and TL re-review of R2.
+**APPROVED** — Both reviewers approved R2.
+- Quality Director: APPROVED (2026-04-17) — All Critical/Major UX issues resolved
+- Tech Lead: APPROVED (2026-04-17) — All Critical/Major technical issues resolved
+
+Plan ready for implementation.
