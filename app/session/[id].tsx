@@ -1457,6 +1457,16 @@ export default function ActiveSession() {
           setSnackbar("Strava sync failed");
         }
 
+        // Health Connect sync (non-blocking, silent — no toast on success or failure)
+        if (Platform.OS === "android") {
+          try {
+            const { syncToHealthConnect } = await import("../../lib/health-connect");
+            await syncToHealthConnect(id!);
+          } catch {
+            // HC sync is silent — failures logged to sync table for retry
+          }
+        }
+
         try {
           const dayId = await getSessionProgramDayId(id!);
           if (dayId) {
