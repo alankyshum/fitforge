@@ -58,7 +58,7 @@ Before starting work on a task, search this index for relevant learnings:
 | 2026-04-16 | BLD-205 | Android Elevation Clips to Parent View Bounds | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-16 | BLD-182 | COUNT(*) Overcounts When Joining Tables with Duplicate Dimension Values | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-182 | Conditional Algorithm Specs Require Branch-by-Branch Verification | Process | [quality-pipeline.md](process/quality-pipeline.md) |
-| 2026-04-16 | BLD-186/187 | Seed Data Repair Must Cover ALL Canonical Columns | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
+| 2026-04-17 | BLD-174/187/255 | Seed Data Repair Must Cover the Entire Entity Graph | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-16 | BLD-186/187 | Canonical Constants as UI Fallback for DB-Sourced Display Data | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-16 | BLD-179 | GitHub Actions Release Notes with Markdown Break GITHUB_OUTPUT Heredoc | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-16 | BLD-179 | Expo Kotlin NoSuchMethodError on Newer Android = SDK Version Too Old | Debugging | [common-errors.md](debugging/common-errors.md) |
