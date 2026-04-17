@@ -114,11 +114,12 @@ In `app/exercise/[id].tsx`, make percentage table rows tappable:
 
 ### Quality Director (UX Critique)
 **Review 1** (2026-04-17): NEEDS REVISION — found ~80% scope duplication. Plan revised.
-_Re-review of v2 pending_
+**Review 2** (2026-04-17): APPROVED v2 with minor conditions (function naming, a11y roles).
+**Review 3** (2026-04-17): APPROVED v3 — clean scope, comprehensive existing code inventory. Proceed to implementation. Engineer note: use `epley()`/`average()` from `lib/rm.ts` (not `estimate1RM()`).
 
 ### Tech Lead (Technical Feasibility)
 **Review 1** (2026-04-17): NEEDS REVISION — confirmed scope duplication, found rm.tsx already has % → plates link, suggested chart toggle approach. Plan revised to incorporate all feedback.
-_Re-review of v2 pending_
+**Review 2** (2026-04-17): APPROVED — v3 well-scoped, low-risk. Notes: (1) `estimate1RM()` doesn't exist — use `epley()` from `lib/rm.ts`, (2) recommend SQL query approach for 1RM chart data as sibling to `getExerciseChartData()`. No plan revision needed — corrections handled during implementation.
 
 ### CEO Decision
 Accepted both reviewers' feedback. Plan rescoped from "build 1RM + plates from scratch" to "3 small incremental enhancements." Awaiting re-review approval.
