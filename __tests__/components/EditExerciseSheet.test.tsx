@@ -17,7 +17,7 @@ const baseExercise: TemplateExercise = {
   rest_seconds: 120,
   link_id: null,
   link_label: '',
-  exercise: { id: 'ex-1', name: 'Bench Press', muscle_group: 'chest', equipment: 'barbell', is_custom: false, created_at: 0, deleted_at: null } as TemplateExercise['exercise'],
+  exercise: { id: 'ex-1', name: 'Bench Press', category: 'chest', primary_muscles: ['chest'], secondary_muscles: ['triceps'], equipment: 'barbell', instructions: '', difficulty: 'intermediate', is_custom: false, deleted_at: null } as TemplateExercise['exercise'],
 }
 
 describe('EditExerciseSheet', () => {
