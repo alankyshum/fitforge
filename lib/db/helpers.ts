@@ -579,29 +579,44 @@ async function seedStarters(database: SQLite.SQLiteDatabase): Promise<void> {
     );
   }
 
-  // Always repair is_starter flags and names — handles cases where import,
-  // migration, or prior seeding left starters with is_starter=0 or empty names
-  const starterTplIds = STARTER_TEMPLATES.map((t) => t.id);
-  const tplPlaceholders = starterTplIds.map(() => "?").join(",");
-  await database.runAsync(
-    `UPDATE workout_templates SET is_starter = 1 WHERE id IN (${tplPlaceholders}) AND is_starter = 0`,
-    starterTplIds
-  );
-  // Repair names from canonical STARTER_TEMPLATES data
+  // Always repair ALL canonical starter data — handles cases where import,
+  // migration, deletion, or prior incomplete seeding left starters corrupted.
+  // Each repair uses INSERT OR IGNORE (idempotent) to re-create deleted rows,
+  // then UPDATE to fix corrupted columns on existing rows.
+  // This covers: workout_templates, template_exercises, programs, program_days.
+  // See BLD-174, BLD-187, BLD-255 for the history of this recurring regression.
   for (const tpl of STARTER_TEMPLATES) {
     await database.runAsync(
-      "UPDATE workout_templates SET name = ? WHERE id = ? AND (name IS NULL OR name = '')",
+      "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter) VALUES (?, ?, 0, 0, 1)",
+      [tpl.id, tpl.name]
+    );
+    await database.runAsync(
+      "UPDATE workout_templates SET is_starter = 1, name = ? WHERE id = ? AND (is_starter = 0 OR name IS NULL OR name = '')",
       [tpl.name, tpl.id]
     );
+    for (let i = 0; i < tpl.exercises.length; i++) {
+      const ex = tpl.exercises[i];
+      await database.runAsync(
+        "INSERT OR IGNORE INTO template_exercises (id, template_id, exercise_id, position, target_sets, target_reps, rest_seconds) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [ex.id, tpl.id, ex.exercise_id, i, ex.target_sets, ex.target_reps, ex.rest_seconds]
+      );
+    }
   }
   await database.runAsync(
-    "UPDATE programs SET is_starter = 1 WHERE id = ? AND is_starter = 0",
-    [STARTER_PROGRAM.id]
+    "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, is_starter) VALUES (?, ?, ?, 0, NULL, 0, 0, 1)",
+    [STARTER_PROGRAM.id, STARTER_PROGRAM.name, STARTER_PROGRAM.description]
   );
   await database.runAsync(
-    "UPDATE programs SET name = ? WHERE id = ? AND (name IS NULL OR name = '')",
+    "UPDATE programs SET is_starter = 1, name = ? WHERE id = ? AND (is_starter = 0 OR name IS NULL OR name = '')",
     [STARTER_PROGRAM.name, STARTER_PROGRAM.id]
   );
+  for (let i = 0; i < STARTER_PROGRAM.days.length; i++) {
+    const day = STARTER_PROGRAM.days[i];
+    await database.runAsync(
+      "INSERT OR IGNORE INTO program_days (id, program_id, template_id, position, label) VALUES (?, ?, ?, ?, ?)",
+      [day.id, STARTER_PROGRAM.id, day.template_id, i, day.label]
+    );
+  }
 
   if (row && Number(row.value) >= STARTER_VERSION) return;
 
