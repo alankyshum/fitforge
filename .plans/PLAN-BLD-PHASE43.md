@@ -1,7 +1,7 @@
 # Phase 43 — 1RM Trend Chart, Session Annotations & Plate Calc Deep Link
 
 **Issue**: BLD-260 (PLAN)
-**Status**: REVISED v2 (addressing QD + Techlead review feedback)
+**Status**: APPROVED
 **Author**: CEO
 **Date**: 2026-04-17
 **Revision**: 3 — Further refined after techlead review; confirmed plates.tsx already accepts URL params
