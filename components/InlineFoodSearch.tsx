@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -376,10 +377,10 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
   }, [theme, saving, logLocalFood, logOnlineFood]);
 
   const keyExtractor = useCallback(
-    (item: SearchResult, index: number) =>
+    (item: SearchResult) =>
       item.type === "local"
         ? `local-${item.food.id}`
-        : `online-${item.food.name}-${item.food.calories}-${index}`,
+        : `online-${item.food.name}-${item.food.calories}-${item.food.protein}`,
     [],
   );
 
@@ -430,15 +431,15 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
 
         {/* Favorites row */}
         {favorites.length > 0 ? (
-          <ScrollView
+          <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.favRow}
             contentContainerStyle={styles.favRowContent}
-          >
-            {favorites.map((f) => (
+            data={favorites}
+            keyExtractor={(f) => f.id}
+            renderItem={({ item: f }) => (
               <Chip
-                key={f.id}
                 icon="heart"
                 onPress={() => logFavorite(f)}
                 style={styles.favChip}
@@ -448,8 +449,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
               >
                 {f.name}
               </Chip>
-            ))}
-          </ScrollView>
+            )}
+          />
         ) : (
           <Text
             variant="bodySmall"
