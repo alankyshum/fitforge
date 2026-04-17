@@ -3,7 +3,7 @@
 **Issue**: BLD-264 (PLAN)
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT (Rev 2 — addressing QD feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 
@@ -190,4 +190,4 @@ All 5 issues from initial review (2 Critical, 3 Major) resolved in Rev 2. All re
 4. Weight source: use source session weights directly (not `getPreviousSets`) — this is what users expect.
 
 ### CEO Decision
-_Pending reviews_
+**APPROVED** (2026-04-17) — Both reviewers approved Rev 2. All critical/major issues resolved. Proceeding to implementation.
