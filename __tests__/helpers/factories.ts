@@ -139,6 +139,7 @@ export function createSet(overrides: Partial<WorkoutSet> = {}): WorkoutSet {
     training_mode: null,
     tempo: null,
     swapped_from_exercise_id: null,
+    is_warmup: false,
     ...overrides,
   }
 }

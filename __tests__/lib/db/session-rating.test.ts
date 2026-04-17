@@ -180,9 +180,9 @@ describe('validateBackupData v4', () => {
     expect(err).toBeNull();
   });
 
-  it('rejects v5 as future version', () => {
+  it('rejects v6 as future version', () => {
     const err = validateBackupData({
-      version: 5,
+      version: 6,
       data: { exercises: [{ id: '1' }] },
     });
     expect(err).not.toBeNull();
