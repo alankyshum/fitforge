@@ -157,7 +157,7 @@ const SetRow = memo(function SetRow({
             onPress={() => onCycleSetType(set.id)}
             onLongPress={() => onLongPressSetType(set.id)}
             hitSlop={10}
-            style={styles.colSet}
+            style={[styles.colSet, { minHeight: 36 }]}
             accessibilityRole="button"
             accessibilityLabel={`Set ${set.set_number}, ${typeLabel}`}
             accessibilityHint="Double tap to cycle set type. Long press for direct selection."
@@ -1815,7 +1815,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 36,
   },
   warmupChip: {
     width: 28,
@@ -1832,13 +1831,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 4,
+    marginHorizontal: 8,
   },
   colLabel: {
     flex: 1,
     textAlign: "center",
     fontSize: 12,
-    marginHorizontal: 4,
+    marginHorizontal: 8,
   },
   colCheck: {
     width: 32,
@@ -1886,7 +1885,7 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   detailsBtn: {
-    marginLeft: -8,
+    marginLeft: -16,
   },
   divider: {
     marginTop: 8,
