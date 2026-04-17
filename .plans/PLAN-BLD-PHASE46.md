@@ -1,9 +1,9 @@
 # Feature Plan: Dropset & Set Type Annotation (Phase 46)
 
-**Issue**: BLD-TBD (PLAN)
+**Issue**: BLD-268 (PLAN)
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT → IN_REVIEW (addressing reviewer feedback)
+**Status**: APPROVED
 
 ## Problem Statement
 
