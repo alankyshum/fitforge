@@ -108,8 +108,6 @@ type SetRowProps = {
   set: SetWithMeta;
   step: number;
   unit: "kg" | "lb";
-  notesOpen: boolean;
-  notesDraft: string | undefined;
   halfStep: { setId: string; base: number } | null;
   onUpdate: (setId: string, field: "weight" | "reps", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
@@ -118,17 +116,14 @@ type SetRowProps = {
   onHalfStep: (setId: string, val: number) => void;
   onHalfStepClear: () => void;
   onHalfStepOpen: (setId: string, base: number) => void;
-  onNotes: (setId: string, text: string) => void;
-  onNotesDraftChange: (setId: string, text: string) => void;
-  onToggleNotes: (setId: string) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
 };
 
 const SetRow = memo(function SetRow({
-  set, step, unit, notesOpen, notesDraft, halfStep,
+  set, step, unit, halfStep,
   onUpdate, onCheck, onDelete, onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onCycleSetType, onLongPressSetType,
+  onHalfStepOpen, onCycleSetType, onLongPressSetType,
 }: SetRowProps) {
   const theme = useTheme();
 
@@ -312,26 +307,6 @@ const SetRow = memo(function SetRow({
           </View>
         </View>
       )}
-
-      {notesOpen && (
-        <View style={styles.notesContainer}>
-          <TextInput
-            mode="outlined"
-            dense
-            placeholder="Add notes..."
-            value={notesDraft ?? set.notes}
-            onChangeText={(v) => onNotesDraftChange(set.id, v)}
-            onBlur={() => onNotes(set.id, notesDraft ?? set.notes)}
-            maxLength={200}
-            multiline
-            style={styles.notesInput}
-            accessibilityLabel="Set notes"
-          />
-          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
-            {(notesDraft ?? set.notes).length}/200
-          </Text>
-        </View>
-      )}
     </View>
   );
 });
@@ -342,8 +317,8 @@ type GroupCardProps = {
   unit: "kg" | "lb";
   suggestions: Record<string, Suggestion | null>;
   modes: Record<string, TrainingMode>;
-  notesOpenMap: Record<string, boolean>;
-  notesDraftMap: Record<string, string>;
+  exerciseNotesOpen: boolean;
+  exerciseNotesDraft: string | undefined;
   halfStep: { setId: string; base: number } | null;
   linkIds: string[];
   groups: ExerciseGroup[];
@@ -357,9 +332,9 @@ type GroupCardProps = {
   onHalfStep: (setId: string, val: number) => void;
   onHalfStepClear: () => void;
   onHalfStepOpen: (setId: string, base: number) => void;
-  onNotes: (setId: string, text: string) => void;
-  onNotesDraftChange: (setId: string, text: string) => void;
-  onToggleNotes: (setId: string) => void;
+  onExerciseNotes: (exerciseId: string, text: string) => void;
+  onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
+  onToggleExerciseNotes: (exerciseId: string) => void;
   onCycleSetType: (setId: string) => void;
   onLongPressSetType: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
@@ -368,10 +343,10 @@ type GroupCardProps = {
 
 const ExerciseGroupCard = memo(function ExerciseGroupCard({
   group, step, unit, suggestions, modes,
-  notesOpenMap, notesDraftMap, halfStep, linkIds, groups, palette,
+  exerciseNotesOpen, exerciseNotesDraft, halfStep, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
-  onHalfStepOpen, onNotes, onNotesDraftChange, onToggleNotes, onCycleSetType, onLongPressSetType,
+  onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
   onShowDetail, onSwap,
 }: GroupCardProps) {
   const theme = useTheme();
@@ -388,6 +363,10 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
 
   const suggestion = suggestions[group.exercise_id];
+
+  // Exercise-level notes: use first set's notes as the exercise note
+  const firstSet = group.sets[0];
+  const exerciseNotesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
 
   const suggestionChip = suggestion && (() => {
     const s = suggestion;
@@ -461,6 +440,13 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
               accessibilityLabel={`Swap ${group.name} for alternative`}
               style={styles.swapBtn}
             />
+            <IconButton
+              icon={firstSet?.notes ? "note-text" : "note-text-outline"}
+              size={24}
+              onPress={() => onToggleExerciseNotes(group.exercise_id)}
+              accessibilityLabel={`${group.name} notes`}
+              style={styles.notesBtn}
+            />
           </View>
           <View style={styles.groupHeaderCompactRow}>
             <Button
@@ -469,6 +455,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
               icon="information-outline"
               onPress={() => onShowDetail(group.exercise_id)}
               accessibilityLabel={`View ${group.name} details`}
+              style={styles.detailsBtn}
             >
               Details
             </Button>
@@ -499,6 +486,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             icon="information-outline"
             onPress={() => onShowDetail(group.exercise_id)}
             accessibilityLabel={`View ${group.name} details`}
+            style={styles.detailsBtn}
           >
             Details
           </Button>
@@ -509,6 +497,13 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             accessibilityLabel={`Swap ${group.name} for alternative`}
             style={styles.swapBtn}
           />
+          <IconButton
+            icon={firstSet?.notes ? "note-text" : "note-text-outline"}
+            size={24}
+            onPress={() => onToggleExerciseNotes(group.exercise_id)}
+            accessibilityLabel={`${group.name} notes`}
+            style={styles.notesBtn}
+          />
           {group.is_voltra && group.training_modes.length > 1 && (
             <TrainingModeSelector
               modes={group.training_modes}
@@ -518,6 +513,25 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
               compact
             />
           )}
+        </View>
+      )}
+      {exerciseNotesOpen && (
+        <View style={styles.notesContainer}>
+          <TextInput
+            mode="outlined"
+            dense
+            placeholder="Add exercise notes..."
+            value={exerciseNotesValue}
+            onChangeText={(v) => onExerciseNotesDraftChange(group.exercise_id, v)}
+            onBlur={() => onExerciseNotes(group.exercise_id, exerciseNotesValue)}
+            maxLength={200}
+            multiline
+            style={styles.notesInput}
+            accessibilityLabel="Exercise notes"
+          />
+          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "right", fontSize: 12 }}>
+            {exerciseNotesValue.length}/200
+          </Text>
         </View>
       )}
     </>
@@ -538,8 +552,6 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
           set={set}
           step={step}
           unit={unit}
-            notesOpen={!!notesOpenMap[set.id]}
-          notesDraft={notesDraftMap[set.id]}
           halfStep={halfStep}
           onUpdate={onUpdate}
           onCheck={onCheck}
@@ -548,9 +560,6 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
           onHalfStep={onHalfStep}
           onHalfStepClear={onHalfStepClear}
           onHalfStepOpen={onHalfStepOpen}
-          onNotes={onNotes}
-          onNotesDraftChange={onNotesDraftChange}
-          onToggleNotes={onToggleNotes}
           onCycleSetType={onCycleSetType}
           onLongPressSetType={onLongPressSetType}
         />
@@ -771,8 +780,8 @@ export default function ActiveSession() {
   const prHapticFired = useRef<Set<string>>(new Set());
   const [snackbar, setSnackbar] = useState("");
   const [snackbarAction, setSnackbarAction] = useState<{ label: string; onPress: () => void } | undefined>();
-  const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
-  const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
+  const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
+  const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
   const [nextHint, setNextHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1340,18 +1349,22 @@ export default function ActiveSession() {
     setHalfStep({ setId, base });
   }, []);
 
-  const handleNotes = useCallback(async (setId: string, text: string) => {
-    updateGroupSet(setId, { notes: text });
-    setNotesDraft((prev) => { const next = { ...prev }; delete next[setId]; return next; });
-    await updateSetNotes(setId, text);
-  }, [updateGroupSet]);
+  const handleExerciseNotes = useCallback(async (exerciseId: string, text: string) => {
+    // Save notes to the first set of this exercise group
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (!group || group.sets.length === 0) return;
+    const firstSetId = group.sets[0].id;
+    updateGroupSet(firstSetId, { notes: text });
+    setExerciseNotesDraft((prev) => { const next = { ...prev }; delete next[exerciseId]; return next; });
+    await updateSetNotes(firstSetId, text);
+  }, [updateGroupSet, groups]);
 
-  const handleNotesDraftChange = useCallback((setId: string, text: string) => {
-    setNotesDraft((prev) => ({ ...prev, [setId]: text }));
+  const handleExerciseNotesDraftChange = useCallback((exerciseId: string, text: string) => {
+    setExerciseNotesDraft((prev) => ({ ...prev, [exerciseId]: text }));
   }, []);
 
-  const toggleNotes = useCallback((setId: string) => {
-    setNotesOpen((prev) => ({ ...prev, [setId]: !prev[setId] }));
+  const toggleExerciseNotes = useCallback((exerciseId: string) => {
+    setExerciseNotesOpen((prev) => ({ ...prev, [exerciseId]: !prev[exerciseId] }));
   }, []);
 
   const handleCycleSetType = useCallback(async (setId: string) => {
@@ -1538,8 +1551,8 @@ export default function ActiveSession() {
             unit={unit}
             suggestions={suggestions}
             modes={modes}
-            notesOpenMap={notesOpen}
-            notesDraftMap={notesDraft}
+            exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
+            exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
             halfStep={halfStep}
             linkIds={linkIds}
             groups={groups}
@@ -1553,9 +1566,9 @@ export default function ActiveSession() {
             onHalfStep={handleHalfStep}
             onHalfStepClear={handleHalfStepClear}
             onHalfStepOpen={handleHalfStepOpen}
-            onNotes={handleNotes}
-            onNotesDraftChange={handleNotesDraftChange}
-            onToggleNotes={toggleNotes}
+            onExerciseNotes={handleExerciseNotes}
+            onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
+            onToggleExerciseNotes={toggleExerciseNotes}
             onCycleSetType={handleCycleSetType}
             onLongPressSetType={handleLongPressSetType}
             onShowDetail={handleShowDetail}
@@ -1832,18 +1845,20 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    marginHorizontal: 4,
   },
   colLabel: {
     flex: 1,
     textAlign: "center",
     fontSize: 12,
+    marginHorizontal: 4,
   },
   colCheck: {
     width: 32,
     alignItems: "center",
   },
   colTrailing: {
-    width: 96,
+    width: 72,
   },
   circleCheck: {
     width: 36,
@@ -1877,6 +1892,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     margin: 0,
+  },
+  notesBtn: {
+    width: 56,
+    height: 56,
+    margin: 0,
+  },
+  detailsBtn: {
+    marginLeft: -8,
   },
   divider: {
     marginTop: 8,

@@ -172,6 +172,7 @@ export function buildReportBody(opts: {
 
 const MAX_URL = 8000;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- consoleLogs param kept for API consistency with generateGitHubURL
 export function truncateBody(body: string, errors: ErrorEntry[], interactions: Interaction[], desc: string, type: ReportType, includeDiag: boolean, consoleLogs?: ConsoleLogEntry[]): string {
   const check = (b: string) =>
     `https://github.com/alankyshum/fitforge/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
@@ -182,7 +183,7 @@ export function truncateBody(body: string, errors: ErrorEntry[], interactions: I
   const noConsoleLogs = buildReportBody({
     type,
     description: desc,
-    errors: errors.map((e) => ({ ...e, stack: null })),
+    errors,
     interactions,
     consoleLogs: [],
     includeDiag,

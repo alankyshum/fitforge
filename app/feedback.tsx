@@ -21,7 +21,7 @@ import {
   getRecentErrors,
 } from "../lib/errors";
 import { recent as recentInteractions } from "../lib/interactions";
-import { getRecentConsoleLogs, formatConsoleLogs } from "../lib/console-log-buffer";
+import { getRecentConsoleLogs } from "../lib/console-log-buffer";
 import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "../lib/types";
 
 const MAX_TITLE = 150;
