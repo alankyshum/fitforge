@@ -1,3 +1,16 @@
+// Mock useFocusEffect as useEffect so it fires immediately in tests
+jest.mock("@react-navigation/native", () => {
+  const RealReact = require("react");
+  return {
+    useFocusEffect: (cb: () => (() => void) | void) => {
+      RealReact.useEffect(() => {
+        const cleanup = cb();
+        return typeof cleanup === "function" ? cleanup : undefined;
+      }, []);
+    },
+  };
+});
+
 // Mock getAppSetting directly
 const mockGetAppSetting = jest.fn<Promise<string | null>, [string]>();
 jest.mock("../../lib/db", () => ({
