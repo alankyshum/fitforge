@@ -69,7 +69,7 @@ import { rpeColor, rpeText } from "../../lib/rpe";
 import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { useProfileGender } from "../../lib/useProfileGender";
-import { suggest, type Suggestion } from "../../lib/rm";
+import { suggest, epley, type Suggestion } from "../../lib/rm";
 import TrainingModeSelector from "../../components/TrainingModeSelector";
 import { formatTime } from "../../lib/format";
 import { useLayout } from "../../lib/layout";
@@ -846,7 +846,9 @@ export default function ActiveSession() {
         ...s,
         previous:
           prev && prev.weight != null && prev.reps != null
-            ? `${prev.weight}×${prev.reps}`
+            ? prev.weight > 0 && prev.reps > 1
+              ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
+              : `${prev.weight}×${prev.reps}`
             : "-",
       });
     }

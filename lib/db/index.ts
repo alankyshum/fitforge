@@ -69,6 +69,7 @@ export {
   getExerciseHistory,
   getExerciseRecords,
   getExerciseChartData,
+  getExercise1RMChartData,
   getRecentExerciseSets,
   getBestSet,
   getMuscleVolumeForWeek,

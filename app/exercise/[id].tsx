@@ -18,6 +18,7 @@ import {
   getExerciseHistory,
   getExerciseRecords,
   getExerciseChartData,
+  getExercise1RMChartData,
   getBodySettings,
   getBestSet,
   type ExerciseSession,
@@ -63,6 +64,8 @@ export default function ExerciseDetail() {
 
   // Chart state
   const [chart, setChart] = useState<{ date: number; value: number }[]>([]);
+  const [chart1RM, setChart1RM] = useState<{ date: number; value: number }[]>([]);
+  const [chartMode, setChartMode] = useState<"max" | "1rm">("max");
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState(false);
 
@@ -91,8 +94,12 @@ export default function ExerciseDetail() {
     setChartLoading(true);
     setChartError(false);
     try {
-      const c = await getExerciseChartData(eid);
+      const [c, c1rm] = await Promise.all([
+        getExerciseChartData(eid),
+        getExercise1RMChartData(eid),
+      ]);
       setChart(c);
+      setChart1RM(c1rm);
     } catch {
       setChartError(true);
     } finally {
@@ -184,21 +191,23 @@ export default function ExerciseDetail() {
     .filter(Boolean);
 
   const bw = records?.is_bodyweight ?? false;
+  const activeChart = bw || chartMode === "max" ? chart : chart1RM;
   const chartWidth = layout.atLeastMedium
     ? Math.min((screenWidth - 80) / 2, 500)
     : screenWidth - 48;
 
   // Chart accessibility summary
-  const chartSummary = chart.length >= 2
+  const chartSummary = activeChart.length >= 2
     ? (() => {
-        const start = chart[0].value;
-        const end = chart[chart.length - 1].value;
+        const start = activeChart[0].value;
+        const end = activeChart[activeChart.length - 1].value;
         const pct = start > 0 ? Math.round(((end - start) / start) * 100) : 0;
         const label = bw ? "reps" : unit;
         const sv = bw ? start : toDisplay(start, unit);
         const ev = bw ? end : toDisplay(end, unit);
         const dir = pct >= 0 ? "+" : "";
-        return `Your ${exercise.name} progressed from ${sv}${label} to ${ev}${label} over ${chart.length} sessions (${dir}${pct}%)`;
+        const modeLabel = chartMode === "1rm" && !bw ? "estimated 1RM" : (bw ? "reps" : "max weight");
+        return `Your ${exercise.name} ${modeLabel} progressed from ${sv}${label} to ${ev}${label} over ${activeChart.length} sessions (${dir}${pct}%)`;
       })()
     : null;
 
@@ -448,15 +457,18 @@ export default function ExerciseDetail() {
                       <Text variant="labelSmall" style={[styles.pctCol, { color: theme.colors.onSurfaceVariant }]}>Reps</Text>
                     </View>
                     {table.map((row) => (
-                      <View
+                      <Pressable
                         key={row.pct}
+                        onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
                         style={[styles.pctRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.outlineVariant }]}
                         accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${unit === "kg" ? "kilograms" : "pounds"}, ${row.reps} reps`}
+                        accessibilityRole="button"
+                        accessibilityHint="Opens plate calculator with this weight"
                       >
                         <Text variant="bodySmall" style={[styles.pctCol, { color: theme.colors.onSurface }]}>{row.pct}%</Text>
                         <Text variant="bodySmall" style={[styles.pctCol, { color: theme.colors.onSurface }]}>{row.weight} {unit}</Text>
                         <Text variant="bodySmall" style={[styles.pctCol, { color: theme.colors.onSurface }]}>{row.reps}</Text>
-                      </View>
+                      </Pressable>
                     ))}
                   </View>
                   <Button
@@ -482,6 +494,26 @@ export default function ExerciseDetail() {
           <Text variant="titleMedium" style={{ color: theme.colors.onSurface, marginBottom: 12 }}>
             {bw ? "Reps Progression" : "Weight Progression"}
           </Text>
+          {!bw && chart.length >= 2 && (
+            <View style={styles.chartToggle} accessibilityRole="radiogroup" accessibilityLabel="Chart data mode">
+              <Chip
+                selected={chartMode === "max"}
+                onPress={() => setChartMode("max")}
+                compact
+                style={styles.chartToggleChip}
+              >
+                Max Weight
+              </Chip>
+              <Chip
+                selected={chartMode === "1rm"}
+                onPress={() => setChartMode("1rm")}
+                compact
+                style={styles.chartToggleChip}
+              >
+                Est. 1RM
+              </Chip>
+            </View>
+          )}
           {chartLoading ? (
             <ActivityIndicator style={styles.loader} />
           ) : chartError ? (
@@ -489,9 +521,9 @@ export default function ExerciseDetail() {
               <Text style={{ color: theme.colors.error }}>Failed to load chart</Text>
               <Button mode="text" onPress={() => id && loadChart(id)}>Retry</Button>
             </View>
-          ) : chart.length < 2 ? (
+          ) : activeChart.length < 2 ? (
             <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-              {chart.length === 0
+              {activeChart.length === 0
                 ? "No data to chart yet"
                 : "Log more sessions to see a trend chart"}
             </Text>
@@ -499,7 +531,7 @@ export default function ExerciseDetail() {
             <View accessibilityLabel={chartSummary ?? undefined}>
               <View style={{ width: chartWidth, height: 200 }}>
                 <CartesianChart
-                  data={chart.map((d) => ({
+                  data={activeChart.map((d) => ({
                     date: formatDate(d.date),
                     value: bw ? d.value : toDisplay(d.value, unit),
                   }))}
@@ -754,5 +786,13 @@ const styles = StyleSheet.create({
   pctCol: {
     flex: 1,
     textAlign: "center",
+  },
+  chartToggle: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  chartToggleChip: {
+    marginBottom: 0,
   },
 });

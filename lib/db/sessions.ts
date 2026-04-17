@@ -684,6 +684,31 @@ export async function getExerciseRecords(exerciseId: string): Promise<ExerciseRe
   };
 }
 
+export async function getExercise1RMChartData(
+  exerciseId: string,
+  limit: number = 20
+): Promise<{ date: number; value: number }[]> {
+  return query<{ date: number; value: number }>(
+    `SELECT * FROM (
+       SELECT wss.started_at AS date,
+              MAX(ws.weight * (1 + ws.reps / 30.0)) AS value
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+       WHERE ws.exercise_id = ?
+         AND ws.completed = 1
+         AND ws.weight IS NOT NULL
+         AND ws.weight > 0
+         AND ws.reps IS NOT NULL
+         AND ws.reps > 0
+         AND wss.completed_at IS NOT NULL
+       GROUP BY wss.id
+       ORDER BY wss.started_at DESC
+       LIMIT ?
+     ) ORDER BY date ASC`,
+    [exerciseId, limit]
+  );
+}
+
 export async function getExerciseChartData(
   exerciseId: string,
   limit: number = 20
