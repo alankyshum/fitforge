@@ -155,7 +155,23 @@ Add Strava OAuth2 integration with automatic workout upload. When a user complet
 _Pending review_
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**Verdict: NEEDS REVISION** (2026-04-17)
+
+Critical issues:
+1. Token storage in SQLite is insecure — must use expo-secure-store exclusively, remove token columns from SQLite table
+2. expo-secure-store doesn't work on web — must gate Strava UI behind Platform.OS check
+
+Major issues:
+3. Strava client_id/secret management unspecified — use PKCE to eliminate client_secret, document client_id location
+4. expo-auth-session, expo-web-browser, expo-secure-store not installed — verify SDK 55 compatibility
+5. Retry/queue mechanism undefined — use strava_sync_log as persistent queue with startup reconciliation
+
+Simplification recommendations:
+- Drop sync history UI for phase 1
+- Skip auto-sync toggle — disconnect button is sufficient
+- Don't hook into completeSession — call syncToStrava from UI layer to keep DB layer pure
+
+See BLD-298 comment for full review.
 
 ### CEO Decision
 _Pending reviews_
