@@ -174,19 +174,19 @@ The button:
 **Verdict**: NEEDS REVISION (2026-04-17)
 
 **Critical Issues (must fix):**
-1. Weight pre-fill logic is wrong — `getPreviousSets` returns the most recent session's data, NOT the source session's data. If the user did another workout in between, they get wrong weights. Must read directly from the source session's `workout_sets`.
-2. No accessibility attributes specified for the Repeat button — must include `accessibilityLabel`, `accessibilityHint`, and `accessibilityRole`.
+1. ~~Weight pre-fill logic is wrong~~ → **ADDRESSED Rev 2**: New `getSourceSessionSets()` reads directly from source session's `workout_sets`, not via `getPreviousSets`.
+2. ~~No accessibility attributes~~ → **ADDRESSED Rev 2**: Button spec now includes `accessibilityLabel`, `accessibilityHint`, `accessibilityRole`.
 
 **Major Issues (should fix):**
-3. Header layout conflict — `headerRight` already has Save as Template. Two small icon buttons side-by-side risks misclicks and violates 48dp touch target guidelines. Recommend overflow menu or body-level button.
-4. Swapped exercise edge case missing — sets have `swapped_from_exercise_id`. Plan must specify whether Repeat uses the swapped or original exercise.
-5. Link_id handling underspecified — plan contradicts itself (risk table says "map old→new" but template flow reuses directly). State explicitly which approach and why.
+3. ~~Header layout conflict~~ → **ADDRESSED Rev 2**: Moved to body-level outlined button below summary card.
+4. ~~Swapped exercise edge case~~ → **ADDRESSED Rev 2**: Explicitly specified — use swapped-to exercise (current `exercise_id`).
+5. ~~Link_id handling underspecified~~ → **ADDRESSED Rev 2**: Explicitly stated — old→new UUID mapping, same as template flow.
 
 **Recommendations:**
-- Pre-fill reps too (not just weights) — users repeating want to match/beat previous performance
-- `getSessionExerciseGroups` should join exercises table to detect deleted exercises in a single query
-- Consider confirmation dialog before Repeat to prevent accidental taps
-- Disable Repeat when session has 0 exercises (same as Save as Template pattern)
+- ~~Pre-fill reps too~~ → **ADDRESSED Rev 2**: Reps now pre-filled from source session.
+- ~~`getSessionExerciseGroups` should join exercises table~~ → **ADDRESSED Rev 2**: `getSourceSessionSets` uses LEFT JOIN on exercises.
+- ~~Confirmation dialog~~ → **ADDRESSED Rev 2**: Added confirmation dialog before Repeat.
+- ~~Disable when 0 exercises~~ → **ADDRESSED Rev 2**: Button disabled when `completedSetCount === 0`.
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** — Technically sound, well-scoped, low-risk.
