@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   Alert,
+  Pressable,
   StyleSheet,
   View,
 } from "react-native";
@@ -8,6 +9,7 @@ import { FlashList } from "@shopify/flash-list";
 import {
   Button,
   IconButton,
+  Snackbar,
   Text,
   TextInput,
   useTheme,
@@ -23,9 +25,11 @@ import {
   removeExerciseFromTemplate,
   reorderTemplateExercises,
   updateTemplateName,
+  updateTemplateExercise,
 } from "../../lib/db";
 import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/types";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
+import EditExerciseSheet from "../../components/EditExerciseSheet";
 
 export default function CreateTemplate() {
   const theme = useTheme();
@@ -39,6 +43,8 @@ export default function CreateTemplate() {
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [editing, setEditing] = useState<TemplateExercise | null>(null);
+  const [snackbar, setSnackbar] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -118,13 +124,27 @@ export default function CreateTemplate() {
     await load();
   }, [template, exercises, load]);
 
+  const handleEditSave = useCallback(async (sets: number, reps: string, rest: number) => {
+    if (!editing || !template) return;
+    try {
+      await updateTemplateExercise(editing.id, template.id, sets, reps, rest);
+      setEditing(null);
+      await load();
+    } catch {
+      setSnackbar("Failed to update exercise settings");
+    }
+  }, [editing, template, load]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => (
-      <View
+      <Pressable
+        onPress={() => setEditing(item)}
         style={[
           styles.exerciseRow,
           { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
         ]}
+        accessibilityRole="button"
+        accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
       >
         <View style={styles.exerciseInfo}>
           <Text variant="titleSmall" style={{ color: theme.colors.onSurface }}>
@@ -138,6 +158,12 @@ export default function CreateTemplate() {
           </Text>
         </View>
         <View style={styles.actions}>
+          <IconButton
+            icon="pencil-outline"
+            size={16}
+            onPress={() => setEditing(item)}
+            accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
+          />
           <IconButton
             icon="arrow-up"
             size={18}
@@ -159,7 +185,7 @@ export default function CreateTemplate() {
             accessibilityLabel={`Remove ${item.exercise?.name ?? "exercise"}`}
           />
         </View>
-      </View>
+      </Pressable>
     ),
     [theme, exercises.length, move, remove]
   );
@@ -235,6 +261,20 @@ export default function CreateTemplate() {
         onDismiss={() => setPickerOpen(false)}
         onPick={handlePickExercise}
       />
+      <EditExerciseSheet
+        visible={!!editing}
+        exercise={editing}
+        onSave={handleEditSave}
+        onDismiss={() => setEditing(null)}
+      />
+      <Snackbar
+        visible={!!snackbar}
+        onDismiss={() => setSnackbar("")}
+        duration={4000}
+        accessibilityLiveRegion="polite"
+      >
+        {snackbar}
+      </Snackbar>
     </>
   );
 }
