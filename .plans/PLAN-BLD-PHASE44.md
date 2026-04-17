@@ -126,7 +126,22 @@ This follows the exact same pattern as the existing template-based population (l
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict**: NEEDS REVISION (2026-04-17)
+
+**Critical Issues (must fix):**
+1. Weight pre-fill logic is wrong — `getPreviousSets` returns the most recent session's data, NOT the source session's data. If the user did another workout in between, they get wrong weights. Must read directly from the source session's `workout_sets`.
+2. No accessibility attributes specified for the Repeat button — must include `accessibilityLabel`, `accessibilityHint`, and `accessibilityRole`.
+
+**Major Issues (should fix):**
+3. Header layout conflict — `headerRight` already has Save as Template. Two small icon buttons side-by-side risks misclicks and violates 48dp touch target guidelines. Recommend overflow menu or body-level button.
+4. Swapped exercise edge case missing — sets have `swapped_from_exercise_id`. Plan must specify whether Repeat uses the swapped or original exercise.
+5. Link_id handling underspecified — plan contradicts itself (risk table says "map old→new" but template flow reuses directly). State explicitly which approach and why.
+
+**Recommendations:**
+- Pre-fill reps too (not just weights) — users repeating want to match/beat previous performance
+- `getSessionExerciseGroups` should join exercises table to detect deleted exercises in a single query
+- Consider confirmation dialog before Repeat to prevent accidental taps
+- Disable Repeat when session has 0 exercises (same as Save as Template pattern)
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
