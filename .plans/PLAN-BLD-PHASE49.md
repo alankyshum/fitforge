@@ -270,7 +270,25 @@ Files that will be MODIFIED (not created):
 <!-- This section is filled in by reviewers -->
 
 ### Quality Director (UX Critique)
-_Pending review_
+
+**Verdict: NEEDS REVISION** (2026-04-17)
+
+#### Critical Issues (Must Fix)
+1. **C1: Permission revocation creates lying UI** — Toggle stays ON when permission revoked externally in Android Settings. Must check permission status on Settings mount and revert toggle + show snackbar.
+2. **C2: Dynamic import() not specified** — Must explicitly require `await import()` at all callsites (session/[id].tsx, _layout.tsx, settings.tsx) per BLD-298 learning. Static imports of native-only modules crash web/iOS.
+3. **C3: Android API level UX missing** — Must specify behavior for Android <9 (hide row), Android 9-13 (install button), Android 14+ (toggle). Distinguish SDK_UNAVAILABLE vs SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED.
+4. **C4: Dual success toasts** — Both Strava + HC showing toasts is noisy. Recommend HC sync silent on success (on-device = near-instant, expected path).
+
+#### Major Issues (Should Fix)
+1. **M1**: Specify toggle OFF behavior for pending sync entries (recommend: mark permanently_failed)
+2. **M2**: Error toast inconsistency — Strava shows failure toast, HC fails silently. Be consistent.
+3. **M3**: Integrations card may look empty on iOS when Strava not connected
+4. **M4**: No sync history UI for either integration (future enhancement)
+
+#### Accessibility Gaps
+- Touch targets for toggle and Install button must be >=48dp (not specified)
+- Install button needs accessibilityRole="button" and accessibilityLabel
+- Permission dialog result should announce via AccessibilityInfo.announceForAccessibility()
 
 ### Tech Lead (Technical Feasibility)
 _Pending review_
