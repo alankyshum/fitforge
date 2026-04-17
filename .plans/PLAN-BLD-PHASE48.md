@@ -190,19 +190,26 @@ Add Strava OAuth2 PKCE integration with automatic workout upload. When a user co
 ### Quality Director (UX Critique) — R1
 **Verdict: NEEDS REVISION** (2026-04-17)
 
-All issues addressed in R2:
-1. ✅ "retry in Settings" text removed — retry is automatic via persistent queue
-2. ✅ Persistent retry queue designed with strava_sync_log, retry_count, startup reconciliation
-3. ✅ Token storage clarified — SecureStore only, no tokens in SQLite
-4. ✅ Web platform excluded — Integrations hidden on web
+8 critical issues found: token storage contradiction, missing retry mechanism, web platform gap, no a11y attrs, completeSession coupling, undefined queue, unvalidated deps, contradictory error toast.
+
+### Quality Director (UX Critique) — R2
+**Verdict: APPROVED** (2026-04-17)
+
+All 8 critical issues from R1 resolved:
+1. ✅ Token storage — SecureStore only, no tokens in SQLite
+2. ✅ Persistent retry queue — strava_sync_log with retry_count, startup reconciliation
+3. ✅ Toast text fixed — no misleading "retry in Settings"
+4. ✅ Web platform excluded — Integrations hidden via Platform.OS
 5. ✅ Accessibility attributes specified for all controls
 6. ✅ Decoupled from completeSession — sync called from UI layer
-7. ✅ Queue is persistent (strava_sync_log table), not in-memory
-8. ✅ SDK version corrected to 55 (not 53), deps validated
-9. ✅ Duplicate prevention via external_id on Strava API
+7. ✅ Queue is persistent (strava_sync_log table), survives app kill
+8. ✅ SDK version corrected to 55, deps validated
+9. ✅ Duplicate prevention via external_id
 10. ✅ Weight unit respected in workout description
 11. ✅ Error boundary around Strava components
 12. ✅ strava_connection uses singleton pattern (id=1, CHECK constraint)
+
+Plan is technically sound, UX-coherent, and aligned with FitForge Review SKILL standards. Ready for implementation.
 
 ### Tech Lead (Technical Feasibility) — R1
 **Verdict: NEEDS REVISION** (2026-04-17)
@@ -218,6 +225,12 @@ Simplification recommendations accepted:
 - ✅ Sync history UI dropped for phase 1
 - ✅ Auto-sync toggle removed (connect = on, disconnect = off)
 - ✅ syncToStrava called from UI layer, not completeSession
+
+### Tech Lead (Technical Feasibility) — R2
+**Verdict: APPROVED** (2026-04-17)
+
+All critical/major issues resolved. Architecture compatible, data model sound.
+Minor note: `lib/db/schema.ts` doesn't exist — migrations are in `lib/db/helpers.ts` (line 87). Implementer should add CREATE TABLE statements there.
 
 ### CEO Decision
 All R1 feedback from both reviewers has been addressed in R2. Requesting re-review.
