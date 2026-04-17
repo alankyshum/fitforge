@@ -1,175 +1,153 @@
-# Feature Plan: Enhanced Error Reporting — Expanded Diagnostics
+# Feature Plan: Strava Integration (Phase 48)
 
-**Issue**: BLD-287
+**Issue**: BLD-297
 **Author**: CEO
 **Date**: 2026-04-17
 **Status**: DRAFT
 
 ## Problem Statement
+Many fitness enthusiasts use Strava as their central activity hub. Currently, FitForge workout data is siloed — users who want to track their strength training in Strava must manually re-enter workout details. This creates friction and reduces FitForge's value in a multi-app fitness ecosystem.
 
-Owner reported (GitHub #149) that the current feedback/error reports include only the last 10 interaction events, which is insufficient for debugging. The request is to expand diagnostic data to cover the last 1 minute of activity and include platform-level logs.
-
-Current report data sources:
-- `interaction_log` — limited to 10 entries (hard-coded in INSERT prune + SELECT)
-- `console-log-buffer` — 100 entries, 1 min max age (already good)
-- `error_log` — last 50 entries (already good)
-
-The console-log-buffer already captures all JS-side console output (log/warn/error), which includes Expo framework warnings and React Native bridge messages. This IS the "expo logs" the owner sees in the terminal — they're just not visible in the report because they're separate from the interaction log.
+The owner has filed three related requests:
+- GitHub #164: Auto-upload finished workouts to Strava
+- GitHub #165: Strava account linking on Settings page
+- GitHub #166: Wear OS companion (separate phase — out of scope here)
 
 ## User Stories
-
-- As a user filing a bug report, I want my recent navigation and actions from the last minute included so the developer can understand what I did before the bug occurred.
-- As a developer reviewing a bug report, I want to see console warnings/errors alongside interactions in chronological order so I can correlate user actions with framework-level issues.
+- As a gym-goer who uses Strava, I want my FitForge workouts to appear in Strava automatically so I don't have to manually log them twice
+- As a user, I want to connect/disconnect my Strava account from Settings so I control when syncing is active
+- As a user, I want to see which workouts have been synced so I know my data is up to date
 
 ## Proposed Solution
 
 ### Overview
-
-Three changes, all low-risk:
-
-1. **Expand interaction log** from 10-entry cap to time-based (1 minute, matching console-log-buffer)
-2. **Increase interaction retention** in DB from 10 to 200 entries (high-water mark)
-3. **Interleave console logs + interactions** in report for chronological debugging context
+Add Strava OAuth2 integration with automatic workout upload. When a user completes a workout and has Strava connected, FitForge will create a Strava activity with the workout summary.
 
 ### UX Design
 
-No UI changes. The feedback screen already shows diagnostic data. The only visible difference:
-- More interaction entries appear in the "Recent Interactions" section
-- A new "Combined Timeline" section shows interactions + console logs interleaved chronologically
+#### Settings Page — Strava Connection
+- New "Integrations" section in Settings (below existing sections)
+- "Connect Strava" button with Strava brand icon
+- When connected: show connected account name, "Disconnect" button, toggle for auto-sync
+- OAuth2 flow uses `expo-auth-session` / `expo-web-browser` for the browser redirect
 
-**Report structure (updated):**
-```
-## Diagnostic Info
-- App Version: x.y.z
-- Platform: android
-- OS Version: 36
+#### Workout Completion — Auto-Upload
+- After `completeSession()`, if Strava is connected and auto-sync is on, upload the workout
+- Show a brief toast: "Synced to Strava ✓" or "Strava sync failed — retry in Settings"
+- No blocking UI — sync happens in the background after session completion
 
-## Combined Timeline (last 1 minute)
-1. [timestamp] [NAV] /exercises
-2. [timestamp] [LOG] Fetching exercise data...
-3. [timestamp] [WARN] Deprecated API usage: ...
-4. [timestamp] [NAV] /exercise/mw-bw-039
-5. [timestamp] [ERROR] Failed to load image: ...
-
-## Error Log
-(unchanged — full error entries with stacks)
-```
-
-The separate "Recent Interactions" and "Console Logs" sections are REMOVED in favor of the combined timeline. This is cleaner and more useful for debugging.
+#### Sync History (stretch goal)
+- Optional: show sync status icon on recent workouts list (synced ✓ / failed ✗ / pending)
 
 ### Technical Approach
 
-#### Change 1: Expand interaction_log retention
+#### Strava API Integration
+- **OAuth2 flow**: Authorization Code Grant with PKCE
+  - Redirect URI: `fitforge://strava-callback` (deep link)
+  - Scopes: `activity:write` (create activities)
+  - Token storage: `expo-secure-store` for access/refresh tokens
+- **Activity creation**: POST `/api/v3/activities`
+  - `name`: workout template name or "Strength Training"
+  - `type`: "WeightTraining"
+  - `sport_type`: "WeightTraining"
+  - `start_date_local`: session.started_at (ISO 8601)
+  - `elapsed_time`: session.duration_seconds
+  - `description`: exercise summary (e.g., "Bench Press: 3×10@80kg, Squat: 4×8@100kg")
+- **Token refresh**: Strava tokens expire every 6 hours — auto-refresh before API calls
 
-In `lib/db/settings.ts`:
-- Change `insertInteraction` prune from `LIMIT 10` to `LIMIT 200`
-- Change `getInteractions` from `LIMIT 10` to time-based: `WHERE timestamp > ? LIMIT 200` (cutoff = now - 60000ms)
+#### Data Model Changes
+- New table: `strava_integration`
+  - `id` TEXT PRIMARY KEY
+  - `access_token` TEXT (encrypted via SecureStore)
+  - `refresh_token` TEXT (encrypted via SecureStore)
+  - `athlete_id` INTEGER
+  - `athlete_name` TEXT
+  - `expires_at` INTEGER
+  - `auto_sync` INTEGER DEFAULT 1
+  - `created_at` INTEGER
+- New table: `strava_sync_log`
+  - `id` TEXT PRIMARY KEY
+  - `session_id` TEXT REFERENCES workout_sessions(id)
+  - `strava_activity_id` TEXT
+  - `status` TEXT (pending/synced/failed)
+  - `error` TEXT
+  - `synced_at` INTEGER
 
-#### Change 2: Add combined timeline builder
+#### New Dependencies
+- `expo-auth-session` — OAuth2 flow
+- `expo-web-browser` — browser popup for Strava login
+- `expo-secure-store` — secure token storage (already available in Expo)
 
-In `lib/errors.ts`, add a new function:
-
-```typescript
-export function buildCombinedTimeline(
-  interactions: Interaction[],
-  consoleLogs: ConsoleLogEntry[]
-): string {
-  type TimelineEntry = { timestamp: number; label: string; message: string };
-
-  const entries: TimelineEntry[] = [
-    ...interactions.map(i => ({
-      timestamp: i.timestamp,
-      label: i.action.toUpperCase(),
-      message: `${i.screen}${i.detail ? ` — ${i.detail}` : ""}`,
-    })),
-    ...consoleLogs.map(c => ({
-      timestamp: c.timestamp,
-      label: c.level.toUpperCase(),
-      message: c.message,
-    })),
-  ];
-
-  entries.sort((a, b) => a.timestamp - b.timestamp);
-
-  if (entries.length === 0) return "No recent activity";
-
-  return entries
-    .map((e, i) =>
-      `${i + 1}. [${new Date(e.timestamp).toISOString()}] [${e.label}] ${e.message}`
-    )
-    .join("\n");
-}
-```
-
-#### Change 3: Update report builders
-
-In `lib/errors.ts`, update `buildReportBody` and `generateShareText`:
-- Replace separate "Recent Interactions" and "Console Logs" sections with single "Combined Timeline (last 1 minute)" section
-- Update `truncateBody` phases: remove the "remove console logs" phase (since they're now merged with interactions), adjust other phases
-
-#### Change 4: Update feedback screen
-
-In `app/feedback.tsx`:
-- No changes needed — it already fetches interactions and consoleLogs and passes them to `buildReportBody`
-- The combined timeline is built inside `buildReportBody`
-
-#### Change 5: Update JSON report
-
-In `lib/errors.ts`, update `generateReport`:
-- Keep `interactions` and `console_logs` as separate fields (for machine parsing)
-- Add a `combined_timeline` field with the interleaved array (for human reading)
+#### Key Files to Create/Modify
+- `lib/strava.ts` — Strava API client (OAuth, token refresh, activity creation)
+- `lib/db/strava.ts` — DB operations for strava_integration and strava_sync_log
+- `app/(tabs)/settings.tsx` — add Integrations section
+- `lib/db/sessions.ts` — hook into completeSession for auto-sync trigger
+- `lib/db/schema.ts` — new tables in migration
 
 ### Scope
 
 **In Scope:**
-- Expand interaction_log from 10 to 200 entries with 1-minute time filter on retrieval
-- Interleave interactions + console logs in report body (combined timeline)
-- Update truncation logic to handle the new format
-- Update tests
+- Strava OAuth2 connection/disconnection in Settings
+- Automatic workout upload on session completion
+- Token refresh handling
+- Basic error handling and retry
+- Sync status toast notifications
 
 **Out of Scope:**
-- Android logcat access (requires native module — not feasible in Expo managed workflow without ejecting. The console-log-buffer already captures JS-side equivalents.)
-- Native crash reporting (would need expo-updates/Sentry integration — separate feature)
-- Changing the feedback UI layout
-- Adding new log sources (network requests, storage operations)
+- Wear OS integration (separate phase — GitHub #166)
+- Importing Strava activities INTO FitForge
+- Syncing cardio data (FitForge is strength-focused)
+- Manual "sync this workout" button (auto-sync only)
+- Bidirectional sync
+- Strava webhook subscriptions
 
 ### Acceptance Criteria
-
-- [ ] Given a user navigates through 30+ screens in 1 minute, When they open the feedback screen and submit a bug report, Then the report includes all 30+ interactions (not just 10)
-- [ ] Given console.warn fires 5 times during the last minute, When a bug report is generated, Then those warnings appear in the Combined Timeline interleaved with navigation events in chronological order
-- [ ] Given the combined timeline has entries older than 1 minute, When the report is built, Then only entries from the last 60 seconds are included
-- [ ] Given a very long report exceeds the 8000-char URL limit, When the GitHub URL is generated, Then the truncation logic gracefully shortens the combined timeline
-- [ ] `npx tsc --noEmit` passes
-- [ ] All existing tests pass with no regressions
+- [ ] Given a user on Settings When they tap "Connect Strava" Then the Strava OAuth2 browser flow opens
+- [ ] Given a user completes Strava OAuth Then their Strava account name appears in Settings with a "Disconnect" button
+- [ ] Given a connected user who completes a workout When auto-sync is on Then the workout appears as a Strava activity within 10 seconds
+- [ ] Given a Strava activity is created Then it has type "WeightTraining", correct duration, and exercise summary in description
+- [ ] Given a user taps "Disconnect" Then tokens are deleted and no future workouts sync
+- [ ] Given the Strava API is unavailable When a workout completes Then a non-blocking error toast shows and the workout is still saved locally
+- [ ] Given a token has expired When a sync is attempted Then the token is refreshed automatically before retrying
+- [ ] PR passes all existing tests with no regressions
+- [ ] New tests cover OAuth flow mocking, activity creation, and error handling
 
 ### Edge Cases
-
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| No interactions and no console logs | "No recent activity" shown in Combined Timeline |
-| 200+ interactions in 1 minute | Only newest 200 kept (DB prune), all within 1-min window shown |
-| Console logs but no interactions | Timeline shows only console entries |
-| Interaction timestamps slightly out of sync with console timestamps | Sort by timestamp handles any ordering |
-| Report truncation with combined timeline | Truncation removes timeline entries from oldest first |
+| Strava API down | Toast "Strava sync failed", workout saved locally, retry on next app open |
+| Token expired | Auto-refresh, retry once, fail gracefully if refresh also fails |
+| User revokes access on Strava.com | Next sync fails → show "Strava disconnected" and clear tokens |
+| No internet | Skip sync silently, log for retry |
+| Very long workout (3+ hours) | Works normally — just large elapsed_time |
+| Workout with 0 completed sets | Skip Strava upload (nothing meaningful to sync) |
+| Multiple rapid workout completions | Queue uploads, process sequentially |
+| User disconnects mid-sync | Cancel pending upload, clear tokens |
 
 ### Risk Assessment
-
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Larger interaction_log increases DB size | Low | Low | 200 entries is still tiny; prune on insert |
-| Combined timeline makes reports longer | Medium | Low | Truncation logic already handles long reports; we update it for new format |
-| Breaking existing report format consumers | Low | Medium | JSON report keeps separate fields; combined_timeline is additive |
+| Strava API rate limits (100/15min, 1000/day) | Low (1 upload per workout) | Low | Unlikely to hit limits with normal usage |
+| Strava OAuth complexity in Expo | Medium | Medium | Use expo-auth-session which handles PKCE and redirects |
+| Token storage security | Low | High | Use expo-secure-store, never log tokens |
+| Strava API changes | Low | Medium | Pin API version, handle errors gracefully |
+| Strength training data doesn't map well | Medium | Low | Use "WeightTraining" type, put details in description text |
 
-### Why NOT Android Logcat
+## Implementation Strategy
 
-The owner asked for "Android app logs (if running on Android as apk)." In Expo managed workflow:
-- There is no JS API to read logcat
-- `react-native-logcat` requires bare workflow
-- Creating a custom Expo module is possible but adds significant complexity for marginal value
-- The console-log-buffer ALREADY captures all JS-side log output, which includes React Native bridge warnings, Expo SDK messages, and app-level logging
-- The real gap was the 10-interaction limit, not missing native logs
+### Sub-tasks (in order):
+1. **DB schema**: Add strava_integration and strava_sync_log tables
+2. **Strava API client**: OAuth flow, token management, activity creation
+3. **Settings UI**: Integrations section with connect/disconnect
+4. **Auto-sync hook**: Wire into completeSession
+5. **Error handling & retry**: Toast notifications, graceful failures
+6. **Tests**: Unit tests for API client, integration tests for OAuth flow
 
-If native logcat access is truly needed in the future, it should be a separate feature with a custom Expo module.
+### Estimated Complexity: Medium-High
+- OAuth2 is well-documented but has edge cases (PKCE, token refresh, deep links)
+- Strava API is straightforward for activity creation
+- Main risk is the OAuth redirect flow in React Native/Expo
 
 ## Review Feedback
 
