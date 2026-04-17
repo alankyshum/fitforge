@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { SectionList, StyleSheet, View } from "react-native";
+import { LayoutAnimation, SectionList, StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import {
   Button,
@@ -15,6 +15,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import { router, useFocusEffect } from "expo-router";
+import InlineFoodSearch from "../../components/InlineFoodSearch";
 import {
   getDailyLogs,
   getDailySummary,
@@ -54,6 +55,7 @@ export default function Nutrition() {
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [snack, setSnack] = useState("");
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [showAddCard, setShowAddCard] = useState(false);
 
   // Inline add-form state (tablet only)
   const [name, setName] = useState("");
@@ -324,6 +326,19 @@ export default function Nutrition() {
     />
   );
 
+  const toggleAddCard = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAddCard((v) => !v);
+  }, []);
+
+  const handleFoodLogged = useCallback(() => {
+    load();
+  }, [load]);
+
+  const handleSnack = useCallback((message: string) => {
+    setSnack(message);
+  }, []);
+
   if (layout.atLeastMedium) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background, paddingHorizontal: layout.horizontalPadding }]}>
@@ -349,12 +364,22 @@ export default function Nutrition() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {logContent}
 
+      {showAddCard && (
+        <View style={styles.inlineCardOverlay}>
+          <InlineFoodSearch
+            dateKey={formatDateKey(date.getTime())}
+            onFoodLogged={handleFoodLogged}
+            onSnack={handleSnack}
+          />
+        </View>
+      )}
+
       <FAB
-        icon="plus"
+        icon={showAddCard ? "close" : "plus"}
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         color={theme.colors.onPrimary}
-        onPress={() => router.push(`/nutrition/add?date=${formatDateKey(date.getTime())}`)}
-        accessibilityLabel="Add food"
+        onPress={toggleAddCard}
+        accessibilityLabel={showAddCard ? "Close add food" : "Add food"}
       />
 
       <Snackbar
@@ -416,6 +441,7 @@ const styles = StyleSheet.create({
   foodCard: { marginBottom: 6, borderRadius: 8 },
   foodRow: { flexDirection: "row", alignItems: "center" },
   fab: { position: "absolute", right: 16, bottom: 16 },
+  inlineCardOverlay: { position: "absolute", left: 0, right: 0, bottom: 80, zIndex: 1 },
   macro: { marginBottom: 8 },
   macroHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   bar: { height: 6, borderRadius: radii.sm },
