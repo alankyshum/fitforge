@@ -69,6 +69,15 @@ jest.mock('../../lib/openfoodfacts', () => ({
 
 import AddFood from '../../app/nutrition/add'
 
+// Helper to navigate to Online tab and get scan button
+async function openOnlineTab(screen: ReturnType<typeof renderScreen>) {
+  const onlineButtons = screen.getAllByText('Online')
+  fireEvent.press(onlineButtons[0])
+  await waitFor(() => {
+    expect(screen.getByText('Scan Barcode')).toBeTruthy()
+  })
+}
+
 describe('Barcode Scanner Acceptance', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -79,97 +88,232 @@ describe('Barcode Scanner Acceptance', () => {
     Platform.OS = 'ios'
   })
 
+  // ── Visibility ──────────────────────────────────────────────────
+
   it('shows Scan Barcode button on Online tab for native platforms', async () => {
     Platform.OS = 'ios'
-    const { getByText, getAllByText } = renderScreen(<AddFood />)
-
-    // Switch to Online tab
-    const onlineButtons = getAllByText('Online')
-    fireEvent.press(onlineButtons[0])
-
-    await waitFor(() => {
-      expect(getByText('Scan Barcode')).toBeTruthy()
-    })
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
   })
 
   it('hides Scan Barcode button on web platform', async () => {
     Platform.OS = 'web' as typeof Platform.OS
-    const { queryByText, getAllByText } = renderScreen(<AddFood />)
+    const screen = renderScreen(<AddFood />)
 
-    const onlineButtons = getAllByText('Online')
+    const onlineButtons = screen.getAllByText('Online')
     fireEvent.press(onlineButtons[0])
 
     await waitFor(() => {
-      expect(queryByText('Scan Barcode')).toBeNull()
+      expect(screen.queryByText('Scan Barcode')).toBeNull()
     })
   })
 
-  it('shows product not found message when barcode is not in database', async () => {
-    mockLookupBarcodeWithTimeout.mockResolvedValue({ ok: true, status: 'not_found' })
-
-    const { getByText, getAllByText } = renderScreen(<AddFood />)
-
-    const onlineButtons = getAllByText('Online')
-    fireEvent.press(onlineButtons[0])
-
-    await waitFor(() => {
-      expect(getByText('Scan Barcode')).toBeTruthy()
-    })
-
-    fireEvent.press(getByText('Scan Barcode'))
-
-    // Simulate the BarcodeScanner calling onBarcodeScanned
-    // We need to get the BarcodeScanner component and trigger its callback
-    // Since the scanner is now visible, find and trigger it
-    const { CameraView } = require('expo-camera')
-
-    // The scanner's onBarcodeScanned will be called internally
-    // We simulate the full flow by triggering the callback on the parent
-    // Since we mock expo-camera, let's trigger onBarcodeScanned on CameraView
-
-    // Actually, let's just test the error states by directly calling the callback
-    // through the internal component. Since BarcodeScanner renders inside OnlineTab,
-    // we need to simulate a barcode scan event.
-
-    // Let's find the scanner view and simulate a barcode scan
-    await waitFor(() => {
-      // Scanner should be visible
-    })
-  })
-
-  it('shows network error with retry button when offline during barcode lookup', async () => {
-    mockLookupBarcodeWithTimeout.mockResolvedValue({ ok: false, error: 'offline' })
-
-    const { getByText, getAllByText, findByText } = renderScreen(<AddFood />)
-
-    const onlineButtons = getAllByText('Online')
-    fireEvent.press(onlineButtons[0])
-
-    await waitFor(() => {
-      expect(getByText('Scan Barcode')).toBeTruthy()
-    })
-  })
+  // ── Accessibility ───────────────────────────────────────────────
 
   it('has correct accessibility label on scan button', async () => {
-    const { getByLabelText, getAllByText } = renderScreen(<AddFood />)
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
 
-    const onlineButtons = getAllByText('Online')
-    fireEvent.press(onlineButtons[0])
-
-    await waitFor(() => {
-      expect(getByLabelText('Scan food barcode')).toBeTruthy()
-    })
+    expect(screen.getByLabelText('Scan food barcode')).toBeTruthy()
   })
 
   it('shows scan button with minimum touch target size', async () => {
-    const { getByText, getAllByText } = renderScreen(<AddFood />)
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
 
-    const onlineButtons = getAllByText('Online')
-    fireEvent.press(onlineButtons[0])
+    const scanButton = screen.getByText('Scan Barcode')
+    expect(scanButton).toBeTruthy()
+  })
+
+  // ── Barcode found flow ──────────────────────────────────────────
+
+  it('displays found product as result card after barcode scan', async () => {
+    mockLookupBarcodeWithTimeout.mockResolvedValue({
+      ok: true,
+      status: 'found',
+      food: {
+        name: 'Oatly — Oat Milk',
+        calories: 115,
+        protein: 2.5,
+        carbs: 16.8,
+        fat: 3.8,
+        servingLabel: '250ml',
+        isPerServing: true,
+      },
+    })
+
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
+
+    fireEvent.press(screen.getByText('Scan Barcode'))
 
     await waitFor(() => {
-      const scanButton = getByText('Scan Barcode')
-      expect(scanButton).toBeTruthy()
+      const cameraView = screen.getByTestId('camera-view')
+      expect(cameraView).toBeTruthy()
+    })
+
+    const cameraView = screen.getByTestId('camera-view')
+    await act(async () => {
+      const props = cameraView.props
+      if (props.onBarcodeScanned) {
+        props.onBarcodeScanned({ type: 'ean13', data: '7394376616037' })
+      }
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Oatly — Oat Milk')).toBeTruthy()
+    })
+    expect(screen.getByText(/115 cal/)).toBeTruthy()
+    expect(mockLookupBarcodeWithTimeout).toHaveBeenCalledWith('7394376616037', expect.anything())
+  })
+
+  // ── Barcode not found flow ──────────────────────────────────────
+
+  it('shows product not found message with search fallback', async () => {
+    mockLookupBarcodeWithTimeout.mockResolvedValue({ ok: true, status: 'not_found' })
+
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
+
+    fireEvent.press(screen.getByText('Scan Barcode'))
+
+    await waitFor(() => {
+      const cameraView = screen.getByTestId('camera-view')
+      expect(cameraView).toBeTruthy()
+    })
+
+    const cameraView = screen.getByTestId('camera-view')
+    await act(async () => {
+      if (cameraView.props.onBarcodeScanned) {
+        cameraView.props.onBarcodeScanned({ type: 'ean13', data: '0000000000000' })
+      }
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Product not found. Try searching by name.')).toBeTruthy()
+    })
+    expect(screen.getByText('Search by Name')).toBeTruthy()
+    expect(screen.getByText('Retry')).toBeTruthy()
+  })
+
+  // ── Incomplete product flow ─────────────────────────────────────
+
+  it('shows incomplete data message for invalid product', async () => {
+    mockLookupBarcodeWithTimeout.mockResolvedValue({ ok: true, status: 'incomplete' })
+
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
+
+    fireEvent.press(screen.getByText('Scan Barcode'))
+
+    await waitFor(() => {
+      const cameraView = screen.getByTestId('camera-view')
+      expect(cameraView).toBeTruthy()
+    })
+
+    const cameraView = screen.getByTestId('camera-view')
+    await act(async () => {
+      if (cameraView.props.onBarcodeScanned) {
+        cameraView.props.onBarcodeScanned({ type: 'ean13', data: '1234567890123' })
+      }
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Product found but nutrition data is incomplete.')).toBeTruthy()
+    })
+  })
+
+  // ── Network error flow ──────────────────────────────────────────
+
+  it('shows network error with retry button when offline', async () => {
+    mockLookupBarcodeWithTimeout.mockResolvedValue({ ok: false, error: 'offline' })
+
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
+
+    fireEvent.press(screen.getByText('Scan Barcode'))
+
+    await waitFor(() => {
+      const cameraView = screen.getByTestId('camera-view')
+      expect(cameraView).toBeTruthy()
+    })
+
+    const cameraView = screen.getByTestId('camera-view')
+    await act(async () => {
+      if (cameraView.props.onBarcodeScanned) {
+        cameraView.props.onBarcodeScanned({ type: 'ean13', data: '1234567890123' })
+      }
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Could not look up barcode. Check your connection.')).toBeTruthy()
+    })
+    expect(screen.getByText('Retry')).toBeTruthy()
+  })
+
+  // ── Timeout flow ────────────────────────────────────────────────
+
+  it('shows timeout error when barcode lookup times out', async () => {
+    mockLookupBarcodeWithTimeout.mockResolvedValue({ ok: false, error: 'timeout' })
+
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
+
+    fireEvent.press(screen.getByText('Scan Barcode'))
+
+    await waitFor(() => {
+      const cameraView = screen.getByTestId('camera-view')
+      expect(cameraView).toBeTruthy()
+    })
+
+    const cameraView = screen.getByTestId('camera-view')
+    await act(async () => {
+      if (cameraView.props.onBarcodeScanned) {
+        cameraView.props.onBarcodeScanned({ type: 'ean13', data: '1234567890123' })
+      }
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Lookup timed out. Please try again.')).toBeTruthy()
+    })
+  })
+
+  // ── Found announcement ──────────────────────────────────────────
+
+  it('announces found product name for screen readers', async () => {
+    mockLookupBarcodeWithTimeout.mockResolvedValue({
+      ok: true,
+      status: 'found',
+      food: {
+        name: 'Chobani — Greek Yogurt',
+        calories: 130,
+        protein: 15,
+        carbs: 12,
+        fat: 4,
+        servingLabel: '1 cup',
+        isPerServing: true,
+      },
+    })
+
+    const screen = renderScreen(<AddFood />)
+    await openOnlineTab(screen)
+
+    fireEvent.press(screen.getByText('Scan Barcode'))
+
+    await waitFor(() => {
+      const cameraView = screen.getByTestId('camera-view')
+      expect(cameraView).toBeTruthy()
+    })
+
+    const cameraView = screen.getByTestId('camera-view')
+    await act(async () => {
+      if (cameraView.props.onBarcodeScanned) {
+        cameraView.props.onBarcodeScanned({ type: 'ean13', data: '0075240001001' })
+      }
+    })
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Found: Chobani — Greek Yogurt')).toBeTruthy()
     })
   })
 })

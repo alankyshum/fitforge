@@ -12,9 +12,9 @@ CameraView.displayName = 'CameraView';
 
 const useCameraPermissions = () => {
   const [permission, setPermission] = React.useState({
-    granted: false,
+    granted: true,
     canAskAgain: true,
-    status: 'undetermined',
+    status: 'granted',
     expires: 'never',
   });
 
