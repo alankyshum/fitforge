@@ -90,3 +90,11 @@
 **Learning**: When adding columns that appear in export/import data, three changes must happen atomically: (1) bump the export version number (v3 → v4), (2) update the `future_version` rejection threshold (>= 4 → >= 5) so older apps reject the new format cleanly, and (3) add backward-compatible handling so the new version can import old-format data (e.g., `row.rating ?? null`). Missing any one of these causes silent data loss, import crashes, or version confusion.
 **Action**: When modifying export/import to include new fields: bump the version constant, update the future_version guard, and add a fallback for the new field when importing older formats. Search for the current version number in import-export code and update all three locations in the same change.
 **Tags**: export, import, versioning, sqlite, data-migration, backward-compatibility, format-version
+
+### LEFT JOIN to Detect Deleted Referenced Entities Before Loading
+**Source**: BLD-265 — Repeat Workout from History (Phase 44)
+**Date**: 2026-04-17
+**Context**: When repeating a workout from history, the source session may reference exercises that have since been deleted. Loading these blindly would create orphaned sets with no matching exercise, causing UI errors or silent data corruption.
+**Learning**: Use `LEFT JOIN` on the referenced entity table and check for `NULL` in the join result to detect deleted references at query time rather than at render time. The query `SELECT ws.*, e.id AS exercise_exists FROM workout_sets ws LEFT JOIN exercises e ON ws.exercise_id = e.id` lets the caller filter out sets whose exercises no longer exist before inserting them into the new session. Combine with a user-facing notification (snackbar) reporting the count of skipped items.
+**Action**: When loading data that references other entities by ID (exercises, templates, programs), always use LEFT JOIN to detect deleted references. Filter them out before processing and notify the user with a count: `${count} exercise${count > 1 ? 's were' : ' was'} skipped (no longer available)`. Never silently skip or crash on missing references.
+**Tags**: left-join, deleted-references, data-integrity, defensive-query, user-notification, snackbar, exercises, foreign-key
