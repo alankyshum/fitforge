@@ -128,7 +128,7 @@ describe('metric queries exclude warm-ups', () => {
 
   it('getPersonalRecords excludes warm-up sets', async () => {
     mockDb.getAllAsync.mockResolvedValue([]);
-    await getPersonalRecords('ex-1');
+    await getPersonalRecords();
 
     const call = mockDb.getAllAsync.mock.calls[0];
     expect(call[0]).toContain('is_warmup = 0');
