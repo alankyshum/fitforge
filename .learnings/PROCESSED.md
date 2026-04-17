@@ -170,3 +170,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-267 | NO_LEARNINGS | 2026-04-17 |
 | BLD-268 | LEARNINGS_EXTRACTED | 2026-04-17 |
 | BLD-269 | NO_LEARNINGS | 2026-04-17 |
+| BLD-270 | LEARNINGS_EXTRACTED | 2026-04-17 |
