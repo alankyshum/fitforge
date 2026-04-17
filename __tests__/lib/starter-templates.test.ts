@@ -1,5 +1,6 @@
 import { STARTER_TEMPLATES, STARTER_PROGRAM, STARTER_VERSION } from "../../lib/starter-templates";
 import { DIFFICULTY_LABELS } from "../../lib/types";
+import { seedExercises } from "../../lib/seed";
 
 describe("starter-templates data", () => {
   it("has at least 6 starter templates", () => {
@@ -111,5 +112,45 @@ describe("starter program data", () => {
     expect(STARTER_PROGRAM.days[0].template_id).toBe("starter-tpl-2");
     expect(STARTER_PROGRAM.days[1].template_id).toBe("starter-tpl-3");
     expect(STARTER_PROGRAM.days[2].template_id).toBe("starter-tpl-4");
+  });
+});
+
+// --- Regression: BLD-255 — exercise references must exist in seed data ---
+describe("starter template exercise references (BLD-255 regression)", () => {
+  const allExercises = seedExercises();
+  const exerciseIds = new Set(allExercises.map((e) => e.id));
+
+  it("all starter template exercises reference valid seed exercise IDs", () => {
+    for (const tpl of STARTER_TEMPLATES) {
+      for (const ex of tpl.exercises) {
+        expect(exerciseIds.has(ex.exercise_id)).toBe(true);
+      }
+    }
+  });
+
+  it("every starter template has non-empty exercises array", () => {
+    for (const tpl of STARTER_TEMPLATES) {
+      expect(tpl.exercises.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every starter template exercise has all required fields", () => {
+    for (const tpl of STARTER_TEMPLATES) {
+      for (const ex of tpl.exercises) {
+        expect(ex.id).toBeTruthy();
+        expect(ex.exercise_id).toBeTruthy();
+        expect(ex.target_sets).toBeGreaterThanOrEqual(1);
+        expect(ex.target_reps).toBeTruthy();
+        expect(ex.rest_seconds).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("Founder's Favourite template has exercises and metadata", () => {
+    const founders = STARTER_TEMPLATES.find((t) => t.name === "Founder's Favourite");
+    expect(founders).toBeDefined();
+    expect(founders!.exercises.length).toBeGreaterThanOrEqual(5);
+    expect(founders!.difficulty).toBe("advanced");
+    expect(founders!.duration).toBeTruthy();
   });
 });
