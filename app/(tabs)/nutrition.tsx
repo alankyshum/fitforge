@@ -88,8 +88,8 @@ export default function Nutrition() {
     }, [load, layout.atLeastMedium])
   );
 
-  const prev = () => setDate((d) => new Date(d.getTime() - DAY_MS));
-  const next = () => setDate((d) => new Date(d.getTime() + DAY_MS));
+  const prev = () => { setDate((d) => new Date(d.getTime() - DAY_MS)); setShowAddCard(false); };
+  const next = () => { setDate((d) => new Date(d.getTime() + DAY_MS)); setShowAddCard(false); };
 
   const remove = async (log: DailyLog) => {
     if (deleted.current) clearTimeout(deleted.current.timer);

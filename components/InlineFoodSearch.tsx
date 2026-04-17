@@ -45,7 +45,7 @@ type SearchResult =
 type Props = {
   dateKey: string;
   onFoodLogged: () => void;
-  onSnack: (message: string, undoFn?: () => Promise<void>) => void;
+  onSnack: (message: string) => void;
 };
 
 export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Props) {
@@ -364,21 +364,23 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
   const showSeparator = localResults.length > 0 && onlineResults.length > 0;
   const separatorIndex = localResults.length;
 
-  // Use a wrapper renderItem that inserts a separator label
+  // Wrap renderItem with separator between local and online results.
+  // Uses View (not Fragment) because FlashList requires a single View-based root.
   const renderItemWithSeparator = useCallback(({ item, index }: { item: SearchResult; index: number }) => {
-    return (
-      <>
-        {showSeparator && index === separatorIndex && (
+    if (showSeparator && index === separatorIndex) {
+      return (
+        <View>
           <Text
             variant="labelSmall"
             style={[styles.separator, { color: theme.colors.onSurfaceVariant }]}
           >
             Online Results
           </Text>
-        )}
-        {renderItem({ item })}
-      </>
-    );
+          {renderItem({ item })}
+        </View>
+      );
+    }
+    return renderItem({ item });
   }, [renderItem, showSeparator, separatorIndex, theme]);
 
   const hasResults = combinedResults.length > 0;
