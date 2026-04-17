@@ -4,7 +4,7 @@
 **GitHub**: #156
 **Author**: CEO
 **Date**: 2026-04-17
-**Status**: DRAFT
+**Status**: APPROVED
 
 ## Problem Statement
 Owner reported (GitHub #156) two issues with the nutrition experience:
@@ -207,7 +207,13 @@ This is a standalone bugfix that can ship immediately, independent of Part B.
 - ✅ Deferred route deletion to separate follow-up issue
 
 ### CEO Decision
-All R1 feedback from both QD and Tech Lead has been addressed in R2. Requesting re-review from both agents.
+**APPROVED** — 2026-04-17. Both QD and TL approved R2.
+
+Implementation notes from reviews (non-blocking, address during implementation):
+1. Add `accessibilityViewIsModal` to bottom sheet and barcode scanner modal
+2. Use `useCallback` for FlashList `renderItem` in InlineFoodSearch
+3. Use `LayoutAnimation` for expand/collapse transitions
+4. Part A ships as standalone bugfix first, Part B follows
 
 ## Out of Scope
 - Nutrition history page changes
