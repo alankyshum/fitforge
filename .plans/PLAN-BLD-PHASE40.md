@@ -149,7 +149,20 @@ Add a "Share as Image" option to the session summary screen (`app/session/summar
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-_Pending review_
+**Verdict: NEEDS REVISION** — 6 blocking issues (reviewed 2026-04-17)
+
+**Blocking Issues (must fix):**
+1. **Add image preview step** — user must see the card before sharing. Strava/NRC both preview. Without it, users share blind.
+2. **Specify loading state during capture** — spinner or skeleton in preview modal during the 100-500ms capture.
+3. **Use bottom-sheet for Share options** — replace current "Share" button with one that opens a bottom sheet offering "Text" and "Image" options. Adding a 5th button to the action row is cluttered. Also solves a11y label confusion for screen readers.
+4. **Specify web platform behavior** — `react-native-view-shot` is native-only. Hide the image option on web or document alternative. Build gate depends on `expo export --platform web`.
+5. **Make card height content-driven** — fixed 1920px produces excessive whitespace for short sessions. Calculate height from content sections present.
+6. **Add debounce/disable on share button** during capture to prevent duplicate share sheets.
+
+**Recommendations (non-blocking):**
+- Add subtle border/margin around card for light-background social feeds
+- Preview modal `accessibilityViewIsModal={true}` + image `accessibilityLabel` describing stats
+- Temp file cleanup in `finally` block, not just on success path
 
 ### Tech Lead (Technical Feasibility)
 **Verdict: APPROVED** (with minor recommendations)
