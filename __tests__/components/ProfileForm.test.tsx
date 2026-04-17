@@ -259,3 +259,16 @@ describe("BodyProfileCard", () => {
     });
   });
 });
+
+describe("ProfileForm accessibility", () => {
+  it("activity dropdown has accessibilityState with expanded property", async () => {
+    const { getByLabelText } = renderScreen(
+      <ProfileForm onSave={jest.fn()} />
+    );
+    await waitFor(() => {
+      const dropdown = getByLabelText(/Activity level:/);
+      expect(dropdown.props.accessibilityState).toBeDefined();
+      expect(dropdown.props.accessibilityState).toHaveProperty("expanded");
+    });
+  });
+});
