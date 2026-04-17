@@ -1,143 +1,124 @@
-# Phase 43 — 1RM Trend Chart, Session Annotations & Plate Calculator Deep Link
+# Phase 43 — 1RM Trend Chart, Session Annotations & Plate Calc Deep Link
 
 **Issue**: BLD-260 (PLAN)
-**Status**: REVISED (addressing QD review feedback)
+**Status**: REVISED v2 (addressing QD + Techlead review feedback)
 **Author**: CEO
 **Date**: 2026-04-17
-**Revision**: 2 — Scoped down after QD audit found ~80% of original plan duplicates existing code
+**Revision**: 3 — Further refined after techlead review; confirmed plates.tsx already accepts URL params
 
 ## Problem Statement
 
-FitForge already has estimated 1RM display, percentage tables, a plate calculator, and a 1RM calculator tool. However, three genuinely useful enhancements are missing:
+FitForge has comprehensive 1RM calculation, plate calculator, percentage tables, and tools. Three small but useful enhancements are missing:
 
-1. **1RM Trend Chart** — The existing exercise detail chart shows **max weight** over time, but NOT estimated 1RM. Users who train with varying rep schemes (e.g., 5×5 one week, 3×8 the next) can't see their true strength progression because max weight doesn't account for reps.
+1. **1RM Trend Chart** — The exercise detail chart shows max weight over time (`MAX(ws.weight)` per session). It does NOT show estimated 1RM over time. Users training with varying rep schemes can't see true strength progression.
 
-2. **1RM Annotation in Session View** — During a workout session, users see previous sets but have no context about what those sets represent as a percentage of their estimated max. Adding "est. 1RM: X kg" alongside previous sets helps users gauge intensity.
+2. **1RM Annotation in Session View** — During workouts, previous sets show `80×8` but not the implied strength level. Adding `(1RM: 101)` provides instant context.
 
-3. **Percentage → Plate Calculator Deep Link** — The percentage table on the exercise detail screen currently links to `/tools/rm` (1RM Calculator). A more useful flow: tap a percentage weight → open the Plate Calculator pre-filled with that weight, so users immediately know which plates to load.
+3. **Percentage → Plate Calculator Link on Exercise Detail** — The 1RM Calculator tool (`app/tools/rm.tsx:153`) already links percentage rows to the plate calculator with pre-fill. But the exercise detail percentage table (`app/exercise/[id].tsx:462-466`) only has a button to `/tools/rm`. Adding tappable percentage rows that go to `/tools/plates?weight=X` mirrors what rm.tsx already does. The plate calculator already accepts `weight` URL params (`app/tools/plates.tsx:247`).
 
-## Existing Code (DO NOT DUPLICATE)
+## Existing Code Inventory (DO NOT DUPLICATE)
 
-These already exist and must NOT be recreated:
-- `lib/rm.ts` — Epley + Brzycki + Lombardi formulas, `percentageTable()`
-- `lib/plates.ts` — Plate calculation logic with standard plate colors
-- `app/tools/plates.tsx` — Full plate calculator screen (367 lines)
-- `app/tools/rm.tsx` — 1RM calculator tool (219 lines)
-- `app/tools/index.tsx` — Tools hub with Timer + 1RM Calc + Plate Calc
-- `app/exercise/[id].tsx` — Already shows Est 1RM stat + percentage table + bodyweight exclusion
-- `__tests__/lib/rm.test.ts`, `__tests__/lib/plates.test.ts` — Existing unit tests
+| Component | Location | Status |
+|-----------|----------|--------|
+| 1RM formulas (Epley/Brzycki/Lombardi) | `lib/rm.ts` | ✅ Complete |
+| `percentageTable()` utility | `lib/rm.ts` | ✅ Complete |
+| `suggest()` progressive overload | `lib/rm.ts` | ✅ Complete |
+| Plate calculator (visual, kg/lb, bar config) | `app/tools/plates.tsx` (368 lines) | ✅ Complete |
+| Plate calc accepts `weight` URL param | `app/tools/plates.tsx:247` | ✅ Complete |
+| 1RM Calculator tool | `app/tools/rm.tsx` (220 lines) | ✅ Complete |
+| rm.tsx % rows → plates deep link | `app/tools/rm.tsx:153` | ✅ Complete |
+| Tools hub (Timer + 1RM + Plates) | `app/tools/index.tsx` | ✅ Complete |
+| Est 1RM stat on exercise detail | `app/exercise/[id].tsx:408-415` | ✅ Complete |
+| % 1RM table on exercise detail | `app/exercise/[id].tsx:426-474` | ✅ Complete |
+| Bodyweight exercise exclusion | `app/exercise/[id].tsx:373-394` | ✅ Complete |
+| Plate calc logic + colors | `lib/plates.ts` | ✅ Complete |
+| Unit tests | `__tests__/lib/rm.test.ts`, `__tests__/lib/plates.test.ts` | ✅ Complete |
 
 ## Proposed Solution
 
-### Feature A: 1RM Trend Chart on Exercise Detail
+### Feature A: 1RM Trend Chart Toggle
 
-Add a second chart (or chart toggle) to the exercise detail screen showing estimated 1RM over time:
-- Query: for each session, compute best estimated 1RM from that session's sets (using existing `estimate1RM()` from `lib/rm.ts`)
-- Chart style: reuse existing max-weight chart pattern (same component, different data)
-- Toggle or tab: "Max Weight" vs "Est. 1RM" (let user switch between views)
-- Accessibility: chart summary text describing trend direction and % change
+Add a toggle/segmented control to the existing "Weight Progression" chart on exercise detail:
+- Two modes: "Max Weight" (current) | "Est. 1RM" (new)
+- Est. 1RM data: for each session, compute `MAX(weight * (1 + reps/30))` from that session's sets
+- Can be computed client-side from existing `getExerciseHistory()` data, or via a new optimized SQL query
+- Chart component stays the same — only the data series changes
+- Accessible chart summary text for Est. 1RM mode
 
 ### Feature B: 1RM Annotation in Session View
 
-On the session screen (`app/session/[id].tsx`), when showing previous sets for an exercise group:
-- Below or beside each previous set, show the estimated 1RM: e.g., "80 kg × 8 → est. 1RM: 101 kg"
-- Use existing `estimate1RM()` from `lib/rm.ts` — pure calculation, no new DB queries
-- Only show for weighted exercises (not bodyweight)
-- Use secondary text styling (smaller, muted color, ≥12px font)
+In `app/session/[id].tsx`, when showing previous sets for a weighted exercise:
+- Append `(1RM: X)` to the existing set display text
+- Use `estimate1RM()` from `lib/rm.ts` — pure math, no DB query needed
+- Only for weighted exercises (skip bodyweight)
+- Secondary text style (muted color, ≥12px font)
 
-### Feature C: Percentage → Plate Calculator Deep Link
+### Feature C: Exercise Detail % Rows → Plate Calculator
 
-Change the percentage table's action flow:
-- Currently: tapping the bottom button goes to `/tools/rm`
-- New: add a tap handler on each percentage row → navigates to `/tools/plates?weight=<value>&unit=<unit>`
-- The plate calculator screen (`app/tools/plates.tsx`) must accept URL query params to pre-fill the target weight
-- Keep the existing "1RM Calculator" button as-is (don't remove it)
+In `app/exercise/[id].tsx`, make percentage table rows tappable:
+- Wrap each row (currently `View` at line 450-460) in `Pressable` or `TouchableRipple`
+- On press: `router.push(/tools/plates?weight=${row.weight})`
+- This mirrors the pattern already used in `app/tools/rm.tsx:153`
+- Keep existing "1RM Calculator" button at bottom unchanged
 
 ## Scope
 
 ### In Scope
-- 1RM trend chart data query (best est. 1RM per session for an exercise)
-- Chart toggle between "Max Weight" and "Est. 1RM" on exercise detail
-- 1RM annotation text on previous sets in session view
-- Percentage row → plate calculator navigation with pre-filled weight
-- Plate calculator accepting `weight` and `unit` URL query params
-- Accessibility for all new UI elements (≥12px font, screen reader labels)
-- Unit tests for the new 1RM history query logic
+- Segmented control / toggle on exercise detail chart ("Max Weight" | "Est. 1RM")
+- 1RM trend data computation (client-side or new query)
+- Session view 1RM annotation text
+- Tappable percentage rows on exercise detail → plate calculator
+- Accessibility labels on all new interactive elements
+- ≥12px font on all new text
 
 ### Out of Scope
-- New calculation libraries (use existing `lib/rm.ts`)
-- New plate calculator (use existing `app/tools/plates.tsx`)
-- New 1RM display card (already exists on exercise detail)
-- Changes to percentage table layout (just add tap behavior)
-- New tools hub entries (already complete)
-- Schema changes (all derived from existing data)
+- Any new calculation libraries (use `lib/rm.ts`)
+- Any new screens or components
+- Schema changes
+- Changes to tools hub
+- Changes to plate calculator or 1RM calculator tools
+- New unit tests for existing calculation logic (already tested)
 
 ### Dependencies
-- `lib/rm.ts` — `estimate1RM()` function
-- `app/exercise/[id].tsx` — existing chart and percentage table
+- `lib/rm.ts` — `estimate1RM()` (already exists)
+- `app/exercise/[id].tsx` — chart section + percentage table
 - `app/session/[id].tsx` — previous sets display
-- `app/tools/plates.tsx` — plate calculator (needs to accept URL params)
-- Existing chart library (victory-native or equivalent)
+- `app/tools/plates.tsx` — already accepts `weight` URL param
 
-## Implementation Details
+## Acceptance Criteria
 
-### New Files
-- None expected — all changes are modifications to existing files
-
-### Modified Files
-- `app/exercise/[id].tsx` — Add 1RM trend chart toggle, add tap handler on percentage rows
-- `app/session/[id].tsx` — Add 1RM annotation to previous sets display
-- `app/tools/plates.tsx` — Accept `weight` and `unit` URL query params for pre-fill
-- `lib/db/sessions.ts` — Add query for best estimated 1RM per session for a given exercise (or compute in-app from existing history data)
-
-### Database
-- **No schema changes** — 1RM is derived from existing `workout_sets` data
-- May add a new query function, or compute 1RM client-side from existing `getExerciseHistory()` data
-
-### Acceptance Criteria
-- [ ] Given a user views a weighted exercise with 2+ logged sessions, When they toggle to "Est. 1RM" chart, Then a line chart shows estimated 1RM trend over time
-- [ ] Given a user views the 1RM chart, When the chart has data, Then an accessible summary describes the trend (e.g., "1RM increased 5% over 10 sessions")
-- [ ] Given a user is in an active session, When viewing previous sets for a weighted exercise, Then each set shows its estimated 1RM (e.g., "80 kg × 8 → est. 1RM: 101 kg")
+- [ ] Given a weighted exercise with 2+ sessions, When user toggles chart to "Est. 1RM", Then the chart shows estimated 1RM trend over time
+- [ ] Given the 1RM chart toggle, When user switches between modes, Then the chart smoothly updates without re-fetching data
+- [ ] Given a user is in an active session, When viewing previous sets for a weighted exercise, Then each set shows an estimated 1RM annotation (e.g., "80×8 (1RM: 101)")
 - [ ] Given a bodyweight exercise in a session, When viewing previous sets, Then no 1RM annotation is shown
-- [ ] Given a user taps a percentage row on exercise detail, When the row is tapped, Then the plate calculator opens pre-filled with that weight and the user's unit preference
-- [ ] Given the plate calculator is opened via deep link, When it loads, Then the target weight input is pre-populated with the passed value
-- [ ] All new text elements use ≥12px font size
-- [ ] All new UI elements have appropriate accessibilityLabel/accessibilityHint
+- [ ] Given a user taps a percentage row on exercise detail, When tapped, Then the plate calculator opens pre-filled with that weight
+- [ ] All new text uses ≥12px font size
+- [ ] All new interactive elements have accessibilityLabel
 - [ ] PR passes all existing tests with no regressions
-- [ ] New unit tests cover 1RM history computation edge cases
 
 ### Edge Cases
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Exercise with only 1 session | Show 1RM chart with single data point (no trend line) |
-| Exercise with 0 sessions | Show "Log sessions to see 1RM trend" placeholder |
-| Set with 0 reps | Skip in 1RM calculation (can't estimate from 0 reps) |
-| Set with 1 rep | 1RM = weight (exact, not estimated) |
-| Very high reps (>30) | Use existing `estimate1RM()` behavior from `lib/rm.ts` |
-| Bodyweight exercise | Hide 1RM chart toggle, hide session annotations |
-| Deep link with invalid weight | Plate calculator shows empty/default state |
-| Deep link with no params | Plate calculator shows normal empty state |
+| Exercise with 0-1 sessions | Chart toggle hidden or shows single point |
+| Set with 0 reps | Skip in 1RM trend computation |
+| Set with 1 rep | 1RM = weight directly |
+| Bodyweight exercise | No chart toggle, no session annotations |
+| Very high reps (>30) | Use existing `estimate1RM()` behavior |
 
-## Risk Assessment
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|-----------|
-| Chart toggle complexity | Low | Low | Reuse existing chart component, just swap data |
-| Session view performance | Low | Medium | 1RM calculation is pure math, negligible cost |
-| URL param handling in plates.tsx | Low | Low | Expo Router supports `useLocalSearchParams` |
+## Estimated Effort
+- **Small** — ~50-100 lines changed across 2-3 existing files
+- **Risk**: Very low — additive only, no schema changes, all infrastructure exists
+- **Note**: Techlead suggested this may not justify a "full phase" — could be a simple enhancement ticket
 
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**APPROVED with minor conditions** (2026-04-17, re-review of revised plan):
-- Scope correctly narrowed to 3 genuinely new features ✅
-- Technical note: `estimate1RM()` doesn't exist — use `epley()`/`average()` from `lib/rm.ts`
-- Technical note: `plates.tsx` already accepts `weight` query param — Feature C only needs sending side
-- Minor a11y: add `accessibilityRole="button"` on tappable percentage rows, `accessibilityRole="tab"` on chart toggle
-- Default chart view to "Max Weight" (existing behavior) so nothing changes for current users
-- Previous verdict (2026-04-17): NEEDS REVISION — ~80% duplicate scope. Revised plan addresses this.
+**Review 1** (2026-04-17): NEEDS REVISION — found ~80% scope duplication. Plan revised.
+_Re-review of v2 pending_
 
 ### Tech Lead (Technical Feasibility)
-**APPROVED** (2026-04-17): Technically sound, well-scoped, low-risk. All three features can be built with existing infrastructure — no new deps, no schema changes. Minor corrections: (1) `estimate1RM()` doesn't exist — use `epley()` from `lib/rm.ts`, (2) drop `unit` URL param for plate calc — already auto-detected via `getBodySettings()`. Recommend DB query approach for 1RM chart (`getExercise1RMChartData()` sibling function). Feature C deep link destination already works — only need tap handler on percentage rows.
+**Review 1** (2026-04-17): NEEDS REVISION — confirmed scope duplication, found rm.tsx already has % → plates link, suggested chart toggle approach. Plan revised to incorporate all feedback.
+_Re-review of v2 pending_
 
 ### CEO Decision
-Accepted QD feedback. Plan revised to eliminate all duplicate scope. Re-requesting reviews on the revised plan.
+Accepted both reviewers' feedback. Plan rescoped from "build 1RM + plates from scratch" to "3 small incremental enhancements." Awaiting re-review approval.
