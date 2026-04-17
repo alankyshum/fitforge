@@ -356,42 +356,24 @@ Files that will be MODIFIED (not created):
 
 ### Quality Director (UX Critique)
 
-**Verdict: NEEDS REVISION** (2026-04-17)
+**R1 Verdict: NEEDS REVISION** (2026-04-17) — 4 Critical, 4 Major issues raised.
 
-#### Critical Issues (Must Fix)
-1. **C1: Permission revocation creates lying UI** — Toggle stays ON when permission revoked externally in Android Settings. Must check permission status on Settings mount and revert toggle + show snackbar.
-2. **C2: Dynamic import() not specified** — Must explicitly require `await import()` at all callsites (session/[id].tsx, _layout.tsx, settings.tsx) per BLD-298 learning. Static imports of native-only modules crash web/iOS.
-3. **C3: Android API level UX missing** — Must specify behavior for Android <9 (hide row), Android 9-13 (install button), Android 14+ (toggle). Distinguish SDK_UNAVAILABLE vs SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED.
-4. **C4: Dual success toasts** — Both Strava + HC showing toasts is noisy. Recommend HC sync silent on success (on-device = near-instant, expected path).
-
-#### Major Issues (Should Fix)
-1. **M1**: Specify toggle OFF behavior for pending sync entries (recommend: mark permanently_failed)
-2. **M2**: Error toast inconsistency — Strava shows failure toast, HC fails silently. Be consistent.
-3. **M3**: Integrations card may look empty on iOS when Strava not connected
-4. **M4**: No sync history UI for either integration (future enhancement)
-
-#### Accessibility Gaps
-- Touch targets for toggle and Install button must be >=48dp (not specified)
-- Install button needs accessibilityRole="button" and accessibilityLabel
-- Permission dialog result should announce via AccessibilityInfo.announceForAccessibility()
+**R2 Verdict: APPROVED** (2026-04-17) — All 8 issues resolved. Plan meets FitForge quality standards. Permission revocation detection, dynamic imports, API level branching, silent sync, a11y, and toggle-off cleanup all addressed.
 
 ### Tech Lead (Technical Feasibility)
-**Verdict**: NEEDS REVISION — 2 Critical, 2 Major, 2 Minor issues
+**R1 Verdict**: NEEDS REVISION — 2 Critical, 2 Major, 2 Minor issues
+**R2 Verdict**: APPROVED — All issues resolved
 
 **Architecture Fit**: Fully compatible. Strava pattern provides exact template. No refactoring needed.
 **Effort**: Small-Medium (1–2 weeks). **Risk**: Low.
 
-**Critical Issues (must fix)**:
-1. Missing `expo-build-properties` dependency — Health Connect requires `minSdkVersion: 26`. FitForge has no `expo-build-properties` configured. Add it with `compileSdkVersion: 34`, `targetSdkVersion: 34`, `minSdkVersion: 26`.
-2. Missing `initialize()` call — `react-native-health-connect` requires `initialize()` before any API call. Both `syncToHealthConnect()` and `requestHealthConnectPermission()` must call it first.
-
-**Major Issues (should fix)**:
-3. Missing `clientRecordId` for deduplication — Strava uses `fitforge-{sessionId}` as external ID. Health Connect equivalent is `clientRecordId` in record metadata. Without it, retries create duplicate records.
-4. Missing `health_connect_record_id` in sync log schema — Strava has `strava_activity_id`. Add equivalent column for debugging and future delete capability.
-
-**Minor Issues (noted)**:
-5. Verify `expo-health-connect` plugin permission string format (may expect `WRITE_EXERCISE` without Android namespace prefix).
-6. Note Google Play declaration form as release prerequisite (5–7 day approval + 5–7 day whitelist propagation).
+**R1 Issues (all resolved in R2)**:
+1. ~~Missing `expo-build-properties`~~ → Added with minSdkVersion:26, compileSdkVersion:34, targetSdkVersion:34 ✅
+2. ~~Missing `initialize()` call~~ → `ensureInitialized()` guard added before all API calls ✅
+3. ~~Missing `clientRecordId` dedup~~ → `clientRecordId: "fitforge-{sessionId}"` in record metadata ✅
+4. ~~Missing `health_connect_record_id` in schema~~ → Column added to sync log ✅
+5. ~~Permission string format~~ → Changed to `WRITE_EXERCISE` (no prefix) ✅
+6. ~~Google Play declaration form~~ → Added to Risk Assessment ✅
 
 **Positive**: Write-only constraint, single WEIGHTLIFTING mapping, and pattern reuse are all well-scoped decisions.
 
