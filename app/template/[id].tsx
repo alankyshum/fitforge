@@ -27,10 +27,12 @@ import {
   reorderTemplateExercises,
   unlinkExerciseGroup,
   unlinkSingleExercise,
+  updateTemplateExercise,
 } from "../../lib/db";
 import type { Exercise, TemplateExercise, WorkoutTemplate } from "../../lib/types";
 import SwipeToDelete from "../../components/SwipeToDelete";
 import ExercisePickerSheet from "../../components/ExercisePickerSheet";
+import EditExerciseSheet from "../../components/EditExerciseSheet";
 
 function linkLabel(exercises: TemplateExercise[], linkId: string, idx: number): string {
   const count = exercises.filter((e) => e.link_id === linkId).length;
@@ -54,6 +56,7 @@ export default function EditTemplate() {
   const [snackbar, setSnackbar] = useState("");
   const [undo, setUndo] = useState<(() => Promise<void>) | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [editing, setEditing] = useState<TemplateExercise | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const linkIds = useMemo(() => {
@@ -173,6 +176,17 @@ export default function EditTemplate() {
     await load();
   }, [id, load]);
 
+  const handleEditSave = useCallback(async (sets: number, reps: string, rest: number) => {
+    if (!editing || !id) return;
+    try {
+      await updateTemplateExercise(editing.id, id, sets, reps, rest);
+      setEditing(null);
+      await load();
+    } catch {
+      setSnackbar("Failed to update exercise settings");
+    }
+  }, [editing, id, load]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => {
       const linkIdx = item.link_id ? linkIds.indexOf(item.link_id) : -1;
@@ -207,6 +221,13 @@ export default function EditTemplate() {
 
           <SwipeToDelete onDelete={() => remove(item.id)} enabled={!selecting}>
             <Pressable
+              onPress={() => {
+                if (selecting) {
+                  toggleSelect(item.id);
+                } else {
+                  setEditing(item);
+                }
+              }}
               onLongPress={() => {
                 if (!selecting) startSelection(item.id);
               }}
@@ -219,11 +240,11 @@ export default function EditTemplate() {
                   borderLeftColor: color ?? "transparent",
                 },
               ]}
-              accessibilityRole={selecting ? "checkbox" : "none"}
+              accessibilityRole={selecting ? "checkbox" : "button"}
               accessibilityState={selecting ? { selected: selected.has(item.id) } : undefined}
               accessibilityLabel={selecting
                 ? `Select ${item.exercise?.name ?? "exercise"} for superset`
-                : undefined}
+                : `Edit ${item.exercise?.name ?? "exercise"} settings`}
             >
               {selecting && (
                 <Checkbox
@@ -267,6 +288,12 @@ export default function EditTemplate() {
               </View>
               {!selecting && (
                 <View style={styles.actions}>
+                  <IconButton
+                    icon="pencil-outline"
+                    size={16}
+                    onPress={() => setEditing(item)}
+                    accessibilityLabel={`Edit ${item.exercise?.name ?? "exercise"} settings`}
+                  />
                   {item.link_id && (
                     <IconButton
                       icon="link-off"
@@ -506,6 +533,12 @@ export default function EditTemplate() {
         visible={pickerOpen}
         onDismiss={() => setPickerOpen(false)}
         onPick={handlePickExercise}
+      />
+      <EditExerciseSheet
+        visible={!!editing}
+        exercise={editing}
+        onSave={handleEditSave}
+        onDismiss={() => setEditing(null)}
       />
     </>
   );
