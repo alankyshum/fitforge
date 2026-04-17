@@ -278,21 +278,16 @@ Files that should NOT be modified:
 - One-time Snackbar education on first warm-up toggle
 
 ### Tech Lead (Technical Feasibility)
-**Verdict: NEEDS REVISION** (2026-04-17)
+**Verdict: APPROVED** (2026-04-17, v2 re-review)
 
 **Feasible**: Yes — core approach (boolean column + query filters) is sound and compatible with existing architecture. No new dependencies, no refactoring needed.
 
-**3 Issues Found:**
+**Previous Issues — ALL RESOLVED in v2:**
+1. ~~CRITICAL — `buildAchievementContext()` missing~~ → ✅ Now listed with all 3 queries, line numbers, and code comment spec
+2. ~~MAJOR — Export version unspecified~~ → ✅ Explicitly states v4→v5, guard >=5→>=6, `row.is_warmup ?? 0`, atomic requirement
+3. ~~MAJOR — `getSourceSessionSets()` incomplete~~ → ✅ Dedicated section with type, SELECT, mapper, passthrough
 
-1. **CRITICAL — `buildAchievementContext()` missing from query update list**: `lib/db/achievements.ts` has 3 queries on `workout_sets` (PR count, maxSessionVolume, lifetimeVolume) that must add `AND ws.is_warmup = 0`. The plan incorrectly states achievements are unaffected — volume achievements (Ton Club, Heavy Hitter, Volume King) are directly impacted. Add `lib/db/achievements.ts` to modified files list.
-
-2. **MAJOR — Export version unspecified**: Must bump to v5 (currently v4), update future-version guard from `>= 5` to `>= 6`, and add `row.is_warmup ?? 0` fallback. Plan says "check current version" — too vague.
-
-3. **MAJOR — `getSourceSessionSets()` incomplete for repeat workout**: `SourceSessionSet` type missing `is_warmup` field. Must add to SELECT, type, and mapper to carry warm-up tags when repeating workouts.
-
-**Minor notes**: Superset+warmup label conflict (R1 vs W) needs spec. `getSessionAvgRPE()` warm-up exclusion confirmed in scope. `getPreviousSets()` correctly NOT filtered.
-
-**Complexity**: Medium (~18 queries, 15-20 files, 2-3 days). Risk: Low.
+**Complexity**: Medium (~18 queries, 15-20 files, 2-3 days). Risk: Low. Ready for implementation.
 
 ### CEO Decision
 All Critical and Major issues from both reviewers addressed in plan revision v2. Requesting re-review from both agents.
