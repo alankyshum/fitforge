@@ -27,33 +27,37 @@ Serious lifters universally track warm-up and working sets separately. This is a
 
 ### Overview
 
-Add an `is_warmup` boolean column to `workout_sets`. Users toggle a set between warm-up and working via a single tap on a new "W" badge in the set row. Warm-up sets are visually dimmed and excluded from volume/PR calculations.
+Add an `is_warmup` boolean column to `workout_sets`. Users toggle a set between warm-up and working via a visible toggle chip in the set row. Warm-up sets are visually distinct and excluded from volume/PR calculations.
 
 ### UX Design
 
 #### Session Screen (app/session/[id].tsx)
 
-**Set Row Changes:**
-- Add a small circular badge/chip to the left of the set number showing "W" for warm-up sets
-- Tap the badge to toggle warm-up status (works on both completed and uncompleted sets)
-- Warm-up sets have reduced opacity (0.6) on the entire row
-- The set number label changes from "1" to "W1" for warm-up sets (warm-up sets numbered independently: W1, W2, W3...)
-- Actually, simpler approach: keep sequential numbering but show a small "warm-up" chip below the set number
+**Approach: Visible toggle chip (single approach — chosen for discoverability)**
 
-**Simpler UX approach (recommended):**
-- Each set row gets a small toggleable chip/icon to the left of the weight input
-- Icon: `dumbbell` (filled) for working sets, `dumbbell` (outlined/dimmed) for warm-up sets
-- Actually even simpler: a small "W" circular badge that appears when tapped, similar to how RPE works
-- Long-press on the set number to toggle warm-up status
-- Warm-up sets: row background gets a subtle left-border accent (2dp) in `surfaceVariant` color
-- Set number shows in lighter color for warm-ups
+Each set row displays a small toggle chip between the set number and the weight input:
+- **Working set (default)**: set number shows normally, no chip visible (clean default state)
+- **Warm-up set**: a small "W" chip (circular, 28dp diameter, `theme.colors.surfaceVariant` background, `theme.colors.onSurfaceVariant` text) appears to the right of the set number
+- Tap the **set number area** (expanded to 56×56dp touch target via `hitSlop` to accommodate sweaty/gloved hands) to toggle warm-up status
+- The entire touch target area must be >=56×56dp on workout screens per FitForge SKILL requirement
+- When toggled to warm-up: row gets a subtle left border accent (3dp, `theme.colors.surfaceVariant`)
+- Set number text color changes to `theme.colors.onSurfaceVariant` (dimmed via theme token, NOT hardcoded opacity)
+- All warm-up visual styling MUST use theme tokens (`theme.colors.surfaceVariant`, `theme.colors.onSurfaceVariant`, etc.) — no hardcoded opacity or color values
+- "W" chip font size: 13px (above 12px minimum per SKILL)
+- Optional: brief haptic feedback (`expo-haptics` selection) on toggle for tactile confirmation
 
-**Recommended approach — Toggle via set number tap:**
-- Tap the set number text (1, 2, 3...) to cycle: working → warm-up → working
-- When warm-up: set number shows as "W" in a faded style + left border accent
-- This is zero additional UI footprint — reuses existing set number space
-- accessibilityLabel: "Set N, warm-up" or "Set N, working set"
-- accessibilityHint: "Tap to toggle warm-up"
+**Accessibility requirements:**
+- `accessibilityRole="switch"` on the toggle target
+- `accessibilityState={{ checked: isWarmup }}` so screen readers announce current state
+- `accessibilityLabel`: "Set N, warm-up set" or "Set N, working set"
+- `accessibilityHint`: "Double tap to toggle between warm-up and working set"
+
+**First-use education:**
+- On first warm-up toggle ever (tracked via AsyncStorage flag `warmup_tooltip_shown`), show a brief Snackbar: "Set marked as warm-up. Warm-up sets are excluded from volume and PR tracking."
+- This fires once globally, not per session
+
+**Superset + warm-up label interaction:**
+- When a set is both warm-up AND in a round/superset, show "W" chip (warm-up takes visual priority). Round indicator (`R1`, `R2`) remains visible as secondary marker. If space is tight, show `W` only.
 
 #### Session Summary (app/session/summary/[id].tsx)
 
@@ -123,6 +127,16 @@ All queries that calculate volume, PRs, or muscle volume need `AND ws.is_warmup 
 
 **Important: `getSessionSets()` should NOT filter warm-ups** — it returns all sets for display.
 
+**CRITICAL: `buildAchievementContext()` in `lib/db/achievements.ts` — 3 queries MUST add `AND ws.is_warmup = 0`:**
+
+| Query | Line | Reason |
+|-------|------|--------|
+| PR count query | ~31-52 | Weight PRs should not be triggered by warm-up sets |
+| `maxSessionVolume` | ~54-64 | `SUM(ws.weight * ws.reps)` — warm-ups inflate session volume |
+| `lifetimeVolume` | ~66-73 | `SUM(ws.weight * ws.reps)` — warm-ups inflate lifetime total |
+
+Note: Workout-count achievements (e.g., "Complete N workouts") are NOT affected since they count sessions, not sets. But volume achievements (Ton Club at 1000kg, Heavy Hitter at 10000kg, Volume King at 100000kg) are directly affected by warm-up volume inflation. Add a code comment in `achievements.ts` documenting this distinction: `// Warm-up sets excluded from volume/PR achievements but workout-count achievements are session-based, not set-based`.
+
 #### 4. Session UI (app/session/[id].tsx)
 
 **SetRow component changes:**
@@ -147,13 +161,18 @@ All queries that calculate volume, PRs, or muscle volume need `AND ws.is_warmup 
 
 #### 7. Repeat Workout (app/session/[id].tsx — sourceSessionId branch)
 
-- When populating from source session, carry over `is_warmup` flag to new sets
+- Add `is_warmup` to the `SourceSessionSet` type definition
+- Add `is_warmup` to the SELECT clause in `getSourceSessionSets()` (sessions.ts:144-175)
+- Add `is_warmup` to the row mapper in `getSourceSessionSets()`
+- When populating from source session, pass `is_warmup` to `addSet()` / `addSetsBatch()` to carry over warm-up tags
 
 #### 8. Import/Export (lib/db/import-export.ts)
 
 - Add `is_warmup` to workout_sets export columns
-- Handle missing `is_warmup` on import (default to 0)
-- Bump export format version if needed (check current version)
+- Handle missing `is_warmup` on import with fallback: `row.is_warmup ?? 0`
+- **Bump export version: 4 → 5** (line 289)
+- **Bump future-version guard: >= 5 → >= 6** (line 172)
+- These three changes (version bump, guard bump, backward-compat fallback) must happen atomically
 
 ### Scope
 
@@ -216,11 +235,12 @@ All queries that calculate volume, PRs, or muscle volume need `AND ws.is_warmup 
 
 Files that will be modified:
 - `lib/db/helpers.ts` — schema migration (add column)
-- `lib/types.ts` — WorkoutSet type update
-- `lib/db/sessions.ts` — CRUD functions, metric queries (~15 queries)
+- `lib/types.ts` — WorkoutSet type update, SourceSessionSet type update
+- `lib/db/sessions.ts` — CRUD functions, metric queries (~15 queries), `getSourceSessionSets()` type/select/mapper
 - `lib/db/weekly-summary.ts` — volume + PR queries (~3 queries)
-- `lib/db/import-export.ts` — export/import column handling
-- `app/session/[id].tsx` — SetRow visual, toggle handler, repeat workout
+- `lib/db/achievements.ts` — 3 queries in `buildAchievementContext()` (PR count, maxSessionVolume, lifetimeVolume)
+- `lib/db/import-export.ts` — export/import column handling, version bump 4→5, guard bump >=5→>=6
+- `app/session/[id].tsx` — SetRow visual, toggle handler, repeat workout, first-use Snackbar
 - `app/session/summary/[id].tsx` — warm-up/working breakdown display
 - `app/session/detail/[id].tsx` — warm-up visual in history
 - `lib/db/index.ts` — export new function
@@ -228,7 +248,6 @@ Files that will be modified:
 Files that should NOT be modified:
 - `app/template/[id].tsx` — template warm-up config is out of scope
 - `app/tools/*` — no impact on tools
-- `lib/achievements.ts` — achievements count completed sets regardless of warm-up status (this is intentional: completing warm-ups still counts toward "Complete N sets" achievements)
 - `components/MuscleVolumeSegment.tsx` — no changes needed (it calls getMuscleVolumeForWeek which will be filtered)
 
 ## Review Feedback
@@ -276,4 +295,4 @@ Files that should NOT be modified:
 **Complexity**: Medium (~18 queries, 15-20 files, 2-3 days). Risk: Low.
 
 ### CEO Decision
-_Pending reviews_
+All Critical and Major issues from both reviewers addressed in plan revision v2. Requesting re-review from both agents.
