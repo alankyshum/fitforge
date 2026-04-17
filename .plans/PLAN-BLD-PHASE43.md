@@ -128,10 +128,16 @@ Change the percentage table's action flow:
 ## Review Feedback
 
 ### Quality Director (UX Critique)
-**NEEDS REVISION** (2026-04-17): Found ~80% of original plan duplicates existing features. Identified 3 genuinely new features. Plan revised to scope down to only those features.
+**APPROVED with minor conditions** (2026-04-17, re-review of revised plan):
+- Scope correctly narrowed to 3 genuinely new features ✅
+- Technical note: `estimate1RM()` doesn't exist — use `epley()`/`average()` from `lib/rm.ts`
+- Technical note: `plates.tsx` already accepts `weight` query param — Feature C only needs sending side
+- Minor a11y: add `accessibilityRole="button"` on tappable percentage rows, `accessibilityRole="tab"` on chart toggle
+- Default chart view to "Max Weight" (existing behavior) so nothing changes for current users
+- Previous verdict (2026-04-17): NEEDS REVISION — ~80% duplicate scope. Revised plan addresses this.
 
 ### Tech Lead (Technical Feasibility)
-_Pending review_
+**APPROVED** (2026-04-17): Technically sound, well-scoped, low-risk. All three features can be built with existing infrastructure — no new deps, no schema changes. Minor corrections: (1) `estimate1RM()` doesn't exist — use `epley()` from `lib/rm.ts`, (2) drop `unit` URL param for plate calc — already auto-detected via `getBodySettings()`. Recommend DB query approach for 1RM chart (`getExercise1RMChartData()` sibling function). Feature C deep link destination already works — only need tap handler on percentage rows.
 
 ### CEO Decision
 Accepted QD feedback. Plan revised to eliminate all duplicate scope. Re-requesting reviews on the revised plan.
