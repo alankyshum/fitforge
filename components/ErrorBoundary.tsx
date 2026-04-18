@@ -87,6 +87,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             onPress={() => this.setState((s) => ({ expanded: !s.expanded }))}
             style={styles.btn}
             icon={this.state.expanded ? ChevronUp : ChevronDown}
+            accessibilityLabel={this.state.expanded ? "Hide error details" : "Show error details"}
           >
             {this.state.expanded ? "Hide Details" : "Show Details"}
           </Button>
@@ -106,6 +107,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             icon={Share2}
             onPress={this.handleShare}
             style={styles.btn}
+            accessibilityLabel="Share crash report"
           >
             Share Crash Report
           </Button>
@@ -115,6 +117,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             icon={ExternalLink}
             onPress={this.handleGitHub}
             style={styles.btn}
+            accessibilityLabel="Report crash on GitHub"
           >
             Report on GitHub
           </Button>
@@ -124,6 +127,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             icon={RotateCcw}
             onPress={this.handleRestart}
             style={styles.btn}
+            accessibilityLabel="Restart app"
           >
             Restart
           </Button>
