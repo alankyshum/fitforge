@@ -18,7 +18,7 @@ export default function SectionHeader({ title, action, onAction }: Props) {
         {title}
       </Text>
       {action && onAction ? (
-        <Button variant="ghost" size="sm" onPress={onAction} label={action} />
+        <Button variant="ghost" size="sm" onPress={onAction}>{action}</Button>
       ) : null}
     </View>
   );

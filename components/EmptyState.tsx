@@ -39,7 +39,7 @@ export default function EmptyState({ icon, title, subtitle, action }: Props) {
         </Text>
       ) : null}
       {action ? (
-        <Button variant="default" onPress={action.onPress} label={action.label} style={styles.button} />
+        <Button variant="default" onPress={action.onPress} style={styles.button}>{action.label}</Button>
       ) : null}
     </View>
   );

@@ -87,8 +87,9 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             onPress={() => this.setState((s) => ({ expanded: !s.expanded }))}
             style={styles.btn}
             icon={this.state.expanded ? ChevronUp : ChevronDown}
-            label={this.state.expanded ? "Hide Details" : "Show Details"}
-          />
+          >
+            {this.state.expanded ? "Hide Details" : "Show Details"}
+          </Button>
 
           {this.state.expanded && (
             <ScrollView style={[styles.stack, { backgroundColor: t.muted }]} nestedScrollEnabled>
@@ -105,24 +106,27 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             icon={Share2}
             onPress={this.handleShare}
             style={styles.btn}
-            label="Share Crash Report"
-          />
+          >
+            Share Crash Report
+          </Button>
 
           <Button
             variant="outline"
             icon={Github}
             onPress={this.handleGitHub}
             style={styles.btn}
-            label="Report on GitHub"
-          />
+          >
+            Report on GitHub
+          </Button>
 
           <Button
             variant="secondary"
             icon={RotateCcw}
             onPress={this.handleRestart}
             style={styles.btn}
-            label="Restart"
-          />
+          >
+            Restart
+          </Button>
         </ScrollView>
       </View>
     );
