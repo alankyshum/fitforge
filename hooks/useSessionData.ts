@@ -1,0 +1,292 @@
+/* eslint-disable max-lines-per-function, complexity, react-hooks/exhaustive-deps */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useToast } from "@/components/ui/bna-toast";
+import {
+  addSetsBatch,
+  getBodySettings,
+  getAllExercises,
+  getMaxWeightByExercise,
+  getRecentExerciseSets,
+  getSessionById,
+  getSessionSets,
+  getSourceSessionSets,
+  getTemplateById,
+  getPreviousSets,
+  getExerciseById,
+  updateSetsBatch,
+} from "../lib/db";
+import type { WorkoutSession, TrainingMode, Exercise } from "../lib/types";
+import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
+import { epley, suggest, type Suggestion } from "../lib/rm";
+import { uuid } from "../lib/uuid";
+import { useThemeColors } from "@/hooks/useThemeColors";
+
+type UseSessionDataArgs = {
+  id: string | undefined;
+  templateId: string | undefined;
+  sourceSessionId: string | undefined;
+};
+
+export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDataArgs) {
+  const router = useRouter();
+  const colors = useThemeColors();
+  const { warning: showWarning } = useToast();
+
+  const [session, setSession] = useState<WorkoutSession | null>(null);
+  const [groups, setGroups] = useState<ExerciseGroup[]>([]);
+  const [step, setStep] = useState(2.5);
+  const [unit, setUnit] = useState<"kg" | "lb">("kg");
+  const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
+  const [modes, setModes] = useState<Record<string, TrainingMode>>({});
+  const [maxes, setMaxes] = useState<Record<string, number>>({});
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+
+  const initialized = useRef(false);
+  const prevExerciseIds = useRef<string>("");
+
+  const linkIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const g of groups) {
+      if (g.link_id && !ids.includes(g.link_id)) ids.push(g.link_id);
+    }
+    return ids;
+  }, [groups]);
+
+  const palette = useMemo(
+    () => [colors.tertiary, colors.secondary, colors.primary, colors.error, colors.inversePrimary],
+    [colors],
+  );
+
+  const updateGroupSet = useCallback((setId: string, patch: Partial<SetWithMeta>) => {
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        sets: g.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
+      }))
+    );
+  }, []);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    const sess = await getSessionById(id);
+    if (!sess) return;
+    setSession(sess);
+
+    if (sess.completed_at) {
+      router.replace(`/session/detail/${id}`);
+      return;
+    }
+
+    const sets = await getSessionSets(id);
+
+    const body = await getBodySettings();
+    const derived = body.weight_unit === "lb" ? 5 : 2.5;
+    setStep(derived);
+    setUnit(body.weight_unit);
+
+    const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
+
+    const [prevResults, exerciseResults, recentResults] = await Promise.all([
+      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))),
+      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getExerciseById(eid) }))),
+      Promise.all(exerciseIds.map(async (eid) => ({ eid, data: await getRecentExerciseSets(eid, 2) }))),
+    ]);
+
+    const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
+    for (const { eid, data } of prevResults) prevCache[eid] = data;
+
+    const exerciseMeta: Record<string, Exercise> = {};
+    for (const { eid, data } of exerciseResults) {
+      if (data) exerciseMeta[eid] = data;
+    }
+
+    const key = exerciseIds.sort().join(",");
+    if (key !== prevExerciseIds.current) {
+      prevExerciseIds.current = key;
+      const m = await getMaxWeightByExercise(exerciseIds, id);
+      setMaxes(m);
+    }
+
+    const map = new Map<string, ExerciseGroup>();
+    for (const s of sets) {
+      if (!map.has(s.exercise_id)) {
+        const ex = exerciseMeta[s.exercise_id];
+        const parsed: TrainingMode[] = ex?.training_modes ?? [];
+        map.set(s.exercise_id, {
+          exercise_id: s.exercise_id,
+          name: (s.exercise_name ?? "Unknown") + (s.exercise_deleted ? " (removed)" : ""),
+          sets: [],
+          link_id: s.link_id ?? null,
+          training_modes: parsed,
+          is_voltra: ex?.is_voltra ?? false,
+        });
+      }
+      const prev = prevCache[s.exercise_id]?.find(
+        (p) => p.set_number === s.set_number
+      );
+      map.get(s.exercise_id)!.sets.push({
+        ...s,
+        previous:
+          prev && prev.weight != null && prev.reps != null
+            ? prev.weight > 0 && prev.reps > 1
+              ? `${prev.weight}×${prev.reps} (1RM: ${Math.round(epley(prev.weight, prev.reps))})`
+              : `${prev.weight}×${prev.reps}`
+            : "-",
+      });
+    }
+    setGroups([...map.values()]);
+
+    const entries: [string, Suggestion | null][] = exerciseIds.map((eid) => {
+      try {
+        const recent = recentResults.find((r) => r.eid === eid)?.data ?? [];
+        if (recent.length === 0) return [eid, null];
+        const timeBased = recent.every((r) => r.reps === 1 && (r.weight === 0 || r.weight === null));
+        if (timeBased) return [eid, null];
+        const ex = exerciseMeta[eid];
+        const bw = ex ? ex.equipment === "bodyweight" : false;
+        return [eid, suggest(recent, derived, bw)];
+      } catch {
+        return [eid, null];
+      }
+    });
+    const sugg: Record<string, Suggestion | null> = Object.fromEntries(entries);
+    setSuggestions(sugg);
+  }, [id, router]);
+
+  // Initialize session from template or source session
+  useEffect(() => {
+    if (initialized.current || !id) return;
+    initialized.current = true;
+
+    (async () => {
+      const sets = await getSessionSets(id);
+      if (sets.length > 0) {
+        await load();
+        return;
+      }
+
+      if (templateId) {
+        const tpl = await getTemplateById(templateId);
+        if (tpl?.exercises) {
+          const setsToInsert: Parameters<typeof addSetsBatch>[0] = [];
+          for (const te of tpl.exercises) {
+            for (let i = 1; i <= te.target_sets; i++) {
+              setsToInsert.push({
+                sessionId: id,
+                exerciseId: te.exercise_id,
+                setNumber: i,
+                linkId: te.link_id ?? null,
+                round: te.link_id ? i : null,
+              });
+            }
+          }
+          await addSetsBatch(setsToInsert);
+
+          const created = await getSessionSets(id);
+          const exerciseIds = [...new Set(created.map((s) => s.exercise_id))];
+          const prevCache: Record<string, { set_number: number; weight: number | null; reps: number | null }[]> = {};
+          const prevResults = await Promise.all(
+            exerciseIds.map(async (eid) => ({ eid, data: await getPreviousSets(eid, id) }))
+          );
+          for (const { eid, data } of prevResults) prevCache[eid] = data;
+
+          const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (const s of created) {
+            const prev = prevCache[s.exercise_id]?.find((p) => p.set_number === s.set_number);
+            if (prev && prev.weight != null) {
+              setsToUpdate.push({ id: s.id, weight: prev.weight, reps: null });
+            }
+          }
+          await updateSetsBatch(setsToUpdate);
+        }
+      } else if (sourceSessionId) {
+        const sourceSets = await getSourceSessionSets(sourceSessionId);
+
+        const deletedExerciseIds = new Set<string>();
+        const validSets = sourceSets.filter((s) => {
+          if (!s.exercise_exists) {
+            deletedExerciseIds.add(s.exercise_id);
+            return false;
+          }
+          return true;
+        });
+
+        if (deletedExerciseIds.size > 0) {
+          showWarning(
+            `${deletedExerciseIds.size} exercise${deletedExerciseIds.size > 1 ? "s were" : " was"} skipped (no longer available)`
+          );
+        }
+
+        if (validSets.length > 0) {
+          const linkIdMap = new Map<string, string>();
+          for (const s of validSets) {
+            if (s.link_id && !linkIdMap.has(s.link_id)) {
+              linkIdMap.set(s.link_id, uuid());
+            }
+          }
+
+          const setsToInsert: Parameters<typeof addSetsBatch>[0] = [];
+          for (const s of validSets) {
+            const newLinkId = s.link_id ? linkIdMap.get(s.link_id) ?? null : null;
+            setsToInsert.push({
+              sessionId: id,
+              exerciseId: s.exercise_id,
+              setNumber: s.set_number,
+              linkId: newLinkId,
+              round: newLinkId ? s.set_number : null,
+              trainingMode: (s.training_mode as TrainingMode) ?? null,
+              tempo: s.tempo ?? null,
+              isWarmup: s.is_warmup,
+              setType: s.set_type,
+            });
+          }
+          const created = await addSetsBatch(setsToInsert);
+
+          const setsToUpdate: { id: string; weight: number | null; reps: number | null }[] = [];
+          for (let i = 0; i < created.length; i++) {
+            const source = validSets[i];
+            if (source && (source.weight != null || source.reps != null)) {
+              setsToUpdate.push({
+                id: created[i].id,
+                weight: source.weight,
+                reps: source.reps,
+              });
+            }
+          }
+          await updateSetsBatch(setsToUpdate);
+        }
+      }
+      await load();
+    })();
+  }, [id, templateId, sourceSessionId, load]);
+
+  // Reload exercises when returning from exercise picker
+  useFocusEffect(
+    useCallback(() => {
+      if (initialized.current && id) {
+        load();
+      }
+      getAllExercises().then(setAllExercises).catch((err) => {
+        if (__DEV__) console.warn("Failed to load exercises for substitution:", err);
+      });
+    }, [id, load])
+  );
+
+  return {
+    session,
+    groups,
+    setGroups,
+    step,
+    unit,
+    suggestions,
+    modes,
+    setModes,
+    maxes,
+    allExercises,
+    linkIds,
+    palette,
+    updateGroupSet,
+    load,
+  };
+}

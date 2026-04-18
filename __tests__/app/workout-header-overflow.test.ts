@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const sessionSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/session/[id].tsx"),
+  path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"),
   "utf-8"
 );
 

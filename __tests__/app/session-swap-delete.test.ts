@@ -6,10 +6,10 @@ import * as path from "path";
  * Only checks UI-level contracts not covered by lib/db/session-swap-delete.test.ts.
  */
 
-const sessionSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/session/[id].tsx"),
-  "utf-8"
-);
+const sessionSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../hooks/useExerciseManagement.ts"), "utf-8"),
+].join("\n");
 
 describe("BLD-307: Long-press exercise delete (UI wiring)", () => {
   it("exercise name has onLongPress handler for delete", () => {
