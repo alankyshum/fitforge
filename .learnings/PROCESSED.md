@@ -197,3 +197,4 @@ Issues listed here have been reviewed by knowledge-curator. Do NOT re-process.
 | BLD-307 | LEARNINGS_EXTRACTED | 2026-04-18 |
 | BLD-304 | NO_LEARNINGS | 2026-04-18 |
 | BLD-313 | LEARNINGS_EXTRACTED | 2026-04-18 |
+| BLD-314 | LEARNINGS_EXTRACTED | 2026-04-18 |
