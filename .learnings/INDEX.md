@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-18
-Total learnings: 133
+Total learnings: 134
 
 ## How to Use This Knowledge Base
 
@@ -25,7 +25,7 @@ Before starting work on a task, search this index for relevant learnings:
 - [Type Safety](pitfalls/type-safety.md) — 2 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 8 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 9 learnings
 - [PR Workflow](process/pr-workflow.md) — 2 learnings
 
 ### Decisions
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-326 | Pre-Push Hooks Do Not Run tsc — File Deletions Bypass Import Validation | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-18 | BLD-314 | Library Migration Must Audit Behavioral Contracts, Not Just Visual Rendering | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-314 | Vendored UI Components Expand Reanimated Mock Surface Area | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-18 | BLD-313 | BNA UI Card style Prop Requires StyleSheet.flatten — No Array Support | Patterns | [react-native.md](patterns/react-native.md) |
