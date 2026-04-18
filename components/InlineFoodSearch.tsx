@@ -33,7 +33,7 @@ import {
 import type { FoodEntry, Meal, BuiltinFood } from "../lib/types";
 import { MEALS, MEAL_LABELS } from "../lib/types";
 import BarcodeScanner from "./BarcodeScanner";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { ScanBarcode } from "lucide-react-native";
 import { radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -467,7 +467,7 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
           accessibilityLabel="Search foods"
           rightComponent={
             <Pressable onPress={openScanner} accessibilityLabel="Scan barcode" style={{ padding: 4 }}>
-              <MaterialCommunityIcons name="barcode-scan" size={20} color={colors.onSurfaceVariant} />
+              <ScanBarcode size={20} color={colors.onSurfaceVariant} />
             </Pressable>
           }
         />
