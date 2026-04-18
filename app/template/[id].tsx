@@ -132,10 +132,19 @@ export default function EditTemplate() {
     setSelecting(false);
     setSelected(new Set());
     await load();
-    success("Exercises linked as superset");
-    setUndo(() => async () => {
+    const undoFn = async () => {
       await unlinkExerciseGroup(linkId);
       await load();
+    };
+    setUndo(() => undoFn);
+    success("Exercises linked as superset", {
+      action: {
+        label: "Undo",
+        onPress: async () => {
+          await undoFn();
+          setUndo(null);
+        },
+      },
     });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
@@ -147,12 +156,21 @@ export default function EditTemplate() {
     await unlinkExerciseGroup(linkId);
     await load();
     const prev = exercises.filter((e) => e.link_id === linkId).map((e) => e.id);
-    success("Exercises unlinked");
-    setUndo(() => async () => {
+    const undoFn = async () => {
       if (id) {
         await createExerciseLink(id, prev);
         await load();
       }
+    };
+    setUndo(() => undoFn);
+    success("Exercises unlinked", {
+      action: {
+        label: "Undo",
+        onPress: async () => {
+          await undoFn();
+          setUndo(null);
+        },
+      },
     });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {

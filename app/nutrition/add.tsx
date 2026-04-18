@@ -116,7 +116,7 @@ function DatabaseTab({ meal, saving, onSaving, dateKey }: { meal: Meal; saving: 
                     style={styles.chip}
                     accessibilityState={{ selected: multiplier === v }}
                   >
-                    {v}x
+                    {`${v}x`}
                   </Chip>
                 ))}
               </View>
@@ -496,7 +496,7 @@ function OnlineTab({ meal, saving, onSaving, dateKey, autoScan }: { meal: Meal; 
                     style={styles.chip}
                     accessibilityState={{ selected: multiplier === v }}
                   >
-                    {v}x
+                    {`${v}x`}
                   </Chip>
                 ))}
               </View>

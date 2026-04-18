@@ -13,6 +13,7 @@ import {
   getDailySummary,
   getMacroTargets,
   deleteDailyLog,
+  addDailyLog,
 } from "../../lib/db";
 import type { DailyLog, MacroTargets } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
@@ -77,9 +78,20 @@ export default function Nutrition() {
         deleted.current = null;
       }, 4000),
     };
-    info(`${log.food?.name ?? "Food"} removed`);
+    info(`${log.food?.name ?? "Food"} removed`, {
+      action: { label: "Undo", onPress: undo },
+    });
     load();
   };
+
+  const undo = useCallback(async () => {
+    if (!deleted.current) return;
+    clearTimeout(deleted.current.timer);
+    const dl = deleted.current.log;
+    await addDailyLog(dl.food_entry_id, dl.date, dl.meal, dl.servings);
+    deleted.current = null;
+    load();
+  }, [load]);
 
   const sections = useMemo(() =>
     MEALS
@@ -170,16 +182,22 @@ export default function Nutrition() {
     setShowAddCard((v) => !v);
   }, []);
 
-  const undoRef = useRef<(() => Promise<void>) | null>(null);
-
   const handleFoodLogged = useCallback(() => {
     load();
   }, [load]);
 
   const handleSnack = useCallback((message: string, undoFn?: () => Promise<void>) => {
-    undoRef.current = undoFn ?? null;
-    info(message);
-  }, [info]);
+    const onPress = async () => {
+      if (undoFn) {
+        await undoFn();
+      } else {
+        await undo();
+      }
+    };
+    info(message, {
+      action: { label: "Undo", onPress },
+    });
+  }, [info, undo]);
 
   if (layout.atLeastMedium) {
     return (

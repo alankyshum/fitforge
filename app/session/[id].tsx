@@ -1309,7 +1309,7 @@ export default function ActiveSession() {
 
       // Undo snackbar (5s)
       if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
-      showToast(`Swapped to ${newExercise.name}`);
+      showToast(`Swapped to ${newExercise.name}`, { action: { label: "Undo", onPress: handleSwapUndo } });
       swapUndoTimer.current = setTimeout(() => {
         swapUndoTimer.current = null;
         swapUndoRef.current = null;
@@ -1399,7 +1399,7 @@ export default function ActiveSession() {
 
     // Start 5s countdown
     let remaining = 5;
-    showToast(`Removing ${group.name}... (5s)`);
+    showToast(`Removing ${group.name}... (5s)`, { action: { label: "UNDO", onPress: handleDeleteExerciseUndo } });
 
     deleteCountdownInterval.current = setInterval(() => {
       remaining -= 1;

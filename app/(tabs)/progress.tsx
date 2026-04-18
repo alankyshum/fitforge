@@ -186,8 +186,6 @@ export default function Progress() {
     }
     const filtered = entries.filter((e) => e.id !== item.id);
     setEntries(filtered);
-    toastInfo("Entry deleted");
-
     const timer = setTimeout(async () => {
       await deleteBodyWeight(item.id);
       undoRef.current = null;
@@ -195,6 +193,17 @@ export default function Progress() {
     }, 3000);
 
     undoRef.current = { id: item.id, timer };
+
+    toastInfo("Entry deleted", {
+      action: { label: "Undo", onPress: handleUndo },
+    });
+  };
+
+  const handleUndo = () => {
+    if (!undoRef.current) return;
+    clearTimeout(undoRef.current.timer);
+    undoRef.current = null;
+    loadBody();
   };
 
   const loadMore = async () => {

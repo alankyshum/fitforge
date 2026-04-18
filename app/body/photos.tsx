@@ -29,6 +29,7 @@ import {
   getPhotoCount,
   insertPhoto,
   softDeletePhoto,
+  restorePhoto,
   cleanupDeletedPhotos,
   cleanupOrphanFiles,
   ensurePhotoDirs,
@@ -304,7 +305,16 @@ export default function PhotosScreen() {
     await softDeletePhoto(photo.id);
     undoRef.current = { id: photo.id };
     await load();
-    success("Photo deleted");
+    success("Photo deleted", {
+      action: { label: "Undo", onPress: handleUndo },
+    });
+  };
+
+  const handleUndo = async () => {
+    if (!undoRef.current) return;
+    await restorePhoto(undoRef.current.id);
+    undoRef.current = null;
+    await load();
   };
 
   const handlePhotoPress = (photo: ProgressPhoto) => {
