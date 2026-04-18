@@ -242,7 +242,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
                 style={styles.filterChip}
                 compact
                 accessibilityLabel={`Filter by ${CATEGORY_LABELS[cat]}`}
-                accessibilityRole="button"
+                accessibilityRole="checkbox"
                 accessibilityState={{ selected: selected.has(cat) }}
               >
                 {CATEGORY_LABELS[cat]}

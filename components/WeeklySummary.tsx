@@ -241,9 +241,9 @@ export default function WeeklySummary() {
 
   if (error) {
     return (
+      <View accessibilityLabel="Weekly summary unavailable">
       <Card
-        style={[styles.card, { backgroundColor: colors.surface }]}
-        accessibilityLabel="Weekly summary unavailable"
+        style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}
       >
         <CardContent>
           <Text
@@ -254,12 +254,13 @@ export default function WeeklySummary() {
           </Text>
         </CardContent>
       </Card>
+      </View>
     );
   }
 
   if (loading || !data) {
     return (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+      <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
         <CardContent>
           <View style={styles.headerRow}>
             <Text variant="subtitle" style={{ color: colors.onSurface }}>
@@ -293,10 +294,12 @@ export default function WeeklySummary() {
   // ─── Render ────────────────────────────────────────────────────
 
   return (
-    <Card
-      style={[styles.card, { backgroundColor: colors.surface }]}
+    <View
       accessibilityLabel={`Weekly summary for ${formatWeekRange(weekStartMs)}`}
       accessibilityState={{ expanded }}
+    >
+    <Card
+      style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}
     >
       <CardContent>
         {/* Header with week navigation */}
@@ -586,6 +589,7 @@ export default function WeeklySummary() {
         )}
       </CardContent>
     </Card>
+    </View>
   );
 }
 

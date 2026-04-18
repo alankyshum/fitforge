@@ -195,7 +195,7 @@ export default function BodyProfileCard() {
 
   if (cardState === "loading") {
     return (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+      <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
         <CardContent>
           <View style={styles.loadingContainer}>
             <Spinner size="sm" />
@@ -210,7 +210,7 @@ export default function BodyProfileCard() {
 
   if (cardState === "error") {
     return (
-      <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+      <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
         <CardContent>
           <Text variant="body" style={{ color: colors.error, marginBottom: 8 }}>
             Could not load profile
@@ -224,7 +224,7 @@ export default function BodyProfileCard() {
   }
 
   return (
-    <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+    <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
           Body Profile

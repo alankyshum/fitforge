@@ -229,7 +229,7 @@ export default function MuscleVolumeSegment() {
       )}
 
       {data.length === 0 ? (
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+        <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Text
               variant="body"
@@ -243,7 +243,7 @@ export default function MuscleVolumeSegment() {
         <>
           {/* Volume Bars + Trend flow side by side on tablet */}
           <View style={layout.atLeastMedium ? styles.flowRow : undefined}>
-          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
+          <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
             <CardContent>
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
                 Sets per Muscle Group
@@ -319,7 +319,7 @@ export default function MuscleVolumeSegment() {
             </CardContent>
           </Card>
 
-          <Card style={[styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }]}>
+          <Card style={StyleSheet.flatten([styles.card, layout.atLeastMedium && styles.flowCard, { backgroundColor: colors.surface }])}>
             <CardContent>
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
                 {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
@@ -360,7 +360,7 @@ export default function MuscleVolumeSegment() {
           </View>
 
           {/* Muscle Detail List */}
-          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
             <CardContent>
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
                 Muscle Group Details
