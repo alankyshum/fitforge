@@ -182,19 +182,17 @@ export default function Exercises() {
             return (
             <Chip
               selected={active}
-              mode={active ? "flat" : "outlined"}
               onPress={() => toggle(f)}
-              style={[
+              style={StyleSheet.flatten([
                 styles.filterChip,
                 active && { backgroundColor: colors.primaryContainer },
-              ]}
-              textStyle={[
-                { flexShrink: 0 },
-                active ? { color: colors.onPrimaryContainer, fontWeight: "600" } : undefined,
-              ]}
+              ])}
+              textStyle={{
+                flexShrink: 0,
+                ...(active ? { color: colors.onPrimaryContainer, fontWeight: "600" } : {}),
+              }}
               compact
-              showSelectedOverlay={active}
-              icon={f !== "custom" && CATEGORY_ICONS[f] ? () => (
+              icon={f !== "custom" && CATEGORY_ICONS[f] ? (
                 <MaterialCommunityIcons
                   name={CATEGORY_ICONS[f] as keyof typeof MaterialCommunityIcons.glyphMap}
                   size={16}
@@ -225,7 +223,6 @@ export default function Exercises() {
         style={[styles.fab, { backgroundColor: colors.primary }]}
         color={colors.onPrimary}
         accessibilityLabel="Add custom exercise"
-        accessibilityRole="button"
       />
     </View>
   );

@@ -13,7 +13,6 @@ import {
   getDailySummary,
   getMacroTargets,
   deleteDailyLog,
-  addDailyLog,
 } from "../../lib/db";
 import type { DailyLog, MacroTargets } from "../../lib/types";
 import { MEALS, MEAL_LABELS } from "../../lib/types";
@@ -44,7 +43,7 @@ export default function Nutrition() {
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [summary, setSummary] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [targets, setTargets] = useState<MacroTargets | null>(null);
-  const { toast } = useToast();
+  const { info } = useToast();
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
 
@@ -78,18 +77,9 @@ export default function Nutrition() {
         deleted.current = null;
       }, 4000),
     };
-    toast(`${log.food?.name ?? "Food"} removed`);
+    info(`${log.food?.name ?? "Food"} removed`);
     load();
   };
-
-  const undo = useCallback(async () => {
-    if (!deleted.current) return;
-    clearTimeout(deleted.current.timer);
-    const dl = deleted.current.log;
-    await addDailyLog(dl.food_entry_id, dl.date, dl.meal, dl.servings);
-    deleted.current = null;
-    load();
-  }, [load]);
 
   const sections = useMemo(() =>
     MEALS
@@ -188,17 +178,8 @@ export default function Nutrition() {
 
   const handleSnack = useCallback((message: string, undoFn?: () => Promise<void>) => {
     undoRef.current = undoFn ?? null;
-    toast(message);
-  }, [toast]);
-
-  const handleUndo = useCallback(async () => {
-    if (undoRef.current) {
-      await undoRef.current();
-      undoRef.current = null;
-    } else {
-      await undo();
-    }
-  }, [undo]);
+    info(message);
+  }, [info]);
 
   if (layout.atLeastMedium) {
     return (
@@ -246,7 +227,7 @@ function MacroRow({
   label: name,
   value,
   target,
-  color,
+  color: _color, // eslint-disable-line @typescript-eslint/no-unused-vars
   unit,
   colors,
 }: {
@@ -270,7 +251,6 @@ function MacroRow({
       </View>
       <Progress
         value={target > 0 ? Math.min(value / target, 1) * 100 : 0}
-        color={color}
         style={styles.bar}
       />
     </View>

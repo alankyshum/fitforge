@@ -52,11 +52,11 @@ export default function EditTemplate() {
   const [exercises, setExercises] = useState<TemplateExercise[]>([]);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [undo, setUndo] = useState<(() => Promise<void>) | null>(null);
+  const [, setUndo] = useState<(() => Promise<void>) | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editing, setEditing] = useState<TemplateExercise | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { toast } = useToast();
+  const { success, error: showError } = useToast();
 
   const linkIds = useMemo(() => {
     const ids: string[] = [];
@@ -132,7 +132,7 @@ export default function EditTemplate() {
     setSelecting(false);
     setSelected(new Set());
     await load();
-    toast("Exercises linked as superset");
+    success("Exercises linked as superset");
     setUndo(() => async () => {
       await unlinkExerciseGroup(linkId);
       await load();
@@ -147,7 +147,7 @@ export default function EditTemplate() {
     await unlinkExerciseGroup(linkId);
     await load();
     const prev = exercises.filter((e) => e.link_id === linkId).map((e) => e.id);
-    toast("Exercises unlinked");
+    success("Exercises unlinked");
     setUndo(() => async () => {
       if (id) {
         await createExerciseLink(id, prev);
@@ -158,7 +158,7 @@ export default function EditTemplate() {
     undoTimer.current = setTimeout(() => {
       setUndo(null);
     }, 5000);
-  }, [exercises, id, load]);
+  }, [exercises, id, load, success]);
 
   const handleUnlinkSingle = useCallback(async (teId: string, linkId: string) => {
     await unlinkSingleExercise(teId, linkId);
@@ -180,9 +180,9 @@ export default function EditTemplate() {
       setEditing(null);
       await load();
     } catch {
-      toast("Failed to update exercise settings");
+      showError("Failed to update exercise settings");
     }
-  }, [editing, id, load]);
+  }, [editing, id, load, showError]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => {

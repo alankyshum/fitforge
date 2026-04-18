@@ -11,7 +11,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 export default function EditExercise() {
   const colors = useThemeColors();
   const router = useRouter();
-  const { toast } = useToast();
+  const { success } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exercise, setExercise] = useState<Exercise | null>(null);
 
@@ -29,10 +29,10 @@ export default function EditExercise() {
     async (data: Omit<Exercise, "id" | "is_custom">) => {
       if (!id) return;
       await updateCustomExercise(id, data);
-      toast("Exercise updated");
+      success("Exercise updated");
       timer.current = setTimeout(() => router.back(), 400);
     },
-    [id, router, toast]
+    [id, router, success]
   );
 
   if (!exercise) {

@@ -41,7 +41,7 @@ export default function CreateTemplate() {
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editing, setEditing] = useState<TemplateExercise | null>(null);
-  const { toast } = useToast();
+  const { error: showError } = useToast();
 
   useFocusEffect(
     useCallback(() => {
@@ -125,9 +125,9 @@ export default function CreateTemplate() {
       setEditing(null);
       await load();
     } catch {
-      toast("Failed to update exercise settings");
+      showError("Failed to update exercise settings");
     }
-  }, [editing, template, load, toast]);
+  }, [editing, template, load, showError]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: TemplateExercise; index: number }) => {

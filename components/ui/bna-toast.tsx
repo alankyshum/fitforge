@@ -339,7 +339,7 @@ export function Toast({
 }
 
 interface ToastContextType {
-  toast: (toast: Omit<ToastData, 'id'>) => void;
+  toast: (toast: string | Omit<ToastData, 'id'>) => void;
   success: (title: string, description?: string) => void;
   error: (title: string, description?: string) => void;
   warning: (title: string, description?: string) => void;
@@ -361,12 +361,14 @@ export function ToastProvider({ children, maxToasts = 3 }: ToastProviderProps) {
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
   const addToast = useCallback(
-    (toastData: Omit<ToastData, 'id'>) => {
+    (toastData: string | Omit<ToastData, 'id'>) => {
+      const data: Omit<ToastData, 'id'> =
+        typeof toastData === 'string' ? { title: toastData } : toastData;
       const id = generateId();
       const newToast: ToastData = {
-        ...toastData,
+        ...data,
         id,
-        duration: toastData.duration ?? 4000,
+        duration: data.duration ?? 4000,
       };
 
       setToasts((prev) => {

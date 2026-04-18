@@ -838,7 +838,7 @@ export default function AddFood() {
                     value={protein}
                     onChangeText={setProtein}
                     keyboardType="numeric"
-                    containerStyle={[styles.input, styles.flex]}
+                    containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
                   />
                   <View style={{ width: 8 }} />
                   <Input
@@ -846,7 +846,7 @@ export default function AddFood() {
                     value={carbs}
                     onChangeText={setCarbs}
                     keyboardType="numeric"
-                    containerStyle={[styles.input, styles.flex]}
+                    containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
                   />
                   <View style={{ width: 8 }} />
                   <Input
@@ -854,7 +854,7 @@ export default function AddFood() {
                     value={fat}
                     onChangeText={setFat}
                     keyboardType="numeric"
-                    containerStyle={[styles.input, styles.flex]}
+                    containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
                   />
                 </View>
                 <Input

@@ -31,7 +31,7 @@ import {
   type ExerciseRecords as Records,
 } from "../../lib/db";
 import { CATEGORY_LABELS, MOUNT_POSITION_LABELS, ATTACHMENT_LABELS, type Exercise } from "../../lib/types";
-import { difficultyText, DIFFICULTY_COLORS } from "../../constants/theme";
+import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
 import { toDisplay } from "../../lib/units";
@@ -224,7 +224,7 @@ export default function ExerciseDetail() {
       {exercise.is_custom && (
         <Chip
           compact
-          style={[styles.badge, { backgroundColor: colors.tertiaryContainer }]}
+          style={StyleSheet.flatten([styles.badge, { backgroundColor: colors.tertiaryContainer }])}
         >
           Custom
         </Chip>
@@ -240,7 +240,7 @@ export default function ExerciseDetail() {
         </Chip>
         <Chip
           compact
-          style={[styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }]}
+          style={StyleSheet.flatten([styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }])}
         >
           {exercise.difficulty}
         </Chip>
@@ -288,7 +288,7 @@ export default function ExerciseDetail() {
               <Chip
                 key={m}
                 compact
-                style={[styles.muscleChip, { backgroundColor: colors.secondaryContainer }]}
+                style={StyleSheet.flatten([styles.muscleChip, { backgroundColor: colors.secondaryContainer }])}
               >
                 {m.replace(/_/g, " ")}
               </Chip>

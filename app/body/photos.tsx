@@ -29,7 +29,6 @@ import {
   getPhotoCount,
   insertPhoto,
   softDeletePhoto,
-  restorePhoto,
   cleanupDeletedPhotos,
   cleanupOrphanFiles,
   ensurePhotoDirs,
@@ -66,7 +65,7 @@ export default function PhotosScreen() {
   const [poseFilter, setPoseFilter] = useState<PoseCategory | undefined>();
   const [compareMode, setCompareMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const { toast } = useToast();
+  const { success, error: showError } = useToast();
   const [privacyModal, setPrivacyModal] = useState(false);
   const [metaModal, setMetaModal] = useState(false);
   const [pendingUri, setPendingUri] = useState<string | null>(null);
@@ -90,7 +89,7 @@ export default function PhotosScreen() {
       setPhotos(items);
       setTotal(count);
     } catch {
-      toast("Failed to load photos");
+      showError("Failed to load photos");
     } finally {
       setLoading(false);
     }
@@ -243,7 +242,7 @@ export default function PhotosScreen() {
     try {
       await processAndSave(result.assets[0].uri);
     } catch {
-      toast("Failed to process photo");
+      showError("Failed to process photo");
     } finally {
       setSaving(false);
     }
@@ -265,7 +264,7 @@ export default function PhotosScreen() {
     try {
       await processAndSave(result.assets[0].uri);
     } catch {
-      toast("Failed to process photo");
+      showError("Failed to process photo");
     } finally {
       setSaving(false);
     }
@@ -276,7 +275,7 @@ export default function PhotosScreen() {
   const handleSaveMeta = async () => {
     if (!pendingUri) return;
     if (!isValidDate(metaDate)) {
-      toast("Please enter a valid date (YYYY-MM-DD)");
+      showError("Please enter a valid date (YYYY-MM-DD)");
       return;
     }
     setSaving(true);
@@ -293,9 +292,9 @@ export default function PhotosScreen() {
       setMetaModal(false);
       setPendingUri(null);
       await load();
-      toast("Photo saved");
+      success("Photo saved");
     } catch {
-      toast("Failed to save photo");
+      showError("Failed to save photo");
     } finally {
       setSaving(false);
     }
@@ -305,14 +304,7 @@ export default function PhotosScreen() {
     await softDeletePhoto(photo.id);
     undoRef.current = { id: photo.id };
     await load();
-    toast("Photo deleted");
-  };
-
-  const handleUndo = async () => {
-    if (!undoRef.current) return;
-    await restorePhoto(undoRef.current.id);
-    undoRef.current = null;
-    await load();
+    success("Photo deleted");
   };
 
   const handlePhotoPress = (photo: ProgressPhoto) => {
@@ -376,7 +368,7 @@ export default function PhotosScreen() {
           onPress={() => setPoseFilter(undefined)}
           style={styles.chip}
           accessibilityLabel="All poses filter"
-          accessibilityRole="togglebutton"
+          accessibilityRole="checkbox"
         >
           All
         </Chip>
@@ -387,7 +379,7 @@ export default function PhotosScreen() {
             onPress={() => setPoseFilter(poseFilter === p.value ? undefined : p.value)}
             style={styles.chip}
             accessibilityLabel={`${p.label} pose filter`}
-            accessibilityRole="togglebutton"
+            accessibilityRole="checkbox"
           >
             {p.label}
           </Chip>
@@ -576,7 +568,7 @@ export default function PhotosScreen() {
                   onPress={() => setMetaPose(metaPose === p.value ? null : p.value)}
                   style={styles.chip}
                   accessibilityLabel={`${p.label} pose category`}
-                  accessibilityRole="togglebutton"
+                  accessibilityRole="checkbox"
                 >
                   {p.label}
                 </Chip>

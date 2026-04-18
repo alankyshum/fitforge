@@ -36,6 +36,7 @@ interface FABGroupProps {
   onStateChange: (state: { open: boolean }) => void;
   fabStyle?: StyleProp<ViewStyle>;
   color?: string;
+  accessibilityLabel?: string;
 }
 
 export function FAB({

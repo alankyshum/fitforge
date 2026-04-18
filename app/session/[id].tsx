@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   useWindowDimensions,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
@@ -429,31 +428,35 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
                 {group.name}
               </Text>
             </Pressable>
-            <IconButton
-              icon="swap-horizontal"
-              size={24}
+            <Pressable
               onPress={() => onSwap(group.exercise_id)}
               accessibilityLabel={`Swap ${group.name} for alternative`}
-              style={styles.swapBtn}
-            />
-            <IconButton
-              icon={firstSet?.notes ? "note-text" : "note-text-outline"}
-              size={24}
+              hitSlop={8}
+              style={[styles.swapBtn, { padding: 8 }]}
+            >
+              <MaterialCommunityIcons name="swap-horizontal" size={24} color={colors.onSurfaceVariant} />
+            </Pressable>
+            <Pressable
               onPress={() => onToggleExerciseNotes(group.exercise_id)}
               accessibilityLabel={`${group.name} notes`}
-              style={styles.notesBtn}
-            />
+              hitSlop={8}
+              style={[styles.notesBtn, { padding: 8 }]}
+            >
+              <MaterialCommunityIcons name={firstSet?.notes ? "note-text" : "note-text-outline"} size={24} color={colors.onSurfaceVariant} />
+            </Pressable>
           </View>
           <View style={styles.groupHeaderCompactRow}>
             <Button
-              mode="text"
-              compact
-              icon="information-outline"
+              variant="ghost"
+              size="sm"
               onPress={() => onShowDetail(group.exercise_id)}
               accessibilityLabel={`View ${group.name} details`}
               style={styles.detailsBtn}
             >
-              Details
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <MaterialCommunityIcons name="information-outline" size={18} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontWeight: "600" }}>Details</Text>
+              </View>
             </Button>
             {group.is_voltra && group.training_modes.length > 1 && (
               <TrainingModeSelector
@@ -486,29 +489,33 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             </Text>
           </Pressable>
           <Button
-            mode="text"
-            compact
-            icon="information-outline"
+            variant="ghost"
+            size="sm"
             onPress={() => onShowDetail(group.exercise_id)}
             accessibilityLabel={`View ${group.name} details`}
             style={styles.detailsBtn}
           >
-            Details
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <MaterialCommunityIcons name="information-outline" size={18} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontWeight: "600" }}>Details</Text>
+            </View>
           </Button>
-          <IconButton
-            icon="swap-horizontal"
-            size={24}
+          <Pressable
             onPress={() => onSwap(group.exercise_id)}
             accessibilityLabel={`Swap ${group.name} for alternative`}
-            style={styles.swapBtn}
-          />
-          <IconButton
-            icon={firstSet?.notes ? "note-text" : "note-text-outline"}
-            size={24}
+            hitSlop={8}
+            style={[styles.swapBtn, { padding: 8 }]}
+          >
+            <MaterialCommunityIcons name="swap-horizontal" size={24} color={colors.onSurfaceVariant} />
+          </Pressable>
+          <Pressable
             onPress={() => onToggleExerciseNotes(group.exercise_id)}
             accessibilityLabel={`${group.name} notes`}
-            style={styles.notesBtn}
-          />
+            hitSlop={8}
+            style={[styles.notesBtn, { padding: 8 }]}
+          >
+            <MaterialCommunityIcons name={firstSet?.notes ? "note-text" : "note-text-outline"} size={24} color={colors.onSurfaceVariant} />
+          </Pressable>
           {group.is_voltra && group.training_modes.length > 1 && (
             <TrainingModeSelector
               modes={group.training_modes}
@@ -568,14 +575,16 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
         />
       ))}
       <Button
-        mode="text"
-        compact
-        icon="plus"
+        variant="ghost"
+        size="sm"
         onPress={() => onAddSet(group.exercise_id)}
         style={styles.addSetBtn}
         accessibilityLabel={`Add set to ${group.name}`}
       >
-        Add Set
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+          <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Set</Text>
+        </View>
       </Button>
     </>
   );
@@ -781,7 +790,7 @@ export default function ActiveSession() {
   const [maxes, setMaxes] = useState<Record<string, number>>({});
   const prevExerciseIds = useRef<string>("");
   const prHapticFired = useRef<Set<string>>(new Set());
-  const { toast: showToast } = useToast();
+  const { info: showToast, error: showError, warning: showWarning } = useToast();
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
   const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
   const [halfStep, setHalfStep] = useState<{ setId: string; base: number } | null>(null);
@@ -805,7 +814,7 @@ export default function ActiveSession() {
       setAudioEnabled(val !== "false")
     }).catch(() => {
       setAudioEnabled(true)
-      showToast("Could not load sound setting")
+      showError("Could not load sound setting")
     })
   }, []);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({});
@@ -985,7 +994,7 @@ export default function ActiveSession() {
         });
 
         if (deletedExerciseIds.size > 0) {
-          showToast(
+          showWarning(
             `${deletedExerciseIds.size} exercise${deletedExerciseIds.size > 1 ? "s were" : " was"} skipped (no longer available)`
           );
         }
@@ -1253,7 +1262,7 @@ export default function ActiveSession() {
     // Check if all sets are completed
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (group && group.sets.every((s) => s.completed)) {
-      showToast("All sets completed — nothing to swap");
+      showWarning("All sets completed — nothing to swap");
       return;
     }
     const ex = await getExerciseById(exerciseId);
@@ -1275,7 +1284,7 @@ export default function ActiveSession() {
       }
       await load();
     } catch {
-      showToast("Failed to undo swap");
+      showError("Failed to undo swap");
     }
   }, [load]);
 
@@ -1284,7 +1293,7 @@ export default function ActiveSession() {
     try {
       const modifiedIds = await swapExerciseInSession(id, swapSource.id, newExercise.id);
       if (modifiedIds.length === 0) {
-        showToast("All sets completed — nothing to swap");
+        showWarning("All sets completed — nothing to swap");
         setSwapSource(null);
         return;
       }
@@ -1306,7 +1315,7 @@ export default function ActiveSession() {
         swapUndoRef.current = null;
       }, 5000);
     } catch {
-      showToast("Failed to swap exercise");
+      showError("Failed to swap exercise");
     }
   }, [id, swapSource, load, startRest, handleSwapUndo]);
 
@@ -1423,7 +1432,7 @@ export default function ActiveSession() {
           next.splice(Math.min(groupIndex, next.length), 0, group as ExerciseGroup);
           return next;
         });
-        showToast('Failed to delete exercise. Restored.');
+        showError('Failed to delete exercise. Restored.');
       }
     }, 5000);
   }, [groups, dismissRest, handleDeleteExerciseUndo, commitPendingDelete]);
@@ -1577,7 +1586,7 @@ export default function ActiveSession() {
             showToast("Synced to Strava ✓");
           }
         } catch {
-          showToast("Strava sync failed");
+          showError("Strava sync failed");
         }
 
         // Health Connect sync (non-blocking, silent — no toast on success or failure)
@@ -1724,15 +1733,14 @@ export default function ActiveSession() {
                   Rest Timer
                 </Text>
                 <Button
-                  mode="text"
-                  compact
+                  variant="ghost"
+                  size="sm"
                   onPress={dismissRest}
-                  textColor={colors.onPrimaryContainer}
+                  textStyle={{ color: colors.onPrimaryContainer }}
                   style={{ marginTop: 4 }}
                   accessibilityLabel="Skip rest timer"
-                >
-                  Skip
-                </Button>
+                  label="Skip"
+                />
               </Reanimated.View>
             )}
             {nextHint && (
@@ -1747,34 +1755,31 @@ export default function ActiveSession() {
         ListFooterComponent={
           <>
             <Button
-              mode="outlined"
-              icon="plus"
+              variant="outline"
               onPress={handleAddExercise}
               style={styles.addExercise}
-              contentStyle={styles.actionContent}
               accessibilityLabel="Add exercise to workout"
             >
-              Add Exercise
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Exercise</Text>
+              </View>
             </Button>
             <Button
-              mode="contained"
+              variant="default"
               onPress={finish}
               style={styles.finishBtn}
-              contentStyle={styles.actionContent}
               accessibilityLabel="Finish workout"
-            >
-              Finish Workout
-            </Button>
+              label="Finish Workout"
+            />
             <Button
-              mode="text"
+              variant="ghost"
               onPress={cancel}
-              textColor={colors.error}
+              textStyle={{ color: colors.error }}
               style={styles.cancelBtn}
-              contentStyle={styles.actionContent}
               accessibilityLabel="Cancel workout"
-            >
-              Cancel Workout
-            </Button>
+              label="Cancel Workout"
+            />
           </>
         }
       />
@@ -1864,12 +1869,14 @@ export default function ActiveSession() {
               <Text variant="title" style={{ color: colors.onSurface, flex: 1 }}>
                 {detailExercise.name}
               </Text>
-              <IconButton
-                icon="close"
-                size={24}
+              <Pressable
                 onPress={() => detailSheetRef.current?.close()}
                 accessibilityLabel="Close exercise details"
-              />
+                hitSlop={8}
+                style={{ padding: 8 }}
+              >
+                <MaterialCommunityIcons name="close" size={24} color={colors.onSurfaceVariant} />
+              </Pressable>
             </View>
             <ExerciseDetailDrawerContent exercise={detailExercise} />
           </>
