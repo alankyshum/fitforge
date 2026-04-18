@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/bna-toast";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   getMealTemplates,
+  getMealTemplateById,
   deleteMealTemplate,
   logFromTemplate,
   undoLogFromTemplate,
@@ -76,6 +77,12 @@ export default function MealTemplates() {
   const handleDelete = useCallback(
     async (template: MealTemplate) => {
       if (deleted.current) clearTimeout(deleted.current.timer);
+      // Fetch full template with items before deleting so undo can restore them
+      const full = await getMealTemplateById(template.id);
+      const savedItems = (full?.items ?? []).map((it) => ({
+        food_entry_id: it.food_entry_id,
+        servings: it.servings,
+      }));
       await deleteMealTemplate(template.id);
       deleted.current = {
         template,
@@ -93,7 +100,7 @@ export default function MealTemplates() {
             await createMealTemplate({
               name: t.name,
               meal: t.meal,
-              items: [], // Items are lost on undo — acceptable tradeoff
+              items: savedItems,
             });
             deleted.current = null;
             load();

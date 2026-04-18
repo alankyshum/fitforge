@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { StyleSheet, TouchableOpacity, View, ScrollView } from "react-native";
+import { StyleSheet, TouchableOpacity, View, FlatList } from "react-native";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
@@ -157,140 +157,125 @@ export default function EditMealTemplate() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-            hitSlop={8}
-            style={{ padding: 8 }}
-          >
+          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button" hitSlop={8} style={{ padding: 8 }}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
           </TouchableOpacity>
         </View>
         <View style={styles.empty}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-            Template not found
-          </Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Template not found</Text>
         </View>
       </View>
     );
   }
 
-  const totalCalories = items.reduce(
-    (sum, it) => sum + (it.food?.calories ?? 0) * it.servings,
-    0
-  );
-  const totalProtein = items.reduce(
-    (sum, it) => sum + (it.food?.protein ?? 0) * it.servings,
-    0
-  );
-  const totalCarbs = items.reduce(
-    (sum, it) => sum + (it.food?.carbs ?? 0) * it.servings,
-    0
-  );
-  const totalFat = items.reduce(
-    (sum, it) => sum + (it.food?.fat ?? 0) * it.servings,
-    0
+  const macros = items.reduce(
+    (acc, it) => {
+      const s = it.servings;
+      return {
+        cal: acc.cal + (it.food?.calories ?? 0) * s,
+        p: acc.p + (it.food?.protein ?? 0) * s,
+        c: acc.c + (it.food?.carbs ?? 0) * s,
+        f: acc.f + (it.food?.fat ?? 0) * s,
+      };
+    },
+    { cal: 0, p: 0, c: 0, f: 0 }
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={8}
-          style={{ padding: 8 }}
-        >
+        <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button" hitSlop={8} style={{ padding: 8 }}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
         </TouchableOpacity>
         <Text variant="title" style={{ color: colors.onBackground, flex: 1, textAlign: "center" }}>
           Edit Template
         </Text>
-        <TouchableOpacity
-          onPress={handleDelete}
-          accessibilityLabel="Delete template"
-          accessibilityRole="button"
-          hitSlop={8}
-          style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
-        >
+        <TouchableOpacity onPress={handleDelete} accessibilityLabel="Delete template" accessibilityRole="button" hitSlop={8} style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}>
           <MaterialCommunityIcons name="delete-outline" size={24} color={colors.error} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Input
-          label="Template Name"
-          value={name}
-          onChangeText={setName}
-          placeholder="e.g. My Breakfast"
-          accessibilityLabel="Template name"
-          error={name.trim().length === 0 ? "Name is required" : undefined}
-        />
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.id}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        ListHeaderComponent={
+          <View>
+            <Input
+              label="Template Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. My Breakfast"
+              accessibilityLabel="Template name"
+              error={name.trim().length === 0 ? "Name is required" : undefined}
+            />
 
-        <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginTop: 16, marginBottom: 8 }}>
-          Meal Category
-        </Text>
-        <View style={styles.chipRow}>
-          {MEALS.map((m) => (
-            <Chip
-              key={m}
-              selected={meal === m}
-              onPress={() => setMeal(m)}
-              accessibilityLabel={`${MEAL_LABELS[m]} category`}
+            <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginTop: 16, marginBottom: 8 }}>
+              Meal Category
+            </Text>
+            <View style={styles.chipRow}>
+              {MEALS.map((m) => (
+                <Chip
+                  key={m}
+                  selected={meal === m}
+                  onPress={() => setMeal(m)}
+                  accessibilityLabel={`${MEAL_LABELS[m]} category`}
+                  accessibilityRole="button"
+                >
+                  {MEAL_LABELS[m]}
+                </Chip>
+              ))}
+            </View>
+
+            <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginTop: 16, marginBottom: 8 }}>
+              Items ({items.length})
+            </Text>
+            {items.length === 0 && (
+              <View style={[styles.emptyItems, { backgroundColor: colors.surfaceVariant }]}>
+                <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
+                  No items — tap to add
+                </Text>
+              </View>
+            )}
+          </View>
+        }
+        renderItem={({ item }) => (
+          <TemplateItemCard
+            item={item}
+            colors={colors}
+            onUpdateServings={handleUpdateServings}
+            onRemove={handleRemoveItem}
+          />
+        )}
+        ListFooterComponent={
+          <View>
+            <View style={[styles.macroSummary, { backgroundColor: colors.surfaceVariant }]}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                Total: {Math.round(macros.cal)} cal · {Math.round(macros.p)}p · {Math.round(macros.c)}c · {Math.round(macros.f)}f
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                { backgroundColor: isValid ? colors.primary : colors.surfaceVariant },
+              ]}
+              onPress={handleSave}
+              disabled={!isValid || saving}
+              accessibilityLabel="Save changes"
               accessibilityRole="button"
             >
-              {MEAL_LABELS[m]}
-            </Chip>
-          ))}
-        </View>
-
-        <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginTop: 16, marginBottom: 8 }}>
-          Items ({items.length})
-        </Text>
-        {items.length === 0 ? (
-          <View style={[styles.emptyItems, { backgroundColor: colors.surfaceVariant }]}>
-            <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-              No items — tap to add
-            </Text>
+              <Text
+                variant="body"
+                style={{ color: isValid ? colors.onPrimary : colors.onSurfaceVariant, fontWeight: "600" }}
+              >
+                {saving ? "Saving…" : "Save Changes"}
+              </Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          items.map((item) => (
-            <TemplateItemCard
-              key={item.id}
-              item={item}
-              colors={colors}
-              onUpdateServings={handleUpdateServings}
-              onRemove={handleRemoveItem}
-            />
-          ))
-        )}
-
-        <View style={[styles.macroSummary, { backgroundColor: colors.surfaceVariant }]}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            Total: {Math.round(totalCalories)} cal · {Math.round(totalProtein)}p · {Math.round(totalCarbs)}c · {Math.round(totalFat)}f
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: isValid ? colors.primary : colors.surfaceVariant },
-          ]}
-          onPress={handleSave}
-          disabled={!isValid || saving}
-          accessibilityLabel="Save changes"
-          accessibilityRole="button"
-        >
-          <Text
-            variant="body"
-            style={{ color: isValid ? colors.onPrimary : colors.onSurfaceVariant, fontWeight: "600" }}
-          >
-            {saving ? "Saving…" : "Save Changes"}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+        }
+      />
     </View>
   );
 }
