@@ -27,10 +27,10 @@ const sessionSrc = [
   fs.readFileSync(path.resolve(__dirname, "../../hooks/useSessionActions.ts"), "utf-8"),
 ].join("\n");
 
-const layoutSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/_layout.tsx"),
-  "utf-8"
-);
+const layoutSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../app/_layout.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../hooks/useAppInit.ts"), "utf-8"),
+].join("\n");
 
 const indexSrc = fs.readFileSync(
   path.resolve(__dirname, "../../lib/db/index.ts"),
