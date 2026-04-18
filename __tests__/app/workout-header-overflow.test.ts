@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const sessionSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"),
-  "utf-8"
-);
+const sessionSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/GroupCardHeader.tsx"), "utf-8"),
+].join("\n");
 
 describe("Workout session exercise header overflow fix (BLD-203)", () => {
   it("groupHeader uses flexWrap: wrap", () => {
