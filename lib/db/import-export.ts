@@ -10,6 +10,8 @@ import type {
   Program,
   ProgramDay,
   ProgramLog,
+  MealTemplate,
+  MealTemplateItem,
 } from "../types";
 import { getDatabase } from "./helpers";
 
@@ -33,7 +35,9 @@ export type BackupTableName =
   | "daily_log"
   | "program_log"
   | "weekly_schedule"
-  | "program_schedule";
+  | "program_schedule"
+  | "meal_templates"
+  | "meal_template_items";
 
 export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   exercises: "Exercises",
@@ -54,6 +58,8 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   program_log: "Program Log",
   weekly_schedule: "Weekly Schedule",
   program_schedule: "Program Schedule",
+  meal_templates: "Meal Templates",
+  meal_template_items: "Meal Template Items",
 };
 
 // FK-dependency order for import — parents before children
@@ -76,6 +82,8 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "program_log",
   "weekly_schedule",
   "program_schedule",
+  "meal_templates",
+  "meal_template_items",
 ];
 
 export type AppSettingRow = { key: string; value: string };
@@ -102,6 +110,8 @@ export type BackupV3Data = {
   weekly_schedule: WeeklyScheduleRow[];
   program_schedule: ProgramScheduleRow[];
   achievements_earned: AchievementEarnedRow[];
+  meal_templates: MealTemplate[];
+  meal_template_items: MealTemplateItem[];
 };
 
 export type BackupV3 = {
@@ -494,6 +504,20 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO program_schedule (program_id, day_of_week, template_id) VALUES (?, ?, ?)",
         [row.program_id, row.day_of_week, row.template_id]
+      );
+      return r.changes > 0;
+    }
+    case "meal_templates": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO meal_templates (id, name, meal, cached_calories, cached_protein, cached_carbs, cached_fat, last_used_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.name, row.meal, row.cached_calories ?? 0, row.cached_protein ?? 0, row.cached_carbs ?? 0, row.cached_fat ?? 0, row.last_used_at ?? null, row.created_at, row.updated_at]
+      );
+      return r.changes > 0;
+    }
+    case "meal_template_items": {
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO meal_template_items (id, template_id, food_entry_id, servings, sort_order) VALUES (?, ?, ?, ?, ?)",
+        [row.id, row.template_id, row.food_entry_id, row.servings ?? 1, row.sort_order ?? 0]
       );
       return r.changes > 0;
     }
