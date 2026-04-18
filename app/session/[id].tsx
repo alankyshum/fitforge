@@ -35,6 +35,7 @@ import {
   addSetsBatch,
   cancelSession,
   deleteSet,
+  deleteSetsBatch,
   completeSession,
   completeSet,
   getBodySettings,
@@ -326,6 +327,7 @@ type GroupCardProps = {
   onLongPressSetType: (setId: string) => void;
   onShowDetail: (exerciseId: string) => void;
   onSwap: (exerciseId: string) => void;
+  onDeleteExercise: (exerciseId: string) => void;
 };
 
 const ExerciseGroupCard = memo(function ExerciseGroupCard({
@@ -334,7 +336,7 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onUpdate, onCheck, onDelete, onAddSet, onModeChange,
   onRPE, onHalfStep, onHalfStepClear,
   onHalfStepOpen, onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes, onCycleSetType, onLongPressSetType,
-  onShowDetail, onSwap,
+  onShowDetail, onSwap, onDeleteExercise,
 }: GroupCardProps) {
   const theme = useTheme();
   const layout = useLayout();
@@ -412,14 +414,21 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
       {layout.compact ? (
         <View style={styles.groupHeaderCompactWrap}>
           <View style={styles.groupHeaderCompactRow}>
-            <Text
-              variant="titleMedium"
-              numberOfLines={2}
-              ellipsizeMode="tail"
-              style={[styles.groupTitle, { color: theme.colors.primary }]}
+            <Pressable
+              onLongPress={() => onDeleteExercise(group.exercise_id)}
+              delayLongPress={500}
+              style={{ flex: 1 }}
+              accessibilityHint="Long press to remove exercise"
             >
-              {group.name}
-            </Text>
+              <Text
+                variant="titleMedium"
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={[styles.groupTitle, { color: theme.colors.primary }]}
+              >
+                {group.name}
+              </Text>
+            </Pressable>
             <IconButton
               icon="swap-horizontal"
               size={24}
@@ -459,14 +468,21 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
         </View>
       ) : (
         <View style={styles.groupHeader}>
-          <Text
-            variant="titleMedium"
-            numberOfLines={2}
-            ellipsizeMode="tail"
-            style={[styles.groupTitle, { color: theme.colors.primary }]}
+          <Pressable
+            onLongPress={() => onDeleteExercise(group.exercise_id)}
+            delayLongPress={500}
+            style={{ flex: 1 }}
+            accessibilityHint="Long press to remove exercise"
           >
-            {group.name}
-          </Text>
+            <Text
+              variant="titleMedium"
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              style={[styles.groupTitle, { color: theme.colors.primary }]}
+            >
+              {group.name}
+            </Text>
+          </Pressable>
           <Button
             mode="text"
             compact
@@ -1112,11 +1128,11 @@ export default function ActiveSession() {
     }, 1000);
   }, []);
 
-  const dismissRest = () => {
+  const dismissRest = useCallback(() => {
     if (restRef.current) clearInterval(restRef.current);
     restRef.current = null;
     setRest(0);
-  };
+  }, []);
 
   const prevRest = useRef(0);
   useEffect(() => {
@@ -1154,6 +1170,8 @@ export default function ActiveSession() {
       if (hintTimer.current) clearTimeout(hintTimer.current);
       for (const t of restHapticTimers.current) clearTimeout(t);
       if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
+      if (deleteExerciseTimer.current) clearTimeout(deleteExerciseTimer.current);
+      if (deleteCountdownInterval.current) clearInterval(deleteCountdownInterval.current);
     };
   }, []);
 
@@ -1304,6 +1322,84 @@ export default function ActiveSession() {
     }
     await load();
   }, [id, load]);
+
+  // --- Long-press exercise delete with countdown ---
+  const deleteExerciseRef = useRef<{ exerciseId: string; setIds: string[]; removedGroup: ExerciseGroup } | null>(null);
+  const deleteExerciseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deleteCountdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleDeleteExerciseUndo = useCallback(() => {
+    if (!deleteExerciseRef.current) return;
+    const { removedGroup } = deleteExerciseRef.current;
+    // Restore the group back into state
+    setGroups((prev) => {
+      // Re-insert in original position or at end
+      const exists = prev.some((g) => g.exercise_id === removedGroup.exercise_id);
+      if (exists) return prev;
+      return [...prev, removedGroup];
+    });
+    deleteExerciseRef.current = null;
+    if (deleteExerciseTimer.current) {
+      clearTimeout(deleteExerciseTimer.current);
+      deleteExerciseTimer.current = null;
+    }
+    if (deleteCountdownInterval.current) {
+      clearInterval(deleteCountdownInterval.current);
+      deleteCountdownInterval.current = null;
+    }
+    setSnackbar("");
+    setSnackbarAction(undefined);
+  }, []);
+
+  const handleDeleteExercise = useCallback((exerciseId: string) => {
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (!group) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const setIds = group.sets.map((s) => s.id);
+
+    // Optimistically remove the group from UI
+    setGroups((prev) => prev.filter((g) => g.exercise_id !== exerciseId));
+
+    // Clear rest timer if it was running for this exercise
+    dismissRest();
+
+    // Store undo info
+    deleteExerciseRef.current = { exerciseId, setIds, removedGroup: group };
+
+    // Clear any existing delete countdown
+    if (deleteExerciseTimer.current) clearTimeout(deleteExerciseTimer.current);
+    if (deleteCountdownInterval.current) clearInterval(deleteCountdownInterval.current);
+
+    // Start 5s countdown
+    let remaining = 5;
+    setSnackbar(`Removing ${group.name}... (5s)`);
+    setSnackbarAction({ label: "UNDO", onPress: () => handleDeleteExerciseUndo() });
+
+    deleteCountdownInterval.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        if (deleteCountdownInterval.current) {
+          clearInterval(deleteCountdownInterval.current);
+          deleteCountdownInterval.current = null;
+        }
+      } else {
+        setSnackbar(`Removing ${group.name}... (${remaining}s)`);
+      }
+    }, 1000);
+
+    deleteExerciseTimer.current = setTimeout(async () => {
+      deleteExerciseTimer.current = null;
+      deleteExerciseRef.current = null;
+      if (deleteCountdownInterval.current) {
+        clearInterval(deleteCountdownInterval.current);
+        deleteCountdownInterval.current = null;
+      }
+      // Actually delete from DB
+      await deleteSetsBatch(setIds);
+    }, 5000);
+  }, [groups, dismissRest, handleDeleteExerciseUndo]);
 
   const handleRPE = useCallback(async (set: SetWithMeta, val: number) => {
     const next = set.rpe === val ? null : val;
@@ -1581,6 +1677,7 @@ export default function ActiveSession() {
             onLongPressSetType={handleLongPressSetType}
             onShowDetail={handleShowDetail}
             onSwap={handleSwapOpen}
+            onDeleteExercise={handleDeleteExercise}
           />
         )}
         keyExtractor={(item) => item.exercise_id}
