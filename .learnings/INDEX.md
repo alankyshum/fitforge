@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-18
-Total learnings: 142
+Total learnings: 143
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 69 learnings
+- [React Native + Expo](patterns/react-native.md) — 70 learnings
 - [Testing](patterns/testing.md) — 10 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-339 | Avoid Hidden Re-Queries in Composed Data-Layer Functions | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-335 | New Database Tables Require Five-Point Backup/Restore Integration | Pitfalls | [sql-queries.md](pitfalls/sql-queries.md) |
 | 2026-04-18 | BLD-334 | moduleNameMapper Enforces __mocks__/ Directory Mock Resolution for Reanimated | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-18 | BLD-334 | Snapshot Composite Entity Before Cascade Delete for Undo Restoration | Patterns | [react-native.md](patterns/react-native.md) |
