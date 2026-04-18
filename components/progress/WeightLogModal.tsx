@@ -7,7 +7,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 type WeightLogModalProps = {
   visible: boolean;
   onClose: () => void;
-  unit: string;
+  unit: "kg" | "lb";
   logWeight: string;
   setLogWeight: (v: string) => void;
   logDate: string;

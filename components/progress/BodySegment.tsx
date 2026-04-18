@@ -30,7 +30,7 @@ function BodyEntryRow({
   onDelete,
 }: {
   item: BodyWeight;
-  unit: string;
+  unit: "kg" | "lb";
   onDelete: (item: BodyWeight) => void;
 }) {
   const colors = useThemeColors();
@@ -79,7 +79,7 @@ function BodyModal({
 }: {
   modal: boolean;
   setModal: (v: boolean) => void;
-  unit: string;
+  unit: "kg" | "lb";
   logWeight: string;
   setLogWeight: (v: string) => void;
   logDate: string;

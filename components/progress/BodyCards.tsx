@@ -15,7 +15,7 @@ type WeightCardProps = {
   latest: BodyWeight;
   delta: number | null;
   deltaLabel: string;
-  unit: string;
+  unit: "kg" | "lb";
   onToggleUnit: () => void;
 };
 
@@ -68,7 +68,7 @@ type GoalsCardProps = {
   settings: BodySettings;
   latest: BodyWeight | null;
   measurements: BodyMeasurements | null;
-  unit: string;
+  unit: "kg" | "lb";
 };
 
 export function GoalsCard({ settings, latest, measurements, unit }: GoalsCardProps) {
@@ -154,7 +154,7 @@ export function GoalsCard({ settings, latest, measurements, unit }: GoalsCardPro
 
 type ChartCardProps = {
   chart: { date: string; weight: number }[];
-  unit: string;
+  unit: "kg" | "lb";
 };
 
 export function ChartCard({ chart, unit }: ChartCardProps) {
@@ -228,7 +228,7 @@ export function ChartCard({ chart, unit }: ChartCardProps) {
 
 type SingleEntryCardProps = {
   latest: BodyWeight;
-  unit: string;
+  unit: "kg" | "lb";
 };
 
 export function SingleEntryCard({ latest, unit }: SingleEntryCardProps) {
@@ -290,9 +290,7 @@ export function MeasurementsCard({ measurements }: MeasurementsCardProps) {
   );
 }
 
-type ProgressPhotosCardProps = Record<string, never>;
-
-export function ProgressPhotosCard(_props: ProgressPhotosCardProps) {
+export function ProgressPhotosCard() {
   const colors = useThemeColors();
   const router = useRouter();
 
