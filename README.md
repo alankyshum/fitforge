@@ -22,8 +22,8 @@
 - **Framework:** React Native + Expo
 - **Language:** TypeScript
 - **Navigation:** Expo Router (file-based)
-- **UI Library:** React Native Paper (Material Design 3)
-- **Icons:** @expo/vector-icons (MaterialCommunityIcons)
+- **UI Library:** BNA UI (custom component library)
+- **Icons:** lucide-react-native, @expo/vector-icons
 
 ## Getting Started
 
