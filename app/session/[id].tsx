@@ -418,6 +418,8 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
               onLongPress={() => onDeleteExercise(group.exercise_id)}
               delayLongPress={500}
               style={{ flex: 1 }}
+              accessibilityLabel={`Remove ${group.name}`}
+              accessibilityRole="button"
               accessibilityHint="Long press to remove exercise"
             >
               <Text
@@ -472,6 +474,8 @@ const ExerciseGroupCard = memo(function ExerciseGroupCard({
             onLongPress={() => onDeleteExercise(group.exercise_id)}
             delayLongPress={500}
             style={{ flex: 1 }}
+            accessibilityLabel={`Remove ${group.name}`}
+            accessibilityRole="button"
             accessibilityHint="Long press to remove exercise"
           >
             <Text
@@ -1341,7 +1345,11 @@ export default function ActiveSession() {
       clearInterval(deleteCountdownInterval.current);
       deleteCountdownInterval.current = null;
     }
-    await deleteSetsBatch(setIds);
+    try {
+      await deleteSetsBatch(setIds);
+    } catch {
+      // Best-effort: pending delete failed but UI already moved on
+    }
   }, []);
 
   const handleDeleteExerciseUndo = useCallback(() => {
@@ -1414,7 +1422,19 @@ export default function ActiveSession() {
         deleteCountdownInterval.current = null;
       }
       // Actually delete from DB
-      await deleteSetsBatch(setIds);
+      try {
+        await deleteSetsBatch(setIds);
+      } catch {
+        // Restore group on DB failure
+        setGroups((prev) => {
+          const exists = prev.some((g) => g.exercise_id === group.exercise_id);
+          if (exists) return prev;
+          const next = [...prev];
+          next.splice(Math.min(groupIndex, next.length), 0, group as ExerciseGroup);
+          return next;
+        });
+        setSnackbar('Failed to delete exercise. Restored.');
+      }
     }, 5000);
   }, [groups, dismissRest, handleDeleteExerciseUndo, commitPendingDelete]);
 

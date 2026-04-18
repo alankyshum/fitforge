@@ -44,6 +44,17 @@ describe("BLD-307: Swap exercise + long-press delete", () => {
       expect(sessionSrc).toContain("Long press to remove exercise");
     });
 
+    it("has accessibilityLabel and accessibilityRole on delete pressable", () => {
+      expect(sessionSrc).toContain('accessibilityLabel={`Remove ${group.name}`}');
+      expect(sessionSrc).toContain('accessibilityRole="button"');
+    });
+
+    it("wraps deleteSetsBatch in try/catch for error resilience", () => {
+      // Timeout callback should have try/catch around deleteSetsBatch
+      expect(sessionSrc).toContain("await deleteSetsBatch(setIds)");
+      expect(sessionSrc).toContain("Failed to delete exercise. Restored.");
+    });
+
     it("provides haptic feedback on long-press", () => {
       expect(sessionSrc).toContain("Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)");
     });
