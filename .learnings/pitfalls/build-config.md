@@ -106,10 +106,11 @@
 **Action**: When planning diagnostic or debugging features, do not attempt to capture native platform logs in Expo managed workflow. Instead, maximize JS-accessible data: expand console log buffers, add structured event logging to DB, and include device metadata via expo-device and expo-constants. Document the native log limitation for stakeholders early in planning.
 **Tags**: expo, managed-workflow, logcat, native-logs, diagnostics, platform-limitation, debugging, feedback
 
-### FitForge DB Migrations Live in lib/db/helpers.ts, Not a Separate Schema File
-**Source**: BLD-298 — PLAN: Strava Integration (Phase 48)
-**Date**: 2026-04-17
-**Context**: Phase 48 plan referenced `lib/db/schema.ts` for new CREATE TABLE statements. Tech lead review caught that this file does not exist — all schema migrations are defined inline in `lib/db/helpers.ts` (starting around line 89).
-**Learning**: FitForge has no separate schema definition file. All CREATE TABLE statements, migrations, and seed data logic live in `lib/db/helpers.ts` inside the database initialization function. Plans and implementations that reference `lib/db/schema.ts` are targeting a non-existent file.
-**Action**: When adding new tables or modifying schema in FitForge, add CREATE TABLE statements to `lib/db/helpers.ts` alongside existing table definitions. When writing plans that involve DB changes, reference `lib/db/helpers.ts` (not `schema.ts`). Verify the target file exists before specifying it in a plan.
-**Tags**: fitforge, database, schema, migration, helpers, file-location, plan-accuracy
+### FitForge DB Migrations Live in lib/db/migrations.ts
+**Source**: BLD-298 — PLAN: Strava Integration (Phase 48); updated by BLD-322 — FTA complexity audit
+**Date**: 2026-04-18
+**Type**: UPDATE — Supersedes prior version pointing to helpers.ts
+**Context**: BLD-322 split the oversized `lib/db/helpers.ts` into focused modules. Migrations (CREATE TABLE, ALTER TABLE) now live in `lib/db/migrations.ts`. Seed data lives in `lib/db/seed.ts`. `helpers.ts` retains only DB connection setup and query utilities.
+**Learning**: FitForge DB schema migrations (all CREATE TABLE and ALTER TABLE statements) are defined in `lib/db/migrations.ts`. Seed data and starter template logic is in `lib/db/seed.ts`. Plans and implementations referencing `lib/db/helpers.ts` or `lib/db/schema.ts` for DDL are targeting the wrong files.
+**Action**: When adding new tables or modifying schema in FitForge, add CREATE TABLE / ALTER TABLE statements to `lib/db/migrations.ts`. For seed data, use `lib/db/seed.ts`. Reference `lib/db/helpers.ts` only for connection management and query utilities (`query`, `queryOne`, `getDb`).
+**Tags**: fitforge, database, schema, migration, file-location, plan-accuracy, module-decomposition

@@ -545,3 +545,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: When a `useEffect` needs to reset state synchronously on dependency change (e.g., clearing results when query becomes empty), wrapping the setState calls in `queueMicrotask(() => { setState(...) })` defers them to after the current effect completes. This avoids potential React warnings about state updates during rendering and ensures cleanup functions execute before the deferred updates apply.
 **Action**: In effects that conditionally reset state based on dependency changes, use `queueMicrotask(() => { setResults([]); setError(null); })` instead of calling setState directly. This is especially important in hooks shared across components where render timing is unpredictable.
 **Tags**: react, useeffect, queuemicrotask, state-updates, concurrent-mode, hooks, performance
+
+### Barrel Re-Export for Non-Breaking Module Splits
+**Source**: BLD-322 — FTA complexity audit: bring all 102 files below score 50
+**Date**: 2026-04-18
+**Context**: `lib/db/sessions.ts` (1339 lines) and `lib/db/helpers.ts` (719 lines) needed splitting into focused modules. Hundreds of import sites across the codebase referenced these files. Changing every import path would be a massive, error-prone diff.
+**Learning**: When decomposing an oversized module into smaller focused modules, keep the original file as a barrel that re-exports everything from the new modules. The original file shrinks to just import/re-export statements while every existing import site continues to work unchanged. This lets the split happen in one PR without touching consumer files — consumers can optionally be migrated to direct imports later.
+**Action**: When splitting a large module: (1) extract functions/types into new files grouped by responsibility, (2) replace the original file's implementation with `export * from "./new-module"` re-exports, (3) verify TypeScript compilation — no import changes needed anywhere else. Only update test files that directly read source files via `fs.readFileSync`.
+**Tags**: typescript, module-decomposition, barrel-export, refactoring, backward-compatibility, imports
