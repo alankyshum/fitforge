@@ -7,10 +7,10 @@ import * as path from "path";
  * picker column spacing, and SET/PREV header baseline alignment.
  */
 
-const src = fs.readFileSync(
-  path.resolve(__dirname, "../../app/session/[id].tsx"),
-  "utf-8"
-);
+const src = [
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseGroupCard.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/SetRow.tsx"), "utf-8"),
+].join("\n");
 
 describe("workout session layout fixes (BLD-293)", () => {
   describe("Fix 1: Details button left alignment", () => {

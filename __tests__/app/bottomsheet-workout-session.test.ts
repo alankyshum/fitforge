@@ -5,10 +5,11 @@ import * as path from "path";
  * Structural tests for BLD-202: Replace Modal with BottomSheet in workout session.
  */
 
-const src = fs.readFileSync(
-  path.resolve(__dirname, "../../app/session/[id].tsx"),
-  "utf-8"
-);
+const src = [
+  fs.readFileSync(path.resolve(__dirname, "../../app/session/[id].tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/session/ExerciseDetailDrawer.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../hooks/useExerciseManagement.ts"), "utf-8"),
+].join("\n");
 
 describe("workout session exercise detail BottomSheet (BLD-202)", () => {
   it("imports BottomSheet from @gorhom/bottom-sheet", () => {
