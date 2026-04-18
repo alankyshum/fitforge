@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
+  ListRenderItemInfo,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -14,17 +15,23 @@ import {
   getMonthlyWorkoutDates,
   getWorkoutDatesForStreak,
   calculateStreaks,
-  formatMonthYear,
   dateToISO,
   type WorkoutDay,
 } from "@/lib/db/calendar";
 import CalendarGrid from "./CalendarGrid";
 import CalendarDayDetail from "./CalendarDayDetail";
 import CalendarStreaks from "./CalendarStreaks";
+import CalendarMonthHeader from "./CalendarMonthHeader";
 
 type Props = {
   weekStartDay: number;
 };
+
+type SectionItem =
+  | { type: "grid" }
+  | { type: "streaks" }
+  | { type: "detail"; dateStr: string }
+  | { type: "empty" };
 
 export default function CalendarView({ weekStartDay }: Props) {
   const colors = useThemeColors();
@@ -50,7 +57,10 @@ export default function CalendarView({ weekStartDay }: Props) {
   const isCurrentMonth =
     year === now.getFullYear() && month === now.getMonth();
 
-  const workoutDateSet = new Set(workoutDays.map((d) => d.workout_date));
+  const workoutDateSet = useMemo(
+    () => new Set(workoutDays.map((d) => d.workout_date)),
+    [workoutDays]
+  );
 
   const loadData = async (y: number, m: number) => {
     setLoading(true);
@@ -107,9 +117,75 @@ export default function CalendarView({ weekStartDay }: Props) {
     setSelectedDate(null);
   };
 
-  const handleSelectDate = (dateStr: string) => {
-    setSelectedDate(selectedDate === dateStr ? null : dateStr);
-  };
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const handleSelectDate = useCallback((dateStr: string) => {
+    setSelectedDate((prev) => (prev === dateStr ? null : dateStr));
+  }, []);
+
+  const sections = useMemo<SectionItem[]>(() => {
+    const items: SectionItem[] = [{ type: "grid" }, { type: "streaks" }];
+    if (selectedDate) {
+      items.push({ type: "detail", dateStr: selectedDate });
+    }
+    if (workoutDays.length === 0 && !selectedDate) {
+      items.push({ type: "empty" });
+    }
+    return items;
+  }, [selectedDate, workoutDays.length]);
+
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<SectionItem>) => {
+      switch (item.type) {
+        case "grid":
+          return (
+            <CalendarGrid
+              year={year}
+              month={month}
+              weekStartDay={weekStartDay}
+              workoutDates={workoutDateSet}
+              selectedDate={selectedDate}
+              todayStr={todayStr}
+              onSelectDate={handleSelectDate}
+            />
+          );
+        case "streaks":
+          return (
+            <View style={styles.streaksWrap}>
+              <CalendarStreaks
+                currentStreak={currentStreak}
+                longestStreak={longestStreak}
+              />
+            </View>
+          );
+        case "detail":
+          return <CalendarDayDetail dateStr={item.dateStr} />;
+        case "empty":
+          return (
+            <View
+              style={[styles.emptyState, { backgroundColor: colors.surface }]}
+            >
+              <Text
+                style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
+              >
+                No workouts this month. Start your first workout to see your
+                calendar fill up!
+              </Text>
+            </View>
+          );
+      }
+    },
+    [
+      year, month, weekStartDay, workoutDateSet,
+      selectedDate, todayStr, handleSelectDate,
+      currentStreak, longestStreak, colors,
+    ]
+  );
+
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const keyExtractor = useCallback(
+    (item: SectionItem) => item.type + ("dateStr" in item ? item.dateStr : ""),
+    []
+  );
 
   if (loading) {
     return (
@@ -140,108 +216,27 @@ export default function CalendarView({ weekStartDay }: Props) {
   }
 
   return (
-    <ScrollView
+    <FlatList
+      data={sections}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
       style={{ flex: 1 }}
       contentContainerStyle={[
         styles.container,
         { paddingBottom: tabBarHeight + 16 },
       ]}
-    >
-      {/* Month navigation header */}
-      <View style={styles.header}>
-        <View style={styles.navRow}>
-          <Pressable
-            onPress={goToPrevMonth}
-            accessibilityRole="button"
-            accessibilityLabel="Previous month"
-            hitSlop={12}
-            style={styles.navButton}
-          >
-            <Text style={[styles.navArrow, { color: colors.onSurface }]}>
-              {"<"}
-            </Text>
-          </Pressable>
-
-          <Text
-            variant="subtitle"
-            style={[styles.monthTitle, { color: colors.onSurface }]}
-          >
-            {formatMonthYear(year, month)}
-          </Text>
-
-          <Pressable
-            onPress={goToNextMonth}
-            disabled={isCurrentMonth}
-            accessibilityRole="button"
-            accessibilityLabel="Next month"
-            hitSlop={12}
-            style={styles.navButton}
-          >
-            <Text
-              style={[
-                styles.navArrow,
-                { color: isCurrentMonth ? colors.disabled : colors.onSurface },
-              ]}
-            >
-              {">"}
-            </Text>
-          </Pressable>
-        </View>
-
-        {!isCurrentMonth && (
-          <Pressable
-            onPress={goToToday}
-            accessibilityRole="button"
-            accessibilityLabel="Go to current month"
-            style={[styles.todayButton, { borderColor: colors.primary }]}
-          >
-            <Text
-              variant="caption"
-              style={{ color: colors.primary, fontWeight: "600" }}
-            >
-              Today
-            </Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* Calendar grid */}
-      <CalendarGrid
-        year={year}
-        month={month}
-        weekStartDay={weekStartDay}
-        workoutDates={workoutDateSet}
-        selectedDate={selectedDate}
-        todayStr={todayStr}
-        onSelectDate={handleSelectDate}
-      />
-
-      {/* Streaks */}
-      <View style={styles.streaksWrap}>
-        <CalendarStreaks
-          currentStreak={currentStreak}
-          longestStreak={longestStreak}
+      ListHeaderComponent={
+        <CalendarMonthHeader
+          year={year}
+          month={month}
+          isCurrentMonth={isCurrentMonth}
+          colors={colors}
+          onPrevMonth={goToPrevMonth}
+          onNextMonth={goToNextMonth}
+          onToday={goToToday}
         />
-      </View>
-
-      {/* Day detail */}
-      {selectedDate && <CalendarDayDetail dateStr={selectedDate} />}
-
-      {/* Empty state */}
-      {workoutDays.length === 0 && !selectedDate && (
-        <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
-          <Text
-            style={{
-              color: colors.onSurfaceVariant,
-              textAlign: "center",
-            }}
-          >
-            No workouts this month. Start your first workout to see your
-            calendar fill up!
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+      }
+    />
   );
 }
 
@@ -252,35 +247,6 @@ const styles = StyleSheet.create({
   centered: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  navRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  navButton: {
-    padding: 8,
-  },
-  navArrow: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  monthTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginHorizontal: 12,
-  },
-  todayButton: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
   },
   retryButton: {
     borderWidth: 1,

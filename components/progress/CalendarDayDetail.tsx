@@ -134,7 +134,7 @@ export default function CalendarDayDetail({ dateStr }: Props) {
       ))}
 
       {muscles.length > 0 && (
-        <View style={styles.muscleRow}>
+        <View style={[styles.muscleRow, { borderTopColor: colors.outlineVariant }]}>
           <Text
             variant="caption"
             style={{ color: colors.primary, fontWeight: "600" }}
@@ -173,6 +173,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(128,128,128,0.2)",
+    borderTopColor: undefined, // set dynamically via theme token
   },
 });
