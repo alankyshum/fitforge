@@ -152,7 +152,7 @@ describe('Program Lifecycle Acceptance', () => {
     fireEvent.press(screen.getByLabelText('Programs tab'))
 
     await waitFor(() => {
-      expect(screen.getByText(/Active/)).toBeTruthy()
+      expect(screen.getByText(/ACTIVE/)).toBeTruthy()
     })
   })
 

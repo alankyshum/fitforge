@@ -1,8 +1,7 @@
 import { type Page, type TestInfo, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
-// react-native-paper / react-native-web render icon fonts as role="img"
-// divs without alt text, and wrap FABs in nested interactive elements.
+// react-native-web may render icon fonts as role="img" divs without alt text.
 // These are upstream library issues we can't fix in app code.
 const KNOWN_LIBRARY_RULES = ["role-img-alt", "nested-interactive"];
 

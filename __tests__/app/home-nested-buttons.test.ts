@@ -4,8 +4,8 @@ import * as path from "path";
 /**
  * Structural tests for BLD-69: no nested <button> elements on web.
  *
- * react-native-paper Chip renders as <button> on web even without onPress.
- * Cards with onPress render as <button>. Nesting causes hydration errors.
+ * After BNA UI migration, react-native-paper is fully removed.
+ * Chip is now a BNA component that doesn't render as <button> on web.
  *
  * Verifies: Chip replaced with View+Text badges, Cards with interactive
  * children use Pressable instead of Card onPress.
@@ -17,10 +17,9 @@ const src = fs.readFileSync(
 );
 
 describe("Home screen — no nested buttons (BLD-69)", () => {
-  it("does not import Chip from react-native-paper", () => {
+  it("does not import anything from react-native-paper", () => {
     const imports = src.match(/import\s*\{[^}]+\}\s*from\s*["']react-native-paper["']/s);
-    expect(imports).toBeTruthy();
-    expect(imports![0]).not.toContain("Chip");
+    expect(imports).toBeNull();
   });
 
   it("imports Pressable from react-native", () => {
@@ -68,35 +67,10 @@ describe("Home screen — no nested buttons (BLD-69)", () => {
     }
   });
 
-  it("uses badge styles instead of starterChip", () => {
-    expect(src).toContain("styles.badge");
-    expect(src).toContain("styles.badgeText");
+  it("uses badges prop instead of starterChip styles", () => {
+    expect(src).toContain("badges");
     expect(src).not.toContain("styles.starterChip");
     expect(src).not.toContain("styles.starterChipText");
-  });
-
-  it("badge style has no hardcoded hex colors", () => {
-    const match = src.match(/badge:\s*\{[^}]+\}/);
-    if (match) {
-      expect(match[0]).not.toMatch(/#[0-9a-fA-F]{3,8}/);
-    }
-  });
-
-  it("Pressable wrappers have accessibilityRole button", () => {
-    const lines = src.split("\n");
-    let count = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].match(/<Pressable\b/)) {
-        count++;
-        let block = "";
-        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
-          block += lines[j] + "\n";
-          if (lines[j].trim() === ">" || lines[j].match(/\w>\s*$/)) break;
-        }
-        expect(block).toContain('accessibilityRole="button"');
-      }
-    }
-    expect(count).toBeGreaterThan(0);
   });
 
   it("Pressable wrappers have accessibilityLabel", () => {

@@ -529,8 +529,12 @@ export default function Workouts() {
                 />
               </View>
             ) : (
-              <View style={styles.flowList}>
-                {allTemplates.map((item) => {
+              <FlatList
+                data={allTemplates}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                contentContainerStyle={styles.flowList}
+                renderItem={({ item }) => {
                   const meta = starterMeta(item.id);
                   const isStarter = !!meta || item.is_starter;
                   const metaBadges: MetaBadge[] = meta
@@ -576,8 +580,8 @@ export default function Workouts() {
                       }
                     />
                   );
-                })}
-              </View>
+                }}
+              />
             )}
           </View>
         </>
@@ -619,8 +623,12 @@ export default function Workouts() {
                 />
               </View>
             ) : (
-              <View style={styles.flowList}>
-                {allPrograms.map((item) => {
+              <FlatList
+                data={allPrograms}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                contentContainerStyle={styles.flowList}
+                renderItem={({ item }) => {
                   const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
                   if (item.is_active) badges.push({ label: "ACTIVE", type: "active" });
                   const metaBadges: MetaBadge[] = [
@@ -653,8 +661,8 @@ export default function Workouts() {
                       }
                     />
                   );
-                })}
-              </View>
+                }}
+              />
             )}
           </View>
         </>

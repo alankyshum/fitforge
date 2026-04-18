@@ -112,7 +112,7 @@ export default function RootLayout() {
             <Redirect href="/onboarding/welcome" />
           )}
           {banner && (
-          <View style={{ backgroundColor: isDark ? "#332200" : "#FFF8E1", padding: 16 }}>
+          <View style={{ backgroundColor: themeColors.warningBanner, padding: 16 }}>
             <Text style={{ color: themeColors.foreground }}>
               ⚠️ Web storage unavailable — using in-memory database. Your data will not persist across page reloads.
             </Text>
@@ -125,7 +125,7 @@ export default function RootLayout() {
           </View>
           )}
           {!!error && (
-          <View style={{ backgroundColor: isDark ? "#3B1111" : "#FEE2E2", padding: 16 }}>
+          <View style={{ backgroundColor: themeColors.errorBanner, padding: 16 }}>
             <Text style={{ color: themeColors.foreground }}>
               ❌ Database error: {error}. Try reloading the app.
             </Text>

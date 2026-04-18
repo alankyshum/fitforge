@@ -1,4 +1,4 @@
-// Mock the theme constants since they use react-native-paper imports
+// Mock the theme constants for isolated unit testing
 jest.mock("../../constants/theme", () => ({
   semantic: {
     protein: "#4caf50",

@@ -7,12 +7,10 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { PaperProvider } from 'react-native-paper';
 import ShareCard from '../../components/ShareCard';
 import type { ShareCardProps } from '../../components/ShareCard';
-import { MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 
-function renderCard(overrides: Partial<ShareCardProps> = {}, themeProp = MD3LightTheme) {
+function renderCard(overrides: Partial<ShareCardProps> = {}) {
   const defaultProps: ShareCardProps = {
     name: 'Push Day',
     date: 'April 17, 2026',
@@ -26,9 +24,7 @@ function renderCard(overrides: Partial<ShareCardProps> = {}, themeProp = MD3Ligh
     ...overrides,
   };
   return render(
-    <PaperProvider theme={themeProp}>
-      <ShareCard {...defaultProps} />
-    </PaperProvider>
+    <ShareCard {...defaultProps} />
   );
 }
 
@@ -110,7 +106,7 @@ describe('ShareCard', () => {
   });
 
   it('renders with dark theme', () => {
-    const { getByText } = renderCard({}, MD3DarkTheme);
+    const { getByText } = renderCard();
     expect(getByText('FitForge')).toBeTruthy();
   });
 

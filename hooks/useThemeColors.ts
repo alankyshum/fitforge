@@ -1,10 +1,6 @@
 /**
- * Bridge hook: provides MD3-shaped color object backed by BNA UI Colors.
- * This replaces `const { colors } = useTheme()` from react-native-paper
- * with a single import swap: `const colors = useThemeColors()`.
- *
- * During migration, this preserves all existing `colors.X` references
- * while removing the react-native-paper dependency for theming.
+ * Theme colors hook: provides MD3-shaped color object backed by BNA UI Colors.
+ * Usage: `const colors = useThemeColors()` replaces the old RNP useTheme().
  */
 
 import { useColorScheme } from "@/hooks/useColorScheme";

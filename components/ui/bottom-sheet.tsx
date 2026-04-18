@@ -145,7 +145,10 @@ export function BottomSheet({
   // Shared value to hold keyboard height for use in worklets
   const keyboardHeightSV = useSharedValue(0);
 
-  const snapPointsHeights = snapPoints.map((point) => -SCREEN_HEIGHT * point);
+  const snapPointsHeights: number[] = [];
+  for (let i = 0; i < snapPoints.length; i++) {
+    snapPointsHeights.push(-SCREEN_HEIGHT * snapPoints[i]);
+  }
   const defaultHeight = snapPointsHeights[0];
 
   const [modalVisible, setModalVisible] = React.useState(false);

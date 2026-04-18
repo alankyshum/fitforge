@@ -49,6 +49,14 @@ const lightColors = {
   tabIconDefault: "#6B7280",
   tabIconSelected: "#FF6038",
 
+  // Banner backgrounds
+  warningBanner: "#FFF8E1",
+  errorBanner: "#FEE2E2",
+
+  // Shadows & overlays
+  shadow: "#000000",
+  onToast: "#FFFFFF",
+
   // iOS system colors
   blue: "#007AFF",
   green: "#10B981",
@@ -108,6 +116,14 @@ const darkColors = {
   icon: "#8B949E",
   tabIconDefault: "#8B949E",
   tabIconSelected: "#FF7A55",
+
+  // Banner backgrounds
+  warningBanner: "#332200",
+  errorBanner: "#3B1111",
+
+  // Shadows & overlays
+  shadow: "#000000",
+  onToast: "#FFFFFF",
 
   // iOS system colors (dark-adapted)
   blue: "#0A84FF",
