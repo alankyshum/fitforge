@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-18
-Total learnings: 134
+Total learnings: 137
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 63 learnings
+- [React Native + Expo](patterns/react-native.md) — 66 learnings
 - [Testing](patterns/testing.md) — 9 learnings
 
 ### Pitfalls
@@ -38,6 +38,9 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-318 | Decompose Large Components via Domain-Specific Hook Extraction | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-318 | Route Elimination via Query Params for Mode-Switching UI | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-318 | Use queueMicrotask for Deferred State Updates Inside useEffect | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-326 | Pre-Push Hooks Do Not Run tsc — File Deletions Bypass Import Validation | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-18 | BLD-314 | Library Migration Must Audit Behavioral Contracts, Not Just Visual Rendering | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-314 | Vendored UI Components Expand Reanimated Mock Surface Area | Patterns | [testing.md](patterns/testing.md) |

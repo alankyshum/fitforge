@@ -521,3 +521,27 @@ BLD-240 **Source**: Smart Exercise Substitutions (Plan Review)
 **Learning**: When migrating between UI component libraries, rendering parity is insufficient — each old component's behavioral API (callbacks, action buttons, accessibility handlers) carries implicit contracts that consuming code depends on. Automated reviews caught the visual migration but missed that destructive operations (delete daily log, delete body weight, delete photo) lost their undo capability entirely. The fix required extending the target component (adding `action` support to BNA Toast) AND restoring the undo wiring on every affected screen.
 **Action**: Before starting a component migration, create a two-column audit: (1) visual props (style, label, variant) and (2) behavioral props (onPress, action, onDismiss, accessibility roles). Map each behavioral prop to its replacement. If the target library lacks a behavioral equivalent, extend the target component FIRST before migrating screens. For destructive operations, grep for `undo|action|onDismiss` in the old component's usages to identify behavioral contracts at risk.
 **Tags**: bna-ui, react-native-paper, migration, behavioral-contract, undo, snackbar, toast, action-prop, destructive-operation
+
+### Decompose Large Components via Domain-Specific Hook Extraction
+BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance InlineFoodSearch 
+**Date**: 2026-04-18
+**Context**: InlineFoodSearch.tsx was ~750 lines combining search state, online API calls, barcode scanning, food logging, deduplication, manual entry UI, and favorites management. The component was difficult to test and modify because every concern was interleaved.
+**Learning**: Large components that manage multiple async workflows (search, barcode, logging) decompose cleanly when logic is split by domain rather than by lifecycle. `useFoodSearch` encapsulates query state, debounced API calls, barcode scanning, and result caching. `useFoodLogger` encapsulates all food-write operations (local, online, manual, favorite) with undo support. The orchestrating component dropped from ~750 to ~250 lines and became pure UI wiring. Sub-components (`FoodResultItem`, `ManualFoodEntry`) further isolate visual concerns.
+**Action**: When a component exceeds ~400 lines and manages multiple async workflows, extract domain-specific hooks (one per workflow) before extracting sub-components. Each hook should own its own state, refs, and abort controllers. The parent component should only wire hooks to UI — no business logic in render.
+**Tags**: react, hooks, component-decomposition, custom-hooks, refactoring, large-files, separation-of-concerns
+
+### Route Elimination via Query Params for Mode-Switching UI
+**Source**: BLD-318 — Consolidate food-add: delete nutrition/add.tsx, enhance InlineFoodSearch
+**Date**: 2026-04-18
+**Context**: Two entry points existed for food-add: a header barcode icon navigated to `/nutrition/add` (961-line modal page), while a FAB opened InlineFoodSearch. Users got different experiences depending on entry point.
+**Learning**: When two routes serve overlapping functionality (both offered search, barcode, manual entry, favorites), the consolidation pattern is: (1) enhance the surviving component with missing features (serving multiplier, favorite toggle), (2) use a query param (`/nutrition?scan=true`) to trigger the specific mode (barcode auto-open), (3) consume the param via `useLocalSearchParams`, (4) clear it immediately with `router.setParams({ scan: undefined })` to prevent re-triggering on focus. This eliminates a route, its Stack.Screen registration, and its test suite while keeping the UX entry point intact.
+**Action**: When consolidating duplicate UI, prefer query params over separate routes for mode switches. Use `router.setParams({ param: undefined })` to clear one-shot params after consumption. Remove the deleted route from Stack.Screen, screen registries, and E2E test suites.
+**Tags**: expo-router, query-params, route-consolidation, navigation, deduplication, uselocalsearchparams
+
+### Use queueMicrotask for Deferred State Updates Inside useEffect
+**Source**: BLD-318 — Consolidate food-add: delete nutrition/add.tsx, enhance InlineFoodSearch
+**Date**: 2026-04-18
+**Context**: The `useFoodSearch` hook resets `onlineResults` and `onlineError` synchronously inside a `useEffect` when the query changes. React warns about synchronous state updates during effect execution in certain scenarios (concurrent mode, StrictMode double-invocation).
+**Learning**: When a `useEffect` needs to reset state synchronously on dependency change (e.g., clearing results when query becomes empty), wrapping the setState calls in `queueMicrotask(() => { setState(...) })` defers them to after the current effect completes. This avoids potential React warnings about state updates during rendering and ensures cleanup functions execute before the deferred updates apply.
+**Action**: In effects that conditionally reset state based on dependency changes, use `queueMicrotask(() => { setResults([]); setError(null); })` instead of calling setState directly. This is especially important in hooks shared across components where render timing is unpredictable.
+**Tags**: react, useeffect, queuemicrotask, state-updates, concurrent-mode, hooks, performance
