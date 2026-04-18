@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-18
-Total learnings: 138
+Total learnings: 139
 
 ## How to Use This Knowledge Base
 
@@ -14,7 +14,7 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 67 learnings
+- [React Native + Expo](patterns/react-native.md) — 68 learnings
 - [Testing](patterns/testing.md) — 9 learnings
 
 ### Pitfalls
@@ -38,6 +38,7 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-332 | Extract Heavy Constant Data into Companion Data Files | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-322 | Barrel Re-Export for Non-Breaking Module Splits | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-322 | FitForge DB Migrations Live in lib/db/migrations.ts (UPDATE) | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-18 | BLD-318 | Decompose Large Components via Domain-Specific Hook Extraction | Patterns | [react-native.md](patterns/react-native.md) |
