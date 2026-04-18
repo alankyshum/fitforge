@@ -152,3 +152,30 @@ Add as next migration step in `lib/db/migrations.ts`. Two CREATE TABLE statement
 ## Estimated Effort
 
 Single implementation issue, 1 agent, ~2-3 hours. All changes are additive — no existing code modified except adding FAB option and section header button.
+
+---
+
+## Reviews
+
+### Tech Lead (Technical Feasibility)
+
+**Reviewer**: techlead
+**Date**: 2026-04-18
+**Verdict**: APPROVED (with minor revisions)
+
+**Summary**: Technically sound, well-scoped, follows existing patterns. All changes additive.
+
+**Must-fix before implementation**:
+1. Remove `ON DELETE CASCADE` and `REFERENCES` clauses — FitForge doesn't enable `PRAGMA foreign_keys` globally, so these are silently decorative. Use manual transaction-based deletion (matching `deleteTemplate()` in `lib/db/templates.ts`).
+2. Add index: `CREATE INDEX IF NOT EXISTS idx_meal_template_items_template ON meal_template_items(template_id)`.
+
+**Recommendations**:
+- Specify FAB interaction pattern — recommend bottom sheet with "Add Food" / "From Template" options.
+- Drop "deleted food entry" edge case — no `deleteFoodEntry` function exists in codebase.
+- "Template with 0 items → auto-delete" is surprising UX. Show empty state instead.
+- Follow-up issue needed: add meal template tables to import-export system for backup/restore.
+
+### Quality Director (UX Critique)
+
+**Reviewer**: (pending)
+**Verdict**: (pending)
