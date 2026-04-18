@@ -561,3 +561,11 @@ BLD-318 **Source**: Consolidate food-add: delete nutrition/add.tsx, enhance Inli
 **Learning**: Files with high complexity scores often contain large inline constant data (arrays, maps, regex collections, lookup tables) inflating both line count and cyclomatic-complexity metrics. Extracting constants into a `*-data.ts` companion file is the highest-ROI refactoring move — it requires no logic changes, no new interfaces, and no consumer-side updates. Unlike hook or component extraction, it carries near-zero regression risk.
 **Action**: When refactoring a high-complexity file, first check what percentage is constant data. If >40% of lines are constant declarations, extract to a `<module>-data.ts` companion file before attempting any logic restructuring. Import the constants back into the logic file. This single step often brings the file under threshold without further changes.
 **Tags**: refactoring, fta, complexity, constants, data-extraction, typescript, low-risk, quick-win
+
+### Snapshot Composite Entity Before Cascade Delete for Undo Restoration
+**Source**: BLD-334 — Phase 50: Meal Templates
+**Date**: 2026-04-18
+**Context**: Meal template delete uses swipe-to-delete with an undo toast. A template is a composite entity — deleting it cascade-deletes child `meal_template_items` rows. The undo callback needs to re-create both the template and its items.
+**Learning**: When implementing undo for deletion of composite entities (parent + children in separate tables), the full entity state including all children must be fetched BEFORE the delete operation. After deletion, the data is gone — the undo callback cannot query it. Store the fetched children in a closure or ref that the undo callback captures. Re-create the entity from this snapshot on undo.
+**Action**: Before calling a cascade-delete function on a composite entity, call the full-fetch function (e.g., `getEntityById` with children joined) and capture the result. Pass the captured data into the undo callback's closure. The undo callback should call the create function with the snapshotted data. This pattern applies to any entity with dependent rows: templates+items, programs+exercises, workouts+sets.
+**Tags**: undo, swipe-to-delete, cascade-delete, composite-entity, data-snapshot, transaction, toast, react-native

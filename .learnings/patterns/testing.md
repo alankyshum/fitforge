@@ -81,3 +81,11 @@
 **Learning**: Vendored (copy-paste) UI libraries like BNA UI bring their own reanimated usage that may differ from what the app previously used. Each new BNA component can introduce new reanimated exports into the render tree. Tests that mock reanimated with a minimal set of exports will break when new components are rendered — not because the test logic changed, but because the component tree now reaches reanimated paths the mock doesn't cover.
 **Action**: When migrating to BNA components that use reanimated, proactively expand the reanimated mock to include: `useSharedValue`, `useAnimatedStyle`, `withTiming`, `withSpring`, `FadeIn`, `FadeOut`, `SlideInDown`, `SlideOutDown`, and `runOnJS`. Create a shared mock file (e.g., `__mocks__/react-native-reanimated.ts`) that covers the full BNA usage set, rather than patching individual test files.
 **Tags**: testing, react-native-reanimated, mocks, bna-ui, vendored-components, jest, dashboard
+
+### moduleNameMapper Enforces __mocks__/ Directory Mock Resolution for Reanimated
+**Source**: BLD-334 — Phase 50: Meal Templates
+**Date**: 2026-04-18
+**Context**: After adding BNA BottomSheet to the meal template feature, accessibility tests broke with `TypeError: withSpring is not a function`. The `__mocks__/react-native-reanimated.js` file existed with the correct exports, but Jest's module resolver was not reliably picking it up.
+**Learning**: Jest's `__mocks__/` directory convention is a fallback mechanism — it does not guarantee the mock is used in all resolution paths. Adding an explicit `moduleNameMapper` entry in `jest.config.js` (`'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js'`) forces Jest to always resolve to the mock file, regardless of how the module is imported (direct, transitive, or via vendored components). This is more reliable than relying on `__mocks__/` directory convention alone.
+**Action**: When a shared mock file in `__mocks__/` is not being picked up by tests (especially for transitive dependencies like reanimated imported by vendored UI components), add a `moduleNameMapper` entry in `jest.config.js` pointing to the mock file. This is the authoritative enforcement mechanism — do not rely on directory convention for critical mocks.
+**Tags**: jest, modulenamemapper, react-native-reanimated, mocks, jest-config, transitive-dependency, bottom-sheet
