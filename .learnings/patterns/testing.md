@@ -73,3 +73,11 @@
 **Learning**: When code review repeatedly catches the same category of violation (hardcoded colors, undersized fonts, missing a11y attributes), encode those rules as structural source-level tests. Unlike render-based tests, these read the file as a string and assert patterns — making them fast, deterministic, and independent of runtime mocking. They shift enforcement from review time to CI time.
 **Action**: For components with design system requirements, add a test that reads the source via `fs.readFileSync`, then asserts: (1) theme tokens are used (`toContain("theme.colors.X")`), (2) hardcoded values are absent (`not.toContain`), (3) numeric style values meet minimums via regex extraction. Group these as a `describe("design system compliance")` block in the component's test file.
 **Tags**: testing, structural-tests, design-system, theme-compliance, accessibility, code-review-automation, source-analysis, jest
+
+### Vendored UI Components Expand Reanimated Mock Surface Area
+**Source**: BLD-314 — P4b: Migrate screens batch 2
+**Date**: 2026-04-18
+**Context**: After migrating to BNA UI, 26 dashboard tests broke. BNA Button uses `react-native-reanimated` internally (`useSharedValue`, `useAnimatedStyle`, `withTiming`, `FadeIn`, `SlideInDown`). The existing reanimated mock only provided `FadeInDown`, `Easing`, and `createAnimatedComponent`.
+**Learning**: Vendored (copy-paste) UI libraries like BNA UI bring their own reanimated usage that may differ from what the app previously used. Each new BNA component can introduce new reanimated exports into the render tree. Tests that mock reanimated with a minimal set of exports will break when new components are rendered — not because the test logic changed, but because the component tree now reaches reanimated paths the mock doesn't cover.
+**Action**: When migrating to BNA components that use reanimated, proactively expand the reanimated mock to include: `useSharedValue`, `useAnimatedStyle`, `withTiming`, `withSpring`, `FadeIn`, `FadeOut`, `SlideInDown`, `SlideOutDown`, and `runOnJS`. Create a shared mock file (e.g., `__mocks__/react-native-reanimated.ts`) that covers the full BNA usage set, rather than patching individual test files.
+**Tags**: testing, react-native-reanimated, mocks, bna-ui, vendored-components, jest, dashboard

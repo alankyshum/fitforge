@@ -1,7 +1,7 @@
 # FitForge Knowledge Base
 
 Last updated: 2026-04-18
-Total learnings: 131
+Total learnings: 133
 
 ## How to Use This Knowledge Base
 
@@ -14,8 +14,8 @@ Before starting work on a task, search this index for relevant learnings:
 ## Categories
 
 ### Patterns
-- [React Native + Expo](patterns/react-native.md) — 62 learnings
-- [Testing](patterns/testing.md) — 8 learnings
+- [React Native + Expo](patterns/react-native.md) — 63 learnings
+- [Testing](patterns/testing.md) — 9 learnings
 
 ### Pitfalls
 - [Dependencies](pitfalls/dependencies.md) — 8 learnings
@@ -38,6 +38,8 @@ Before starting work on a task, search this index for relevant learnings:
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-04-18 | BLD-314 | Library Migration Must Audit Behavioral Contracts, Not Just Visual Rendering | Patterns | [react-native.md](patterns/react-native.md) |
+| 2026-04-18 | BLD-314 | Vendored UI Components Expand Reanimated Mock Surface Area | Patterns | [testing.md](patterns/testing.md) |
 | 2026-04-18 | BLD-313 | BNA UI Card style Prop Requires StyleSheet.flatten — No Array Support | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-313 | BNA UI Component Gaps — DataTable, List.Item, Card.onPress Require Manual Replacements | Patterns | [react-native.md](patterns/react-native.md) |
 | 2026-04-18 | BLD-307 | Serializing Concurrent Countdown-Undo Actions to Prevent UI/DB Desync | Patterns | [react-native.md](patterns/react-native.md) |
