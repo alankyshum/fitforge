@@ -372,7 +372,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
-    // @ts-expect-error -- web-only boxShadow for cross-platform shadow
     boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
   },
   blurClip: {
