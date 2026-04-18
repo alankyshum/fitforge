@@ -1,10 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const floatingTabBarSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../components/FloatingTabBar.tsx"),
-  "utf-8"
-);
+const floatingTabBarSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../components/FloatingTabBar.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/floating-tab-bar/CenterButton.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/floating-tab-bar/TabButton.tsx"), "utf-8"),
+].join("\n");
 
 const layoutSrc = fs.readFileSync(
   path.resolve(__dirname, "../../app/(tabs)/_layout.tsx"),

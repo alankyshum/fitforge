@@ -179,7 +179,10 @@ describe("Health Connect session sync integration", () => {
 describe("Health Connect startup reconciliation", () => {
   it("_layout.tsx calls reconcileHealthConnectQueue on Android startup", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/_layout.tsx", "utf8");
+    const source = [
+      fs.readFileSync("app/_layout.tsx", "utf8"),
+      fs.readFileSync("hooks/useAppInit.ts", "utf8"),
+    ].join("\n");
     expect(source).toContain("reconcileHealthConnectQueue");
     expect(source).toContain('Platform.OS === "android"');
     // Must use dynamic import
