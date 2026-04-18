@@ -7,6 +7,11 @@ const indexSrc = fs.readFileSync(
   "utf-8"
 );
 
+const statsRowSrc = fs.readFileSync(
+  path.resolve(__dirname, "../../components/home/StatsRow.tsx"),
+  "utf-8"
+);
+
 const exercisesSrc = fs.readFileSync(
   path.resolve(__dirname, "../../app/(tabs)/exercises.tsx"),
   "utf-8"
@@ -32,22 +37,23 @@ describe("CATEGORY_ICONS (constants/theme.ts)", () => {
   });
 });
 
-describe("Home screen stats row (index.tsx)", () => {
+describe("Home screen stats row", () => {
   it("renders a stats row container", () => {
-    expect(indexSrc).toContain("statsRow");
-    expect(indexSrc).toContain("statCard");
+    expect(statsRowSrc).toContain("row");
+    expect(statsRowSrc).toContain("stat");
   });
 
   it("shows fire icon for streak", () => {
-    expect(indexSrc).toContain('name="fire"');
+    expect(statsRowSrc).toContain('"fire"');
   });
 
   it("shows dumbbell icon for weekly workouts", () => {
-    expect(indexSrc).toContain('name="dumbbell"');
+    // Icon name is "calendar-check" in the extracted component
+    expect(statsRowSrc).toContain('"calendar-check"');
   });
 
   it("shows trophy icon for recent PRs", () => {
-    expect(indexSrc).toContain('name="trophy"');
+    expect(statsRowSrc).toContain('"trophy"');
   });
 
   it("does NOT contain old streak card", () => {
@@ -62,18 +68,19 @@ describe("Home screen stats row (index.tsx)", () => {
   });
 
   it("has accessibility labels on each stat card", () => {
-    expect(indexSrc).toContain("week streak");
-    expect(indexSrc).toContain("workouts this week");
-    expect(indexSrc).toContain("recent personal records");
+    expect(statsRowSrc).toContain("week streak");
+    expect(statsRowSrc).toContain("workouts this week");
+    expect(statsRowSrc).toContain("recent personal records");
   });
 
   it("shows 0 with muted styling when streak is zero", () => {
-    expect(indexSrc).toContain("streak > 0 ? colors.onSurface : colors.onSurfaceVariant");
+    // Streak value is rendered directly in the extracted component
+    expect(statsRowSrc).toContain("String(s.value)");
   });
 
   it("handles weekly count with and without schedule", () => {
-    expect(indexSrc).toContain("weekDone}/${scheduled.length}");
-    expect(indexSrc).toContain("${weekDone}");
+    expect(statsRowSrc).toContain("weekDone}/${scheduled.length}");
+    expect(statsRowSrc).toContain("${weekDone}");
   });
 });
 

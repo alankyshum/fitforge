@@ -110,41 +110,39 @@ describe("Health Connect DB functions", () => {
 });
 
 describe("Health Connect settings integration", () => {
-  it("settings.tsx imports AccessibilityInfo for a11y announcements", async () => {
-    // Structural test: verify AccessibilityInfo is imported
+  it("IntegrationsCard imports AccessibilityInfo for a11y announcements", async () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/(tabs)/settings.tsx", "utf8");
+    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
     expect(source).toContain("AccessibilityInfo");
     expect(source).toContain('accessibilityRole="switch"');
     expect(source).toContain('accessibilityLabel="Sync workouts to Health Connect"');
   });
 
-  it("settings.tsx uses dynamic import for health-connect module", () => {
+  it("IntegrationsCard uses dynamic import for health-connect module", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/(tabs)/settings.tsx", "utf8");
-    // All HC imports must be dynamic (no static import of health-connect)
+    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
     expect(source).not.toMatch(/^import.*from.*["'].*health-connect["']/m);
     expect(source).toContain('await import("../../lib/health-connect")');
   });
 
-  it("settings.tsx hides HC UI on non-Android platforms", () => {
+  it("IntegrationsCard hides HC UI on non-Android platforms", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/(tabs)/settings.tsx", "utf8");
+    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
     expect(source).toContain('Platform.OS === "android"');
     expect(source).toContain('hcSdkStatus !== "unavailable"');
   });
 
-  it("settings.tsx shows install/update button for needs_install/needs_update", () => {
+  it("IntegrationsCard shows install/update button for needs_install/needs_update", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/(tabs)/settings.tsx", "utf8");
+    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
     expect(source).toContain("openHealthConnectPlayStore");
     expect(source).toContain('"Install Health Connect from Play Store"');
     expect(source).toContain('"Update Health Connect"');
   });
 
-  it("settings.tsx has ≥48dp touch target for install/update button", () => {
+  it("IntegrationsCard has ≥48dp touch target for install/update button", () => {
     const fs = require("fs");
-    const source = fs.readFileSync("app/(tabs)/settings.tsx", "utf8");
+    const source = fs.readFileSync("components/settings/IntegrationsCard.tsx", "utf8");
     expect(source).toContain("minHeight: 48");
   });
 });
