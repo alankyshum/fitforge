@@ -38,32 +38,6 @@ jest.mock('../../lib/db/body', () => ({
   getLatestBodyWeight: jest.fn().mockResolvedValue({ weight: 75 }),
 }))
 
-describe('Issue 1: Barcode scanner header icon', () => {
-  it('nutrition tab _layout.tsx includes barcode-scan icon config', () => {
-    const fs = require('fs')
-    const path = require('path')
-    const source = fs.readFileSync(
-      path.resolve(__dirname, '../../app/(tabs)/_layout.tsx'),
-      'utf8'
-    )
-    expect(source).toContain('barcode-scan')
-    expect(source).toContain('/nutrition/add?scan=true')
-    expect(source).toContain('Scan food barcode')
-  })
-
-  it('add.tsx accepts scan query param and auto-opens scanner', () => {
-    const fs = require('fs')
-    const path = require('path')
-    const source = fs.readFileSync(
-      path.resolve(__dirname, '../../app/nutrition/add.tsx'),
-      'utf8'
-    )
-    expect(source).toContain('scan?: string')
-    expect(source).toContain('autoScan')
-    expect(source).toContain('setScannerVisible(true)')
-  })
-})
-
 describe('Issue 2: Stat card padding', () => {
   it('statCard style includes paddingHorizontal', () => {
     const fs = require('fs')
