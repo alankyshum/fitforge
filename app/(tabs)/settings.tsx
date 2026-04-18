@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { AccessibilityInfo, Linking, Platform, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
-import { Button, Card, SegmentedButtons, Snackbar, Text, Divider } from "react-native-paper";
+import { Text } from "@/components/ui/text";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/bna-toast";
+import { Download, Upload, FileUp, FileOutput, Apple, Scale, User, Bug, Lightbulb, List, Activity, HeartPulse } from "lucide-react-native";
 import { useLayout } from "../../lib/layout";
 import { useFloatingTabBarHeight } from "../../components/FloatingTabBar";
 import FlowContainer, { flowCardStyle } from "../../components/ui/FlowContainer";
@@ -66,8 +72,8 @@ export default function Settings() {
   const router = useRouter();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [snack, setSnack] = useState("");
   const [count, setCount] = useState(0);
   const [range, setRange] = useState("30");
   const [counts, setCounts] = useState({ sessions: 0, entries: 0 });
@@ -103,7 +109,7 @@ export default function Settings() {
       }).catch(() => {
         setSoundEnabled(true);
         setAudioEnabled(true);
-        setSnack("Could not load sound setting");
+        toast.error("Could not load sound setting");
       });
       Promise.all([
         getAppSetting("reminders_enabled"),
@@ -137,7 +143,7 @@ export default function Settings() {
                 if (!hasPermission) {
                   await setAppSetting("health_connect_enabled", "false");
                   setHcEnabled(false);
-                  setSnack("Health Connect permission was revoked");
+                  toast.error("Health Connect permission was revoked");
                   AccessibilityInfo.announceForAccessibility("Health Connect permission was revoked");
                 } else {
                   setHcEnabled(true);
@@ -151,7 +157,7 @@ export default function Settings() {
           }
         })();
       }
-    }, [])
+    }, [toast])
   );
 
   useEffect(() => {
@@ -162,7 +168,7 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getWorkoutCSVData(sinceForRange(range));
-      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
+      if (rows.length === 0) { toast.info("No data to export"); setLoading(false); return; }
       const csv = workoutCSV(rows);
       const file = new File(Paths.cache, `fitforge-workouts-${dateStamp()}.csv`);
       await file.write(csv);
@@ -171,7 +177,7 @@ export default function Settings() {
         dialogTitle: "Export Workouts CSV",
       });
     } catch {
-      setSnack("Export failed");
+      toast.error("Export failed");
     } finally {
       setLoading(false);
     }
@@ -181,7 +187,7 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getNutritionCSVData(sinceForRange(range));
-      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
+      if (rows.length === 0) { toast.info("No data to export"); setLoading(false); return; }
       const csv = nutritionCSV(rows);
       const file = new File(Paths.cache, `fitforge-nutrition-${dateStamp()}.csv`);
       await file.write(csv);
@@ -190,7 +196,7 @@ export default function Settings() {
         dialogTitle: "Export Nutrition CSV",
       });
     } catch {
-      setSnack("Export failed");
+      toast.error("Export failed");
     } finally {
       setLoading(false);
     }
@@ -200,7 +206,7 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getBodyWeightCSVData(sinceForRange(range));
-      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
+      if (rows.length === 0) { toast.info("No data to export"); setLoading(false); return; }
       const csv = bodyWeightCSV(rows);
       const file = new File(Paths.cache, `fitforge-body-weight-${dateStamp()}.csv`);
       await file.write(csv);
@@ -209,7 +215,7 @@ export default function Settings() {
         dialogTitle: "Export Body Weight CSV",
       });
     } catch {
-      setSnack("Export failed");
+      toast.error("Export failed");
     } finally {
       setLoading(false);
     }
@@ -219,7 +225,7 @@ export default function Settings() {
     setLoading(true);
     try {
       const rows = await getBodyMeasurementsCSVData(sinceForRange(range));
-      if (rows.length === 0) { setSnack("No data to export"); setLoading(false); return; }
+      if (rows.length === 0) { toast.info("No data to export"); setLoading(false); return; }
       const csv = bodyMeasurementsCSV(rows);
       const file = new File(Paths.cache, `fitforge-body-measurements-${dateStamp()}.csv`);
       await file.write(csv);
@@ -228,7 +234,7 @@ export default function Settings() {
         dialogTitle: "Export Body Measurements CSV",
       });
     } catch {
-      setSnack("Export failed");
+      toast.error("Export failed");
     } finally {
       setLoading(false);
     }
@@ -259,7 +265,7 @@ export default function Settings() {
 
                 const totalRecords = Object.values(data.counts).reduce((a, b) => a + b, 0);
                 if (totalRecords === 0) {
-                  setSnack("No data to export");
+                  toast.info("No data to export");
                   setLoading(false);
                   setExportProgress(null);
                   return;
@@ -272,9 +278,9 @@ export default function Settings() {
                   mimeType: "application/json",
                   dialogTitle: "Export FitForge Data",
                 });
-                setSnack("Data exported successfully");
+                toast.success("Data exported successfully");
               } catch {
-                setSnack("Export failed");
+                toast.error("Export failed");
               } finally {
                 setLoading(false);
                 setExportProgress(null);
@@ -284,7 +290,7 @@ export default function Settings() {
         ]
       );
     } catch {
-      setSnack("Could not estimate export size");
+      toast.error("Could not estimate export size");
     }
   };
 
@@ -340,7 +346,7 @@ export default function Settings() {
         params: { backupJson: raw },
       });
     } catch {
-      setSnack("Import failed");
+      toast.error("Import failed");
       setLoading(false);
     }
   };
@@ -350,23 +356,23 @@ export default function Settings() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 }]}
     >
-      <Text variant="headlineMedium" style={{ color: colors.onBackground, marginBottom: 24 }}>
+      <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 24 }}>
         Settings
       </Text>
 
       <FlowContainer gap={16}>
-      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+      <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Units
           </Text>
 
           <View style={styles.row}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
               Weight
             </Text>
             <View style={styles.unitToggle}>
-              <SegmentedButtons
+              <SegmentedControl
                 value={weightUnit}
                 onValueChange={async (val) => {
                   const u = val as "kg" | "lb";
@@ -374,24 +380,23 @@ export default function Settings() {
                   try {
                     await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
                   } catch {
-                    setSnack("Could not save unit");
+                    toast.error("Could not save unit");
                   }
                 }}
                 buttons={[
                   { value: "kg", label: "kg" },
                   { value: "lb", label: "lb" },
                 ]}
-                density="medium"
               />
             </View>
           </View>
 
           <View style={[styles.row, { marginTop: 12 }]}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
               Measurements
             </Text>
             <View style={styles.unitToggle}>
-              <SegmentedButtons
+              <SegmentedControl
                 value={measureUnit}
                 onValueChange={async (val) => {
                   const m = val as "cm" | "in";
@@ -399,30 +404,29 @@ export default function Settings() {
                   try {
                     await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
                   } catch {
-                    setSnack("Could not save unit");
+                    toast.error("Could not save unit");
                   }
               }}
                 buttons={[
                   { value: "cm", label: "cm" },
                   { value: "in", label: "in" },
                 ]}
-                density="medium"
               />
             </View>
           </View>
-        </Card.Content>
+        </CardContent>
       </Card>
 
       <BodyProfileCard />
 
-      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+      <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Preferences
           </Text>
 
           <View style={styles.row}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
               Workout Reminders
             </Text>
             <Switch
@@ -430,14 +434,14 @@ export default function Settings() {
               onValueChange={async (val) => {
                 if (val) {
                   if (scheduleCount === 0) {
-                    setSnack("Set up a weekly workout schedule in your active program first");
+                    toast.info("Set up a weekly workout schedule in your active program first");
                     return;
                   }
                   try {
                     const granted = await requestPermission();
                     if (!granted) {
                       setPermDenied(true);
-                      setSnack("Notification permission denied. Tap 'Open Settings' below to enable.");
+                      toast.error("Notification permission denied. Tap 'Open Settings' below to enable.");
                       return;
                     }
                     setPermDenied(false);
@@ -445,9 +449,9 @@ export default function Settings() {
                     const count = await scheduleReminders({ hour: h, minute: m });
                     await setAppSetting("reminders_enabled", "true");
                     setReminders(true);
-                    setSnack(`Reminders set for ${count} day${count !== 1 ? "s" : ""}`);
+                    toast.success(`Reminders set for ${count} day${count !== 1 ? "s" : ""}`);
                   } catch {
-                    setSnack("Couldn't set reminders. Try again later.");
+                    toast.error("Couldn't set reminders. Try again later.");
                   }
                 } else {
                   try {
@@ -455,7 +459,7 @@ export default function Settings() {
                     await setAppSetting("reminders_enabled", "false");
                     setReminders(false);
                   } catch {
-                    setSnack("Couldn't disable reminders. Try again later.");
+                    toast.error("Couldn't disable reminders. Try again later.");
                   }
                 }
               }}
@@ -467,11 +471,11 @@ export default function Settings() {
 
           {reminders && (
             <>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
                 {`You'll be reminded at ${reminderTime} on days with scheduled workouts`}
               </Text>
               <View style={styles.row}>
-                <Text variant="bodyMedium" style={{ color: colors.onSurface, marginRight: 12 }}>
+                <Text variant="body" style={{ color: colors.onSurface, marginRight: 12 }}>
                   Time
                 </Text>
                 <TextInput
@@ -481,14 +485,14 @@ export default function Settings() {
                     const match = reminderTime.match(/^(\d{1,2}):(\d{2})$/);
                     if (!match) {
                       setReminderTime("08:00");
-                      setSnack("Invalid time format. Use HH:MM");
+                      toast.error("Invalid time format. Use HH:MM");
                       return;
                     }
                     const h = Number(match[1]);
                     const m = Number(match[2]);
                     if (h > 23 || m > 59) {
                       setReminderTime("08:00");
-                      setSnack("Invalid time. Hours 0-23, minutes 0-59");
+                      toast.error("Invalid time. Hours 0-23, minutes 0-59");
                       return;
                     }
                     const padded = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -497,7 +501,7 @@ export default function Settings() {
                       await setAppSetting("reminder_time", padded);
                       await scheduleReminders({ hour: h, minute: m });
                     } catch {
-                      setSnack("Couldn't set reminders. Try again later.");
+                      toast.error("Couldn't set reminders. Try again later.");
                     }
                   }}
                   keyboardType="numbers-and-punctuation"
@@ -518,20 +522,19 @@ export default function Settings() {
           )}
 
           {!reminders && scheduleCount === 0 && (
-            <Text variant="bodySmall" style={{ color: colors.error, marginTop: 4 }}>
+            <Text variant="caption" style={{ color: colors.error, marginTop: 4 }}>
               No workout days scheduled. Set a weekly schedule on your active program to enable reminders.
             </Text>
           )}
 
           {permDenied && !reminders && (
             <View style={{ marginTop: 8 }}>
-              <Text variant="bodySmall" style={{ color: colors.error, marginBottom: 8 }}>
+              <Text variant="caption" style={{ color: colors.error, marginBottom: 8 }}>
                 Notification permission is denied. Enable it in your device settings to use reminders.
               </Text>
               <Button
-                mode="outlined"
+                variant="outline"
                 onPress={() => Linking.openSettings()}
-                compact
                 style={{ alignSelf: "flex-start" }}
                 accessibilityLabel="Open device notification settings"
               >
@@ -541,7 +544,7 @@ export default function Settings() {
           )}
 
           <View style={[styles.row, { marginTop: 16 }]}>
-            <Text variant="bodyLarge" style={{ color: colors.onSurface, flex: 1 }}>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
               Timer Sound
             </Text>
             <Switch
@@ -552,7 +555,7 @@ export default function Settings() {
                 try {
                   await setAppSetting("timer_sound_enabled", val ? "true" : "false");
                 } catch {
-                  setSnack("Failed to save timer sound setting");
+                  toast.error("Failed to save timer sound setting");
                 }
               }}
               accessibilityLabel="Timer Sound"
@@ -560,17 +563,17 @@ export default function Settings() {
               accessibilityHint="Enable or disable audio cues for workout timers"
             />
           </View>
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             Audio cues for interval timers and rest countdowns.
           </Text>
-        </Card.Content>
+        </CardContent>
       </Card>
 
       {Platform.OS !== "web" && (
         <ErrorBoundary>
-        <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+          <CardContent>
+            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
               Integrations
             </Text>
 
@@ -578,69 +581,67 @@ export default function Settings() {
               <View>
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
+                    <Text variant="body" style={{ color: colors.onSurface }}>
                       Strava
                     </Text>
-                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                       Connected as {stravaAthlete}
                     </Text>
                   </View>
                   <Button
-                    mode="outlined"
+                    variant="outline"
                     onPress={async () => {
                       setStravaLoading(true);
                       try {
                         await disconnectStrava();
                         setStravaAthlete(null);
-                        setSnack("Strava disconnected");
+                        toast.success("Strava disconnected");
                       } catch {
-                        setSnack("Failed to disconnect Strava");
+                        toast.error("Failed to disconnect Strava");
                       } finally {
                         setStravaLoading(false);
                       }
                     }}
                     loading={stravaLoading}
                     disabled={stravaLoading}
-                    contentStyle={styles.exportBtnContent}
                     accessibilityRole="button"
                     accessibilityLabel={`Disconnect Strava account (${stravaAthlete})`}
                   >
                     Disconnect
                   </Button>
                 </View>
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                   Completed workouts are automatically uploaded to Strava.
                 </Text>
               </View>
             ) : (
               <View>
                 <Button
-                  mode="contained"
-                  icon="run"
+                  variant="default"
+                  icon={Activity}
                   onPress={async () => {
                     setStravaLoading(true);
                     try {
                       const result = await connectStrava();
                       if (result) {
                         setStravaAthlete(result.athleteName);
-                        setSnack("Connected to Strava!");
+                        toast.success("Connected to Strava!");
                       }
                     } catch (err) {
                       const msg = err instanceof Error ? err.message : "Connection failed";
-                      setSnack(msg);
+                      toast.error(msg);
                     } finally {
                       setStravaLoading(false);
                     }
                   }}
                   loading={stravaLoading}
                   disabled={stravaLoading}
-                  contentStyle={styles.exportBtnContent}
                   accessibilityRole="button"
                   accessibilityLabel="Connect your Strava account"
                 >
                   Connect Strava
                 </Button>
-                <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
                   Automatically upload completed workouts to your Strava account.
                 </Text>
               </View>
@@ -649,15 +650,15 @@ export default function Settings() {
             {/* Health Connect toggle (Android only) */}
             {Platform.OS === "android" && hcSdkStatus !== "unavailable" && (
               <View style={{ marginTop: 16 }}>
-                <Divider style={{ marginBottom: 16 }} />
+                <Separator style={{ marginBottom: 16 }} />
                 {hcSdkStatus === "available" ? (
                   <View>
                     <View style={styles.row}>
                       <View style={{ flex: 1 }}>
-                        <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
+                        <Text variant="body" style={{ color: colors.onSurface }}>
                           Health Connect
                         </Text>
-                        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                           {hcEnabled ? "Enabled" : "Disabled"}
                         </Text>
                       </View>
@@ -676,17 +677,17 @@ export default function Settings() {
                               if (granted) {
                                 await setAppSetting("health_connect_enabled", "true");
                                 setHcEnabled(true);
-                                setSnack("Health Connect enabled");
+                                toast.success("Health Connect enabled");
                               } else {
                                 setHcEnabled(false);
-                                setSnack("Health Connect permission required");
+                                toast.error("Health Connect permission required");
                                 AccessibilityInfo.announceForAccessibility(
                                   "Health Connect permission required"
                                 );
                               }
                             } catch {
                               setHcEnabled(false);
-                              setSnack("Failed to enable Health Connect");
+                              toast.error("Failed to enable Health Connect");
                             } finally {
                               setHcLoading(false);
                             }
@@ -697,9 +698,9 @@ export default function Settings() {
                                 await import("../../lib/health-connect");
                               await disableHealthConnect();
                               setHcEnabled(false);
-                              setSnack("Health Connect disabled");
+                              toast.success("Health Connect disabled");
                             } catch {
-                              setSnack("Failed to disable Health Connect");
+                              toast.error("Failed to disable Health Connect");
                             } finally {
                               setHcLoading(false);
                             }
@@ -707,7 +708,7 @@ export default function Settings() {
                         }}
                       />
                     </View>
-                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                       Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.
                     </Text>
                   </View>
@@ -715,22 +716,22 @@ export default function Settings() {
                   <View>
                     <View style={styles.row}>
                       <View style={{ flex: 1 }}>
-                        <Text variant="bodyLarge" style={{ color: colors.onSurface }}>
+                        <Text variant="body" style={{ color: colors.onSurface }}>
                           Health Connect
                         </Text>
-                        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                           {hcSdkStatus === "needs_update" ? "Update required" : "Not installed"}
                         </Text>
                       </View>
                       <Button
-                        mode="outlined"
-                        icon="heart-pulse"
+                        variant="outline"
+                        icon={HeartPulse}
+                        style={{ minHeight: 48 }}
                         onPress={() => {
                           import("../../lib/health-connect").then(({ openHealthConnectPlayStore }) =>
                             openHealthConnectPlayStore()
                           );
                         }}
-                        contentStyle={{ minHeight: 48 }}
                         accessibilityRole="button"
                         accessibilityLabel={
                           hcSdkStatus === "needs_update"
@@ -741,32 +742,31 @@ export default function Settings() {
                         {hcSdkStatus === "needs_update" ? "Update" : "Install"}
                       </Button>
                     </View>
-                    <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+                    <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
                       Completed workouts appear in Google Fit, Samsung Health, and other Health Connect apps.
                     </Text>
                   </View>
                 )}
               </View>
             )}
-          </Card.Content>
+          </CardContent>
         </Card>
         </ErrorBoundary>
       )}
 
-      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+      <Card style={StyleSheet.flatten([styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Data Management
           </Text>
 
           <View style={styles.buttonFlow}>
             <Button
-              mode="contained"
-              icon="export"
+              variant="default"
+              icon={Download}
               onPress={handleExport}
               loading={loading}
               disabled={loading}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export all data as JSON"
               accessibilityRole="button"
             >
@@ -774,12 +774,11 @@ export default function Settings() {
             </Button>
 
             <Button
-              mode="outlined"
-              icon="import"
+              variant="outline"
+              icon={Upload}
               onPress={handleImport}
               loading={loading}
               disabled={loading}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Import data"
               accessibilityRole="button"
             >
@@ -789,7 +788,7 @@ export default function Settings() {
 
           {exportProgress && (
             <Text
-              variant="bodySmall"
+              variant="caption"
               style={{ color: colors.primary, marginTop: 8 }}
               accessibilityLiveRegion="polite"
               accessibilityLabel={exportProgress}
@@ -798,36 +797,35 @@ export default function Settings() {
             </Text>
           )}
 
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}>
             Export your complete FitForge data as a JSON backup file, or restore from a previous backup. Duplicates are skipped.
           </Text>
 
-          <Divider style={{ marginBottom: 16 }} />
+          <Separator style={{ marginBottom: 16 }} />
 
           <Button
-            mode="outlined"
-            icon="file-import-outline"
+            variant="outline"
+            icon={FileUp}
             onPress={() => router.push("/settings/import-strong")}
-            contentStyle={styles.exportBtnContent}
             accessibilityLabel="Import workout data from Strong CSV export"
             accessibilityRole="button"
           >
             Import from Strong
           </Button>
 
-          <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
             Import workout history from the Strong app using a CSV export file.
           </Text>
-        </Card.Content>
+        </CardContent>
       </Card>
 
-      <Card style={[styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+      <Card style={StyleSheet.flatten([styles.flowCard, styles.wideCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
             CSV Export
           </Text>
 
-          <SegmentedButtons
+          <SegmentedControl
             value={range}
             onValueChange={setRange}
             buttons={RANGE_BUTTONS}
@@ -835,7 +833,7 @@ export default function Settings() {
           />
 
           <Text
-            variant="bodySmall"
+            variant="caption"
             style={{ color: colors.onSurfaceVariant, marginBottom: 12, marginTop: 8 }}
             accessibilityLabel={`${counts.sessions} workout sessions, ${counts.entries} nutrition entries`}
           >
@@ -844,117 +842,102 @@ export default function Settings() {
 
           <View style={styles.buttonFlow}>
             <Button
-              mode="outlined"
-              icon="file-export-outline"
+              variant="outline"
+              icon={FileOutput}
               onPress={handleWorkoutCSV}
               loading={loading}
               disabled={loading}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export workouts as CSV"
             >
               Workouts
             </Button>
 
             <Button
-              mode="outlined"
-              icon="food-apple-outline"
+              variant="outline"
+              icon={Apple}
               onPress={handleNutritionCSV}
               loading={loading}
               disabled={loading}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export nutrition as CSV"
             >
               Nutrition
             </Button>
 
             <Button
-              mode="outlined"
-              icon="scale-bathroom"
+              variant="outline"
+              icon={Scale}
               onPress={handleBodyWeightCSV}
               loading={loading}
               disabled={loading}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export body weight as CSV"
             >
               Body Weight
             </Button>
 
             <Button
-              mode="outlined"
-              icon="human"
+              variant="outline"
+              icon={User}
               onPress={handleBodyMeasurementsCSV}
               loading={loading}
               disabled={loading}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Export body measurements as CSV"
             >
               Measurements
             </Button>
           </View>
-        </Card.Content>
+        </CardContent>
       </Card>
 
-      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 16 }}>
+      <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 16 }}>
             Feedback &amp; Reports
           </Text>
 
           <View style={styles.buttonFlow}>
             <Button
-              mode="contained"
-              icon="bug-outline"
+              variant="default"
+              icon={Bug}
               onPress={() => router.push({ pathname: "/feedback", params: { type: "bug" } })}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Report a bug"
             >
               Report Bug
             </Button>
 
             <Button
-              mode="outlined"
-              icon="lightbulb-outline"
+              variant="outline"
+              icon={Lightbulb}
               onPress={() => router.push({ pathname: "/feedback", params: { type: "feature" } })}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel="Request a feature"
             >
               Feature Request
             </Button>
 
             <Button
-              mode="outlined"
-              icon="format-list-bulleted"
+              variant="outline"
+              icon={List}
               onPress={() => router.push("/errors")}
-              contentStyle={styles.exportBtnContent}
               accessibilityLabel={`View error log, ${count} ${count === 1 ? "error" : "errors"}`}
             >
               Errors ({count})
             </Button>
 
           </View>
-        </Card.Content>
+        </CardContent>
       </Card>
 
-      <Card style={[styles.flowCard, { backgroundColor: colors.surface }]}>
-        <Card.Content>
-          <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8 }}>
+      <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <CardContent>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
             About
           </Text>
-          <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
             FitForge v1.0.0{"\n"}Free & open-source workout tracker.
           </Text>
-        </Card.Content>
+        </CardContent>
       </Card>
       </FlowContainer>
 
-      <Snackbar
-        visible={!!snack}
-        onDismiss={() => setSnack("")}
-        duration={3000}
-        action={{ label: "OK", onPress: () => setSnack("") }}
-      >
-        {snack}
-      </Snackbar>
     </ScrollView>
   );
 }
@@ -992,9 +975,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  exportBtnContent: {
-    paddingHorizontal: 8,
   },
   timeInput: {
     borderWidth: 1,
