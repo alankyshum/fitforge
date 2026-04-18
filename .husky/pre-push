@@ -1,0 +1,93 @@
+#!/bin/sh
+
+# FTA (File Complexity Analysis) pre-push gate
+# Blocks push if any changed .ts/.tsx file exceeds the FTA score cap.
+# FTA Score: < 50 = OK, 50-60 = Could be better, > 60 = Needs improvement
+FTA_SCORE_CAP=50
+
+# Compare HEAD against the remote tracking branch
+remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")
+
+# Get changed .ts/.tsx files (exclude tests, mocks, config files)
+changed_files=$(git diff --name-only --diff-filter=ACMR "$remote_branch"...HEAD -- '*.ts' '*.tsx' \
+  | grep -v '__tests__/' \
+  | grep -v '__mocks__/' \
+  | grep -v '\.test\.' \
+  | grep -v '\.spec\.' \
+  | grep -v 'jest\.' \
+  | grep -v 'babel\.config' \
+  | grep -v 'metro\.config' \
+  | grep -v 'app\.config' \
+  || true)
+
+if [ -z "$changed_files" ]; then
+  exit 0
+fi
+
+# Create temp dir for analysis (avoids shell issues with parentheses in paths)
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+# Copy files with safe names, write mapping file
+mapfile="$tmpdir/_filemap.txt"
+: > "$mapfile"
+for file in $changed_files; do
+  if [ ! -f "$file" ]; then
+    continue
+  fi
+  safe_name=$(echo "$file" | sed 's/[^a-zA-Z0-9._-]/__/g')
+  cp "$file" "$tmpdir/$safe_name"
+  echo "${safe_name}=${file}" >> "$mapfile"
+done
+
+if [ ! -s "$mapfile" ]; then
+  exit 0
+fi
+
+# Run FTA on all copied files at once
+output=$(npx fta-cli "$tmpdir" --json 2>/dev/null || true)
+
+if [ -z "$output" ]; then
+  echo "⚠️  FTA: could not analyze files, skipping check"
+  exit 0
+fi
+
+# Parse JSON results and check for violations
+echo "$output" | FTA_SCORE_CAP="$FTA_SCORE_CAP" MAPFILE="$mapfile" node -e "
+  const fs = require('fs');
+  const data = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
+  const mapText = fs.readFileSync(process.env.MAPFILE, 'utf8').trim();
+  const fileMap = {};
+  mapText.split('\n').forEach(line => {
+    const idx = line.indexOf('=');
+    if (idx > 0) fileMap[line.slice(0, idx)] = line.slice(idx + 1);
+  });
+  const cap = Number(process.env.FTA_SCORE_CAP);
+  const fails = data.filter(f => f.fta_score > cap);
+  if (fails.length > 0) {
+    console.log('');
+    console.log('🚨 FTA Score Cap Exceeded (limit: ' + cap + ')');
+    console.log('─'.repeat(70));
+    fails.forEach(f => {
+      const basename = f.file_name.split('/').pop();
+      const orig = fileMap[basename] || basename;
+      console.log('  ' + orig);
+      console.log('    Score: ' + f.fta_score.toFixed(1) + ' ' + f.assessment);
+      console.log('    Lines: ' + f.line_count + '  Cyclomatic: ' + f.cyclo + '  Halstead Difficulty: ' + f.halstead.difficulty.toFixed(1));
+      console.log('');
+    });
+    console.log('Refactor these files to reduce complexity before pushing.');
+    console.log('To skip this check: git push --no-verify');
+    console.log('');
+    process.exit(1);
+  }
+"
+
+exit_code=$?
+file_count=$(echo "$changed_files" | wc -l | tr -d ' ')
+if [ $exit_code -ne 0 ]; then
+  exit 1
+fi
+
+echo "✅ FTA: $file_count file(s) analyzed, all within score cap ($FTA_SCORE_CAP)"
+exit 0
