@@ -89,9 +89,9 @@ export default function StepReviewMapping({ exerciseNames, exercises, onNext, on
           const title = item.data as string;
           const isExact = title.startsWith("Exact");
           return (
-            <Pressable onPress={isExact ? () => setExactCollapsed((prev) => !prev) : undefined}
+            <Pressable onPress={isExact ? () => setExactCollapsed((prev) => !prev) : undefined} accessibilityRole="header"
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16 }}
-              accessibilityRole="header" accessibilityState={isExact ? { expanded: !exactCollapsed } : undefined}>
+              accessibilityState={isExact ? { expanded: !exactCollapsed } : undefined}>
               <Text variant="body" style={{ flex: 1, fontWeight: "bold", color: colors.onSurface }}>{title}</Text>
               {isExact && <Icon name={exactCollapsed ? ChevronDown : ChevronUp} size={20} color={colors.onSurfaceVariant} />}
             </Pressable>

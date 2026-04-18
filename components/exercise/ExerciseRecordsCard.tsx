@@ -77,10 +77,9 @@ export default function ExerciseRecordsCard({
                       <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Reps</Text>
                     </View>
                     {table.map((row) => (
-                      <Pressable key={row.pct} onPress={() => router.push(`/tools/plates?weight=${row.weight}`)}
+                      <Pressable key={row.pct} onPress={() => router.push(`/tools/plates?weight=${row.weight}`)} accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${unit === "kg" ? "kilograms" : "pounds"}, ${row.reps} reps`} accessibilityRole="button"
                         style={[styles.pctRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.outlineVariant }]}
-                        accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${unit === "kg" ? "kilograms" : "pounds"}, ${row.reps} reps`}
-                        accessibilityRole="button" accessibilityHint="Opens plate calculator with this weight">
+                        accessibilityHint="Opens plate calculator with this weight">
                         <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.pct}%</Text>
                         <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.weight} {unit}</Text>
                         <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.reps}</Text>

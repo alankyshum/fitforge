@@ -38,9 +38,8 @@ export default function DayDetailPanel({
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: spacing.xs }}>{dayLabel}</Text>
       {dayDetailSessions.length > 0 ? (
         dayDetailSessions.map((s) => (
-          <Pressable key={s.id} onPress={() => router.push(`/session/detail/${s.id}`)}
+          <Pressable key={s.id} onPress={() => router.push(`/session/detail/${s.id}`)} accessibilityRole="button"
             style={[styles.item, { backgroundColor: colors.surface }]}
-            accessibilityRole="button"
             accessibilityLabel={`${s.name || "Untitled workout"}, ${formatDuration(s.duration_seconds)}, ${s.set_count} sets`}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text variant="body" numberOfLines={1} style={{ color: colors.onSurface }}>{s.name || "Untitled workout"}</Text>

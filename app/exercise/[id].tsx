@@ -134,8 +134,8 @@ export default function ExerciseDetail() {
       ? `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}${rpeLabel}`
       : `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, d.unit)} ${d.unit}${rpeLabel}`;
     return (
-      <Pressable onPress={() => router.push(`/session/detail/${item.session_id}`)} style={[styles.historyRow, { borderBottomColor: colors.outlineVariant }]}
-        accessibilityLabel={label} accessibilityRole="button">
+      <Pressable onPress={() => router.push(`/session/detail/${item.session_id}`)} accessibilityLabel={label} accessibilityRole="button"
+        style={[styles.historyRow, { borderBottomColor: colors.outlineVariant }]}>
         <View style={styles.historyLeft}>
           <Text variant="body" style={{ color: colors.onSurface }}>{formatDateLong(item.started_at)}</Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{item.session_name} · {item.set_count} sets · {item.total_reps} reps</Text>

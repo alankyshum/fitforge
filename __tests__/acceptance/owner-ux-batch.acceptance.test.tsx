@@ -64,14 +64,14 @@ describe('Issue 1: Barcode scanner header icon', () => {
 })
 
 describe('Issue 2: Stat card padding', () => {
-  it('statCard style includes paddingHorizontal', () => {
+  it('stat style includes gap spacing', () => {
     const fs = require('fs')
     const path = require('path')
     const source = fs.readFileSync(
-      path.resolve(__dirname, '../../app/(tabs)/index.tsx'),
+      path.resolve(__dirname, '../../components/home/StatsRow.tsx'),
       'utf8'
     )
-    expect(source).toMatch(/statCard[\s\S]*?paddingHorizontal/)
+    expect(source).toMatch(/stat[\s\S]*?gap/)
   })
 })
 

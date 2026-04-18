@@ -17,10 +17,10 @@ const helpersSrc = fs.readFileSync(
   "utf-8"
 );
 
-const settingsSrc = fs.readFileSync(
-  path.resolve(__dirname, "../../app/(tabs)/settings.tsx"),
-  "utf-8"
-);
+const settingsSrc = [
+  fs.readFileSync(path.resolve(__dirname, "../../app/(tabs)/settings.tsx"), "utf-8"),
+  fs.readFileSync(path.resolve(__dirname, "../../components/settings/IntegrationsCard.tsx"), "utf-8"),
+].join("\n");
 
 const sessionSrc = fs.readFileSync(
   path.resolve(__dirname, "../../app/session/[id].tsx"),

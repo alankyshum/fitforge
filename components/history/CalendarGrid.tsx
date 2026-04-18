@@ -68,8 +68,7 @@ export default function CalendarGrid({
       : `${day} ${monthLabel(year, month)}, rest day`;
 
     return (
-      <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)}
-        accessibilityLabel={label} accessibilityRole="button"
+      <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
         style={[styles.cell, {
           width: cellSize, height: cellSize, borderRadius: cellSize / 2,
           borderWidth: isToday ? 2 : 0, borderColor: isToday ? colors.primary : "transparent",

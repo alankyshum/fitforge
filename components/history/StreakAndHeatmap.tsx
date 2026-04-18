@@ -46,8 +46,8 @@ export default function StreakAndHeatmap({
       </Card>
 
       <View style={styles.heatmapSection}>
-        <Pressable onPress={() => setHeatmapExpanded(!heatmapExpanded)} style={styles.heatmapHeader}
-          accessibilityRole="button" accessibilityLabel={`Last 16 Weeks, ${heatmapExpanded ? "collapse" : "expand"}`}
+        <Pressable onPress={() => setHeatmapExpanded(!heatmapExpanded)} accessibilityRole="button" accessibilityLabel={`Last 16 Weeks, ${heatmapExpanded ? "collapse" : "expand"}`}
+          style={styles.heatmapHeader}
           accessibilityState={{ expanded: heatmapExpanded }}>
           <Text variant="subtitle" style={{ color: colors.onBackground }}>Last 16 Weeks</Text>
           <Icon name={heatmapExpanded ? ChevronUp : ChevronDown} size={20} color={colors.onSurfaceVariant} />
