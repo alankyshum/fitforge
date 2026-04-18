@@ -7,14 +7,11 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { PaperProvider } from 'react-native-paper';
 import RatingWidget from '../../components/RatingWidget';
 
 function renderWidget(props: { value: number | null; onChange?: (v: number | null) => void; readOnly?: boolean; size?: 'small' | 'medium' | 'large' }) {
   return render(
-    <PaperProvider>
-      <RatingWidget {...props} />
-    </PaperProvider>
+    <RatingWidget {...props} />
   );
 }
 

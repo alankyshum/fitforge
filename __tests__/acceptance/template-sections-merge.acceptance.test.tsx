@@ -102,12 +102,12 @@ describe('Template sections merge (BLD-289)', () => {
     expect(screen.getByText('Full Body Starter')).toBeTruthy()
   })
 
-  it('shows STARTER badge on starter templates only', async () => {
+  it('shows Starter label on starter templates only', async () => {
     const screen = renderScreen(<Workouts />)
     await waitFor(() => expect(mockGetTemplates).toHaveBeenCalled())
 
     await waitFor(() => {
-      const badges = screen.getAllByText('STARTER')
+      const badges = screen.getAllByText('Starter')
       expect(badges.length).toBeGreaterThanOrEqual(1)
     })
   })

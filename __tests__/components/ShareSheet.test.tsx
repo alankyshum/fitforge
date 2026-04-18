@@ -28,7 +28,6 @@ jest.mock('@gorhom/bottom-sheet', () => {
 
 import React, { createRef } from 'react';
 import { render } from '@testing-library/react-native';
-import { PaperProvider } from 'react-native-paper';
 import type BottomSheet from '@gorhom/bottom-sheet';
 import ShareSheet from '../../components/ShareSheet';
 
@@ -43,9 +42,7 @@ function renderSheet(overrides: Partial<React.ComponentProps<typeof ShareSheet>>
     ...overrides,
   };
   const result = render(
-    <PaperProvider>
-      <ShareSheet {...defaultProps} />
-    </PaperProvider>
+    <ShareSheet {...defaultProps} />
   );
   return { ...result, sheetRef: ref, props: defaultProps };
 }
