@@ -116,4 +116,16 @@ Available tools (require dev server running — see above):
 - **Test (watch):** `npm run test:watch`
 - **Test (coverage):** `npm run test:coverage`
 - **Test (e2e):** `npm run test:e2e`
+- **Test audit:** `./scripts/audit-tests.sh` (or `--detail` for mock overlap matrix)
 - **Build APK:** `npm run build:apk`
+
+## Test Budget & Deduplication
+
+The test suite has a **budget of 1800 test cases**. Before adding tests, agents MUST:
+
+1. Run `./scripts/audit-tests.sh` to check the current count
+2. If over budget, consolidate overlapping tests before adding new ones
+3. When writing new tests, check for existing coverage of the same behavior in `flows/`, `acceptance/`, `app/`, and `components/` — do NOT duplicate
+4. Use shared helpers from `__tests__/helpers/` for router mocks and domain mock factories
+5. Prefer extending an existing test file over creating a new one for the same feature
+6. Avoid source-string tests (`fs.readFileSync` + regex) when a behavioral test already covers the same assertion

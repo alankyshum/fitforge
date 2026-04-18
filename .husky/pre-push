@@ -1,5 +1,17 @@
 #!/bin/sh
 
+# ─── Test Budget Gate ────────────────────────────────────────────
+# Blocks push if test count exceeds budget (1800 test cases)
+if [ -f "scripts/audit-tests.sh" ]; then
+  echo "🧪 Running test audit..."
+  if ! ./scripts/audit-tests.sh 2>/dev/null; then
+    echo ""
+    echo "Consolidate tests before pushing. Run: ./scripts/audit-tests.sh --detail"
+    echo "To skip this check: git push --no-verify"
+    exit 1
+  fi
+fi
+
 # FTA (File Complexity Analysis) pre-push gate
 # Blocks push if any changed .ts/.tsx file exceeds the FTA score cap.
 # FTA Score: < 50 = OK, 50-60 = Could be better, > 60 = Needs improvement

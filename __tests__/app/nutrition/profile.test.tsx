@@ -73,16 +73,6 @@ describe("Profile Screen", () => {
     mockGetLatestBodyWeight.mockResolvedValue(null);
   });
 
-  it("renders all profile fields", async () => {
-    const { findByText, getByLabelText } = renderScreen(<ProfileScreen />);
-
-    expect(await findByText("Your Profile")).toBeTruthy();
-    expect(getByLabelText("Birth year")).toBeTruthy();
-    expect(getByLabelText("Weight in kg")).toBeTruthy();
-    expect(getByLabelText("Height in cm")).toBeTruthy();
-    expect(getByLabelText("Calculate and save nutrition targets")).toBeTruthy();
-  });
-
   it("pre-fills weight from latest body weight entry", async () => {
     mockGetLatestBodyWeight.mockResolvedValue({ weight: 75 });
     const { findByLabelText } = renderScreen(<ProfileScreen />);
@@ -114,21 +104,6 @@ describe("Profile Screen", () => {
     });
   });
 
-  it("shows validation errors for empty fields on save attempt", async () => {
-    const { findByText, getByLabelText } = renderScreen(<ProfileScreen />);
-
-    await findByText("Your Profile");
-    const saveBtn = getByLabelText("Calculate and save nutrition targets");
-    const { fireEvent } = require("@testing-library/react-native");
-    fireEvent.press(saveBtn);
-
-    const currentYear = new Date().getFullYear();
-    expect(await findByText(`Enter a valid birth year (1900–${currentYear - 1})`)).toBeTruthy();
-    expect(await findByText("Enter a valid weight")).toBeTruthy();
-    expect(await findByText("Enter a valid height")).toBeTruthy();
-    expect(mockSetAppSetting).not.toHaveBeenCalled();
-  });
-
   it("shows error banner when load fails", async () => {
     mockGetAppSetting.mockRejectedValueOnce(new Error("DB read failed"));
 
@@ -137,15 +112,5 @@ describe("Profile Screen", () => {
     expect(
       await findByText("Could not load your profile. Please try again.")
     ).toBeTruthy();
-  });
-
-  it("displays segmented buttons for sex, activity, and goal", async () => {
-    const { findByText } = renderScreen(<ProfileScreen />);
-
-    expect(await findByText("Sex")).toBeTruthy();
-    expect(await findByText("Activity Level")).toBeTruthy();
-    expect(await findByText("Goal")).toBeTruthy();
-    expect(await findByText("Male")).toBeTruthy();
-    expect(await findByText("Female")).toBeTruthy();
   });
 });

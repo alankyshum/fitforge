@@ -197,10 +197,13 @@ describe('Exercise Browser', () => {
     expect(getAllByText('Custom').length).toBeGreaterThan(0)
   })
 
-  it('FAB has add custom exercise a11y label', async () => {
+  it('FAB has add custom exercise a11y label and navigates to create', async () => {
     const { findByText, getByLabelText } = renderScreen(<Exercises />)
     await findByText('Bench Press')
-    expect(getByLabelText('Add custom exercise')).toBeTruthy()
+    const fab = getByLabelText('Add custom exercise')
+    expect(fab).toBeTruthy()
+    fireEvent.press(fab)
+    expect(mockRouter.push).toHaveBeenCalledWith('/exercise/create')
   })
 
   it('handles getAllExercises throwing error gracefully', async () => {

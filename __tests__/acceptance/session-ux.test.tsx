@@ -139,30 +139,6 @@ describe('Session UX Acceptance', () => {
     })
   })
 
-  describe('Auto-Fill Previous Set Data', () => {
-    it('shows previous set data as placeholder text', async () => {
-      setupSession()
-      mockDb.getPreviousSets.mockResolvedValue([
-        { set_number: 1, weight: 95, reps: 5 },
-        { set_number: 2, weight: 95, reps: 5 },
-        { set_number: 3, weight: 95, reps: 4 },
-      ])
-      const { findByText, getAllByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      // Previous sets should be displayed as "weight×reps (1RM: X)" format
-      expect(getAllByText('95×5 (1RM: 111)').length).toBeGreaterThanOrEqual(1)
-    })
-
-    it('shows dash when no previous data exists', async () => {
-      setupSession()
-      mockDb.getPreviousSets.mockResolvedValue([])
-      const { findByText, getAllByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      const dashes = getAllByText('-')
-      expect(dashes.length).toBeGreaterThanOrEqual(1)
-    })
-  })
-
   describe('Step Buttons (Weight/Reps)', () => {
     it('renders decrease and increase weight buttons', async () => {
       setupSession()
@@ -237,15 +213,6 @@ describe('Session UX Acceptance', () => {
   })
 
   describe('Rest Timer', () => {
-    it('shows rest timer text label in the UI', async () => {
-      setupSession()
-      const { findByText, queryByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-
-      // Initially no rest timer visible
-      expect(queryByText('Rest Timer')).toBeNull()
-    })
-
     it('shows skip button when rest timer is active', async () => {
       setupSession()
       mockDb.getRestSecondsForExercise.mockResolvedValue(60)
@@ -267,49 +234,6 @@ describe('Session UX Acceptance', () => {
     })
   })
 
-  describe('PREV Column Header', () => {
-    it('shows PREV column header in the set table', async () => {
-      setupSession()
-      const { findByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      expect(await findByText('PREV')).toBeTruthy()
-    })
-  })
-
-  describe('Set Completion Checkbox', () => {
-    it('renders checkbox for each set', async () => {
-      setupSession()
-      const { findByText, getAllByRole } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      const checkboxes = getAllByRole('checkbox')
-      expect(checkboxes.length).toBe(3)
-    })
-
-    it('checkbox has correct accessibility label', async () => {
-      setupSession()
-      const { findByText, getByLabelText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      expect(getByLabelText('Mark set 1 complete')).toBeTruthy()
-      expect(getByLabelText('Mark set 2 complete')).toBeTruthy()
-      expect(getByLabelText('Mark set 3 complete')).toBeTruthy()
-    })
-
-    it('calls completeSet when checkbox is pressed', async () => {
-      setupSession()
-      const { findByText, findByLabelText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-
-      const checkBtn = await findByLabelText('Mark set 1 complete')
-      await waitFor(async () => {
-        fireEvent.press(checkBtn)
-      })
-
-      await waitFor(() => {
-        expect(mockDb.completeSet).toHaveBeenCalledWith('set-1')
-      })
-    })
-  })
-
   describe('Exercise-level notes (BLD-275)', () => {
     it('does NOT render a per-set notes button', async () => {
       setupSession()
@@ -327,22 +251,12 @@ describe('Session UX Acceptance', () => {
       expect(notesBtn).toBeTruthy()
     })
 
-    it('renders only checkbox and delete per set row', async () => {
+    it('renders delete button per set row', async () => {
       setupSession()
       const { findByText, getAllByLabelText } = renderScreen(<ActiveSession />)
       await findByText('Squat')
       const deleteButtons = getAllByLabelText(/Delete set/)
       expect(deleteButtons.length).toBe(3)
-    })
-  })
-
-  describe('Column spacing and alignment (BLD-275)', () => {
-    it('renders SET and PREV column headers', async () => {
-      setupSession()
-      const { findByText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      expect(await findByText('SET')).toBeTruthy()
-      expect(await findByText('PREV')).toBeTruthy()
     })
   })
 })

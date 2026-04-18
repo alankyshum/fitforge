@@ -181,16 +181,24 @@ describe('Nutrition Logging', () => {
     })
   })
 
-  it('edit targets link has a11y label', async () => {
+  it('edit targets link has a11y label and navigates', async () => {
     const { findByLabelText } = renderScreen(<Nutrition />)
-    expect(await findByLabelText('Edit macro targets')).toBeTruthy()
+    const link = await findByLabelText('Edit macro targets')
+    expect(link).toBeTruthy()
+    fireEvent.press(link)
+    expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/targets')
   })
 
-  it('delete button has a11y label for each food', async () => {
+  it('delete button removes food entry', async () => {
     const { findByLabelText } = renderScreen(<Nutrition />)
     expect(await findByLabelText('Remove Chicken Breast')).toBeTruthy()
     expect(await findByLabelText('Remove Brown Rice')).toBeTruthy()
     expect(await findByLabelText('Remove Eggs')).toBeTruthy()
+
+    fireEvent.press(await findByLabelText('Remove Chicken Breast'))
+    await waitFor(() => {
+      expect(mockDeleteLog).toHaveBeenCalledWith('log-1')
+    })
   })
 
   it('shows empty state when no logs', async () => {
