@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -411,8 +411,13 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
     <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
       <CardContent style={styles.content}>
         {/* Meal selector */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealRow}>
-          {MEALS.map((m) => (
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.mealRow}
+          data={MEALS}
+          keyExtractor={(m) => m}
+          renderItem={({ item: m }) => (
             <Chip
               key={m}
               selected={meal === m}
@@ -424,18 +429,19 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
             >
               {MEAL_LABELS[m]}
             </Chip>
-          ))}
-        </ScrollView>
+          )}
+        />
 
         {/* Favorites row */}
         {favorites.length > 0 ? (
-          <ScrollView
+          <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.favRow}
             contentContainerStyle={styles.favRowContent}
-          >
-            {favorites.map((f) => (
+            data={favorites}
+            keyExtractor={(f) => f.id}
+            renderItem={({ item: f }) => (
               <Chip
                 key={f.id}
                 onPress={() => logFavorite(f)}
@@ -446,8 +452,8 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack }: Pro
               >
                 {f.name}
               </Chip>
-            ))}
-          </ScrollView>
+            )}
+          />
         ) : (
           <Text
             variant="caption"

@@ -110,22 +110,27 @@ export function RMCalculatorContent() {
             <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Est 1RM</Text>
           </View>
           <Separator />
-          {[
-            { name: "Epley", value: results.epley },
-            { name: "Brzycki", value: results.brzycki },
-            { name: "Lombardi", value: results.lombardi },
-          ].map((row) => (
-            <View key={row.name}>
-              <View
-                style={styles.tableRow}
-                accessibilityLabel={`${row.name} formula, ${row.value} ${label}`}
-              >
-                <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{row.name}</Text>
-                <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{row.value} {unit}</Text>
-              </View>
-              <Separator />
+          <View>
+            <View style={styles.tableRow} accessibilityLabel={`Epley formula, ${results.epley} ${label}`}>
+              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>Epley</Text>
+              <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{results.epley} {unit}</Text>
             </View>
-          ))}
+            <Separator />
+          </View>
+          <View>
+            <View style={styles.tableRow} accessibilityLabel={`Brzycki formula, ${results.brzycki} ${label}`}>
+              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>Brzycki</Text>
+              <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{results.brzycki} {unit}</Text>
+            </View>
+            <Separator />
+          </View>
+          <View>
+            <View style={styles.tableRow} accessibilityLabel={`Lombardi formula, ${results.lombardi} ${label}`}>
+              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>Lombardi</Text>
+              <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{results.lombardi} {unit}</Text>
+            </View>
+            <Separator />
+          </View>
           <View
             style={[styles.tableRow, { backgroundColor: colors.primaryContainer }]}
             accessibilityLabel={`Average of all formulas, ${results.average} ${label}`}

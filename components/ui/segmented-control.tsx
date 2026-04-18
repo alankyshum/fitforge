@@ -3,7 +3,7 @@ import { Text } from "@/components/ui/text";
 import { useColor } from "@/hooks/useColor";
 import { CORNERS, FONT_SIZE, HEIGHT } from "@/theme/globals";
 import React from "react";
-import { Pressable, ScrollView, TextStyle, View, ViewStyle } from "react-native";
+import { Pressable, TextStyle, View, ViewStyle } from "react-native";
 
 export interface SegmentedControlButton {
   value: string;

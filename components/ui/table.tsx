@@ -15,6 +15,7 @@ import {
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
+  FlatList,
   ScrollView,
   TextInput,
   TextStyle,
@@ -229,58 +230,62 @@ export function Table<T = any>({
     );
   };
 
+  const renderHeaderColumn = ({ item: column }: { item: TableColumn<T> }) => (
+    <TouchableOpacity
+      key={column.id}
+      style={{
+        flex: column.width ? 0 : 1,
+        width: column.width as any,
+        minWidth: column.minWidth || 100,
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent:
+          column.align === 'center'
+            ? 'center'
+            : column.align === 'right'
+            ? 'flex-end'
+            : 'flex-start',
+      }}
+      onPress={() => handleSort(column.id)}
+      disabled={!column.sortable || !sortable}
+    >
+      {column.headerCell ? (
+        column.headerCell()
+      ) : (
+        <>
+          <Text
+            variant='subtitle'
+            style={{
+              marginRight: column.sortable && sortable ? 4 : 0,
+              textAlign: column.align || 'left',
+            }}
+          >
+            {column.header}
+          </Text>
+          {renderSortIcon(column.id)}
+        </>
+      )}
+    </TouchableOpacity>
+  );
+
   const renderHeader = () => (
-    <View
+    <FlatList
+      data={columns}
+      keyExtractor={(col) => col.id}
+      horizontal
+      scrollEnabled={false}
+      renderItem={renderHeaderColumn}
       style={[
         {
-          flexDirection: 'row',
           backgroundColor: cardColor,
           borderBottomWidth: 1,
           borderBottomColor: borderColor,
         },
         headerStyle,
       ]}
-    >
-      {columns.map((column) => (
-        <TouchableOpacity
-          key={column.id}
-          style={{
-            flex: column.width ? 0 : 1,
-            width: column.width as any,
-            minWidth: column.minWidth || 100,
-            paddingHorizontal: 18,
-            paddingVertical: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent:
-              column.align === 'center'
-                ? 'center'
-                : column.align === 'right'
-                ? 'flex-end'
-                : 'flex-start',
-          }}
-          onPress={() => handleSort(column.id)}
-          disabled={!column.sortable || !sortable}
-        >
-          {column.headerCell ? (
-            column.headerCell()
-          ) : (
-            <>
-              <Text
-                variant='subtitle'
-                style={{
-                  marginRight: column.sortable && sortable ? 4 : 0,
-                  textAlign: column.align || 'left',
-                }}
-              >
-                {column.header}
-              </Text>
-              {renderSortIcon(column.id)}
-            </>
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
+    />
   );
 
   const renderRow = (row: T, index: number) => (
@@ -299,7 +304,13 @@ export function Table<T = any>({
       disabled={!onRowPress}
       activeOpacity={onRowPress ? 0.7 : 1}
     >
-      {columns.map((column) => renderCell(column, row, index))}
+      <FlatList
+        data={columns}
+        keyExtractor={(col) => col.id}
+        horizontal
+        scrollEnabled={false}
+        renderItem={({ item: column }) => renderCell(column, row, index)}
+      />
     </TouchableOpacity>
   );
 
@@ -466,9 +477,12 @@ export function Table<T = any>({
           ) : paginatedData.length === 0 ? (
             renderEmptyState()
           ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {paginatedData.map((row, index) => renderRow(row, index))}
-            </ScrollView>
+            <FlatList
+              data={paginatedData}
+              keyExtractor={(_item, index) => String(index)}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item, index }) => renderRow(item, index)}
+            />
           )}
         </View>
       </ScrollView>
