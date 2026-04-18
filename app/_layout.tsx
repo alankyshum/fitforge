@@ -237,17 +237,6 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="nutrition/add"
-              options={{
-                headerShown: true,
-                title: "Add Food",
-                presentation: "modal",
-                animation: "slide_from_bottom",
-                headerStyle,
-                headerTintColor,
-              }}
-            />
-            <Stack.Screen
               name="nutrition/targets"
               options={{
                 headerShown: true,

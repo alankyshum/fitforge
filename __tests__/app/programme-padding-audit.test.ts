@@ -9,7 +9,6 @@ import * as path from "path";
 const auditedFiles = [
   { rel: "app/program/[id].tsx", label: "program detail" },
   { rel: "app/body/goals.tsx", label: "body goals" },
-  { rel: "app/nutrition/add.tsx", label: "add nutrition" },
   { rel: "app/nutrition/profile.tsx", label: "nutrition profile" },
   { rel: "app/nutrition/targets.tsx", label: "nutrition targets" },
   { rel: "app/program/create.tsx", label: "create program" },
